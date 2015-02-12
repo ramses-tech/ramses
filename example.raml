@@ -1,0 +1,63 @@
+#%RAML 0.8
+---
+title: Example REST API
+documentation:
+  - title: Home
+    content: |
+     Welcome to the example API.
+baseUri: https://api.example.com/{version}
+version: 1
+mediaType:  application/json
+protocols: [ HTTP, HTTPS ]
+schemas:
+    - user:   !include schemas/user.json
+    - story:   !include schemas/story.json
+resourceTypes:
+  - collection:
+      description: A collection of <<resourcePathName>>
+      get:
+        description: Get all <<resourcePathName>>
+        responses:
+          200:
+            body:
+              schema: <<resourcePathName | !singularize>>
+      post:
+        description: Create a new <<resourcePathName | !singularize>>
+        body:
+          application/json:
+            schema: <<resourcePathName | !singularize>>
+        responses:
+          200:
+            body:
+              schema: <<resourcePathName | !singularize>>
+
+  - collection-item:
+      get:
+        responses:
+          200:
+            body:
+              schema: <<resourcePathName | !singularize>>
+      put:
+        description: Update a single <<resourcePathName | !singularize>>
+        responses:
+          200:
+            body:
+              schema: <<resourcePathName | !singularize>>
+      delete:
+        description: Delete a single <<resourcePathName | !singularize>>
+
+traits:
+  - secured:
+      description: Some requests require authentication
+
+/users:
+  type: collection
+  is: [ secured ]
+  /{id}:
+    type: collection-item
+
+/stories:
+  type: collection
+  is: [ secured ]
+  /{id}:
+    type: collection-item
