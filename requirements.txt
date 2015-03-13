@@ -1,1 +1,2 @@
-pyraml-parser
+pyramid
+https://github.com/an2deg/pyraml-parser/archive/0.1.1.zip
