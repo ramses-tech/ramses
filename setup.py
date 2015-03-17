@@ -8,8 +8,8 @@ VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 
 requires = [
     'pyramid',
+    'pyraml-parser'
 ]
-
 
 setup(name='ramses',
       version=VERSION,
