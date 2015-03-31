@@ -23,8 +23,7 @@ class RESTView(BaseView):
 
     def delete(self):
         try:
-            self.storage.delete_item(
-                *self.args, id_=self.request.json['id'])
+            self.storage.delete_item(*self.args)
             return {"status": "deleted"}
         except Exception as ex:
             return {"status": "error", "error": str(ex)}
