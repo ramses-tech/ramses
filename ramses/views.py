@@ -1,29 +1,55 @@
-class BaseView(object):
-    def __init__(self, request):
-        self.request = request
-        self.storage = request.registry.storage
-        self.args = filter(bool, request.path.split('/'))
+from nefertari.view import BaseView as NefertariBaseView
+from nefertari.json_httpexceptions import (
+    JHTTPCreated, JHTTPOk)
 
 
-class RESTView(BaseView):
-    def get(self):
-        try:
-            data = self.storage.get(*self.args)
-            return {"status": "success", "data": data}
-        except Exception as ex:
-            return {"status": "error", "error": str(ex)}
+class BaseView(NefertariBaseView):
+    def index(self):
+        return self._model_class.get_collection(**self._params)
 
-    def post(self):
-        try:
-            item = self.storage.add_item(
-                *self.args, item=self.request.json)
-            return {"status": "created", "data": item}
-        except Exception as ex:
-            return {"status": "error", "error": str(ex)}
+    def show(self, **kwargs):
+        return self.context
 
-    def delete(self):
-        try:
-            self.storage.delete_item(*self.args)
-            return {"status": "deleted"}
-        except Exception as ex:
-            return {"status": "error", "error": str(ex)}
+    def create(self):
+        obj = self._model_class(**self._params).save()
+        return JHTTPCreated(
+            resource=obj.to_dict(request=self.request))
+
+    def update(self, **kwargs):
+        obj = self._model_class.get_resource(**kwargs)
+        obj.update(self._params)
+        return JHTTPOk()
+
+    def delete(self, **kwargs):
+        self._model_class._delete(**kwargs)
+        return JHTTPOk()
+
+    def delete_many(self):
+        objects = self._model_class.get_collection(**self._params)
+        count = objects.count()
+
+        if self.needs_confirmation():
+            return objects
+
+        self._model_class._delete_many(objects)
+        return JHTTPOk("Delete %s %s(s) objects" % (
+            count, self._model_class.__name__))
+
+    def update_many(self):
+        _limit = self._params.pop('_limit', None)
+        objects = self._model_class.get_collection(_limit=_limit)
+        self._model_class._update_many(objects, **self._params)
+        return JHTTPOk("Updated %s %s(s) objects" % (
+            objects.count(), self._model_class.__name__))
+
+
+def generate_rest_view(model_cls, methods=None):
+    from nefertari.engine import JSONEncoder
+    if methods is None:
+        methods = []
+
+    class RESTView(BaseView):
+        _json_encoder = JSONEncoder
+        _model_class = model_cls
+
+    return RESTView

@@ -1,12 +1,17 @@
 from __future__ import print_function
 
-from .views import RESTView
+from inflection import pluralize, singularize
+from nefertari.acl import GuestACL
+
+from .views import generate_rest_view
+from .acl import generate_acl
 from .objects import DemoStorage
 from .utils import (
-    ContentTypes, fields_dict, make_route_name, is_dynamic_uri)
+    ContentTypes, fields_dict, make_route_name, is_dynamic_uri,
+    unwrap_dynamic_uri)
 
 
-def setup_storage_schema(config, resource, route_name):
+def setup_storage_model(config, resource, route_name):
     schemas = (ContentTypes.JSON, ContentTypes.TEXT_XML)
     methods = resource.methods or {}
     method = (methods.get('post') or
@@ -29,39 +34,60 @@ def setup_storage_schema(config, resource, route_name):
         raise Exception('Missing schema for route `{}`'.format())
 
 
-def setup_methods_handlers(config, resource, route_name):
-    if not resource.methods:
-        print('No methods to handle. Route: {}'.format(route_name))
+def configure_resources(config, raml_resources, parent_resource=None):
+    if not raml_resources:
+        return
 
-    for method_name, method in resource.methods.items():
-        config.add_view(
-            RESTView,
-            route_name=route_name,
-            renderer='json',
-            attr=method_name,
-            request_method=method_name.upper())
+    # Use root factory for root-level resources
+    if parent_resource is None:
+        parent_resource = config.get_root_resource()
 
-        print('{}:\t{}{}'.format(
-            method_name.upper(), (config.route_prefix or ''),
-            route_name.replace('_', '/')))
-
-
-def configure_resources(config, resources, uri_prefix=''):
-    for resource_uri, resource in resources.items():
-        resource_uri = uri_prefix + resource_uri
+    for resource_uri, raml_resource in raml_resources.items():
+        clean_uri = resource_uri.strip('/')
         route_name = make_route_name(resource_uri)
-        config.add_route(route_name, resource_uri)
 
-        # Do not setup model for dynamic routes for now
-        # Do not generate schema for dynamic routes for now
-        if not is_dynamic_uri(resource_uri):
-            config.registry.storage.add_model(route_name)
-            setup_storage_schema(config, resource, route_name)
+        # No need to setup routes/views for dynamic resource as it was already
+        # setup when parent was configured.
+        if is_dynamic_uri(resource_uri):
+            if parent_resource is None:
+                raise Exception("Top-level resources can't be dynamic and must "
+                                "represent collections instead")
+            return configure_resources(
+                config=config,
+                raml_resources=raml_resource.resources,
+                parent_resource=parent_resource)
 
-        setup_methods_handlers(config, resource, route_name)
+        # This should generate a DB model
+        model_cls = setup_storage_model(config, raml_resource, route_name)
 
-        if resource.resources:
-            configure_resources(config, resource.resources, resource_uri)
+        # Generate ACL. Use GuestACL for now
+        acl = generate_acl(context_cls=model_cls, base_cls=GuestACL)
+
+        # Generate REST view
+        view = generate_rest_view(
+            model_cls=model_cls,
+            methods=(raml_resource.methods or {}).keys())
+
+        kwargs = {'factory': acl, 'view': view}
+
+        # If one of subresources has dynamic part, the name of part is
+        # the name of the field that should be used to get a particular object
+        # from collection
+        subresources = raml_resource.resources or {}
+        dynamic_uris = [u for u in subresources if is_dynamic_uri(u)]
+        if dynamic_uris:
+            kwargs['id_name'] = unwrap_dynamic_uri(dynamic_uris[0])
+
+        # Create new nefertari route
+        new_resource = parent_resource.add(
+            singularize(clean_uri), pluralize(clean_uri),
+            **kwargs)
+
+        # Configure child resources if present
+        configure_resources(
+            config=config,
+            raml_resources=raml_resource.resources,
+            parent_resource=new_resource)
 
 
 def generate_server(parsed_raml, config):
@@ -69,4 +95,4 @@ def generate_server(parsed_raml, config):
     config.registry.storage = DemoStorage()
 
     # Setup resources
-    configure_resources(config, parsed_raml.resources)
+    configure_resources(config=config, raml_resources=parsed_raml.resources)

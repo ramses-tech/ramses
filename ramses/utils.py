@@ -23,3 +23,7 @@ def make_route_name(name):
 
 def is_dynamic_uri(uri):
     return uri.endswith('}')
+
+
+def unwrap_dynamic_uri(uri):
+    return uri.replace('/', '').replace('{', '').strip('}', '')
