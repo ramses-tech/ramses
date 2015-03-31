@@ -9,6 +9,7 @@ from .objects import DemoStorage
 from .utils import (
     ContentTypes, fields_dict, make_route_name, is_dynamic_uri,
     unwrap_dynamic_uri)
+from .models import generate_model_cls
 
 
 def setup_storage_model(config, resource, route_name):
@@ -27,9 +28,7 @@ def setup_storage_model(config, resource, route_name):
         schema = method.body[schema_name].schema
         if schema:
             properties = fields_dict(schema, schema_name)
-            config.registry.storage.setup_schema(
-                route_name, properties)
-            break
+            return generate_model_cls(properties, resource)
     else:
         raise Exception('Missing schema for route `{}`'.format())
 
