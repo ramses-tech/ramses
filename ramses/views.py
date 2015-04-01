@@ -3,6 +3,21 @@ from nefertari.json_httpexceptions import (
     JHTTPCreated, JHTTPOk)
 
 
+collection_methods = {
+    'get':      'index',
+    'post':     'create',
+    'put':      'update_many',
+    'patch':    'update_many',
+    'delete':   'delete_many',
+}
+item_methods = {
+    'get':      'show',
+    'put':      'update',
+    'patch':    'update',
+    'delete':   'delete',
+}
+
+
 class BaseView(NefertariBaseView):
     def index(self):
         return self._model_class.get_collection(**self._params)
@@ -43,13 +58,17 @@ class BaseView(NefertariBaseView):
             objects.count(), self._model_class.__name__))
 
 
-def generate_rest_view(model_cls, methods=None):
+def generate_rest_view(model_cls, attrs=None):
     from nefertari.engine import JSONEncoder
-    if methods is None:
-        methods = []
+    valid_attrs = collection_methods.values() + item_methods.values()
+    missing_attrs = set(valid_attrs) - set(attrs)
 
     class RESTView(BaseView):
         _json_encoder = JSONEncoder
         _model_class = model_cls
+
+    for attr in missing_attrs:
+        if hasattr(RESTView, attr):
+            delattr(RESTView, attr)
 
     return RESTView
