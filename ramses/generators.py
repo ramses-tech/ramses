@@ -72,8 +72,10 @@ def configure_resources(config, raml_resources, parent_resource=None):
         resource name. E.g. parent uid is 'users:stories' and current resource
         is '/comments'. DB model name will be 'UsersStoriesComment'.
       * Dynamic resource uri is added to parent resource as 'id_name' attr.
-        E.g. if you have stories/{story_id}, 'stories' resource will be init
-        with id_name='story_id'.
+        You are encouraged to name dynamic route using field 'id', as it is
+        assumed to be a Primary Key field when generating DB model.
+        E.g. if you have stories/{id}, 'stories' resource will be init
+        with id_name='id'.
       * Collection resource may only have 1 dynamic child resource.
 
     Arguments:
