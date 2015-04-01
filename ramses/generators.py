@@ -6,37 +6,81 @@ from nefertari.acl import GuestACL
 from .views import generate_rest_view
 from .acl import generate_acl
 from .utils import (
-    ContentTypes, fields_dict, make_route_name, is_dynamic_uri,
-    unwrap_dynamic_uri, resource_view_attrs)
-from .models import generate_model_cls
+    ContentTypes, fields_dict, is_dynamic_uri,
+    clean_dynamic_uri, resource_view_attrs, resource_model_name)
 
 
-def setup_storage_model(config, resource, route_name):
+def setup_data_model(config, raml_resource, model_name):
+    """ Setup storage/data model and return generated model class.
+
+    Process follows these steps:
+      * `raml_resource` post and put methods body chemas are checked
+        to see if any defines schema.
+      * Found schema is restructured into dict of form
+        {field_name: {required: boolean, type: type_name}}
+      * Model class is generated from properties dict using util function
+        `generate_model_cls`.
+
+    Arguments:
+        :config: Pyramid Configurator instance.
+        :raml_resource: Instance of pyraml.entities.RamlResource.
+        :model_name: String representing model name.
+    """
+    from .models import generate_model_cls
+    print('Configuring storage model `{}`'.format(model_name))
     schemas = (ContentTypes.JSON, ContentTypes.TEXT_XML)
-    methods = resource.methods or {}
+    methods = raml_resource.methods or {}
 
     # Get 'schema' from POST or PUT bodies
     method = (methods.get('post') or
               methods.get('put'))
     if not method:
-        print('No methods to setup database schema from. '
-              'Route: {}'.format(route_name))
-        return
+        raise ValueError('No methods to setup database schema from')
 
     # Find what schema from 'schemas' is defined
-    for schema_name in schemas:
-        if schema_name not in method.body:
+    for schema_ct in schemas:
+        if schema_ct not in method.body:
             continue
-        schema = method.body[schema_name].schema
+        schema = method.body[schema_ct].schema
         if schema:
             # Restructure arbitrary schema to dict or {name: {...: ...}}
-            properties = fields_dict(schema, schema_name)
-            return generate_model_cls(properties, resource)
+            properties = fields_dict(schema, schema_ct)
+            print('Generating model class `{}`'.format(model_name))
+            return generate_model_cls(properties, model_name)
     else:
         raise Exception('Missing schema for route `{}`'.format())
 
 
 def configure_resources(config, raml_resources, parent_resource=None):
+    """ Perform complete resources' configuration process
+
+    Resources RAML data from `raml_resources` is used. Created resources
+    are attached to `parent_resource` class which is an instance if
+    `nefertari.resource.Resource`.
+
+    Function iterates through resources data from `raml_resources` and
+    generates full set of objects required: ACL, view, route, resource,
+    database model. Is called recursively for configuring child resources.
+
+    Things to consider:
+      * Top-level resources must be collection names.
+      * Resources nesting must look like collection/id/collection/id/...
+      * No resources are explicitly created for dynamic (ending with '}')
+        RAML resources as they are implicitly processed by parent collection
+        resource.
+      * DB model name is generated using parent routes' uid and current
+        resource name. E.g. parent uid is 'users:stories' and current resource
+        is '/comments'. DB model name will be 'UsersStoriesComment'.
+      * Dynamic resource uri is added to parent resource as 'id_name' attr.
+        E.g. if you have stories/{story_id}, 'stories' resource will be init
+        with id_name='story_id'.
+      * Collection resource may only have 1 dynamic child resource.
+
+    Arguments:
+        :config: Pyramid Configurator instance.
+        :raml_resource: Map of {uri_string: pyraml.entities.RamlResource}.
+        :parent_resource: Instance of `nefertari.resource.Resource`.
+    """
     if not raml_resources:
         return
 
@@ -45,8 +89,9 @@ def configure_resources(config, raml_resources, parent_resource=None):
         parent_resource = config.get_root_resource()
 
     for resource_uri, raml_resource in raml_resources.items():
-        clean_uri = resource_uri.strip('/')
-        route_name = make_route_name(resource_uri)
+        clean_uri = route_name = resource_uri.strip('/')
+        print('\nConfiguring resource: `{}`. Parent: `{}`'.format(
+            route_name, parent_resource.uid or 'root'))
 
         # No need to setup routes/views for dynamic resource as it was already
         # setup when parent was configured.
@@ -60,11 +105,16 @@ def configure_resources(config, raml_resources, parent_resource=None):
                 parent_resource=parent_resource)
 
         # Generate DB model
-        model_cls = setup_storage_model(config, raml_resource, route_name)
+        model_name = resource_model_name(parent_resource, route_name)
+        try:
+            model_cls = setup_data_model(config, raml_resource, model_name)
+        except ValueError as ex:
+            raise ValueError('{}: {}'.format(route_name, str(ex)))
 
         resource_kwargs = {}
 
         # Generate ACL. Use GuestACL for now
+        print('Generating ACL for `{}`'.format(route_name))
         resource_kwargs['factory'] = generate_acl(
             context_cls=model_cls,
             base_cls=GuestACL,
@@ -78,15 +128,17 @@ def configure_resources(config, raml_resources, parent_resource=None):
                         if is_dynamic_uri(uri)]
 
         if dynamic_uris:
-            resource_kwargs['id_name'] = unwrap_dynamic_uri(dynamic_uris[0])
+            resource_kwargs['id_name'] = clean_dynamic_uri(dynamic_uris[0])
 
         # Generate REST view
+        print('Generating view for `{}`'.format(route_name))
         resource_kwargs['view'] = generate_rest_view(
             model_cls=model_cls,
             attrs=resource_view_attrs(raml_resource),
         )
 
         # Create new nefertari route
+        print('Creating new resource for `{}`'.format(route_name))
         new_resource = parent_resource.add(
             singularize(clean_uri), pluralize(clean_uri),
             **resource_kwargs)
@@ -99,5 +151,12 @@ def configure_resources(config, raml_resources, parent_resource=None):
 
 
 def generate_server(parsed_raml, config):
+    """ Run server generation process.
+
+    Arguments:
+        :config: Pyramid Configurator instance.
+        :parsed_raml: Parsed pyraml structure.
+    """
+    print('Server generation started')
     # Setup resources
     configure_resources(config=config, raml_resources=parsed_raml.resources)

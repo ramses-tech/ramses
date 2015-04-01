@@ -2,7 +2,10 @@ from nefertari.view import BaseView as NefertariBaseView
 from nefertari.json_httpexceptions import (
     JHTTPCreated, JHTTPOk)
 
+"""
+Maps of {HTTP_method: neferteri view method name}
 
+"""
 collection_methods = {
     'get':      'index',
     'post':     'create',
@@ -19,6 +22,15 @@ item_methods = {
 
 
 class BaseView(NefertariBaseView):
+    """ Base view class that defines provides generic implementation
+    for handling every supported HTTP method requests.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(BaseView, self).__init__(*args, **kwargs)
+        if self.request.method == 'GET':
+            self._params.process_int_param('_limit', 20)
+
     def index(self):
         return self._model_class.get_collection(**self._params)
 
@@ -59,16 +71,27 @@ class BaseView(NefertariBaseView):
 
 
 def generate_rest_view(model_cls, attrs=None):
+    """ Generate REST view for model class.
+
+    Arguments:
+        :model_cls: Generated DB model class.
+        :attr: List of strings that represent names of view methods, new
+            generated view should support. Not supported methods are replaced
+            with property that raises AttributeError to display MethodNotAllowed
+            error.
+    """
     from nefertari.engine import JSONEncoder
     valid_attrs = collection_methods.values() + item_methods.values()
     missing_attrs = set(valid_attrs) - set(attrs)
+
+    def _attr_error(*args, **kwargs):
+        raise AttributeError
 
     class RESTView(BaseView):
         _json_encoder = JSONEncoder
         _model_class = model_cls
 
     for attr in missing_attrs:
-        if hasattr(RESTView, attr):
-            delattr(RESTView, attr)
+        setattr(RESTView, attr, property(_attr_error))
 
     return RESTView
