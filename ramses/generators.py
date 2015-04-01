@@ -14,7 +14,7 @@ def setup_data_model(config, raml_resource, model_name):
     """ Setup storage/data model and return generated model class.
 
     Process follows these steps:
-      * `raml_resource` post and put methods body chemas are checked
+      * `raml_resource` post, put, patch methods body chemas are checked
         to see if any defines schema.
       * Found schema is restructured into dict of form
         {field_name: {required: boolean, type: type_name}}
@@ -31,9 +31,10 @@ def setup_data_model(config, raml_resource, model_name):
     schemas = (ContentTypes.JSON, ContentTypes.TEXT_XML)
     methods = raml_resource.methods or {}
 
-    # Get 'schema' from POST or PUT bodies
+    # Get 'schema' from particular methods' bodies
     method = (methods.get('post') or
-              methods.get('put'))
+              methods.get('put') or
+              methods.get('patch'))
     if not method:
         raise ValueError('No methods to setup database schema from')
 
