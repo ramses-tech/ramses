@@ -143,6 +143,10 @@ def configure_resources(config, raml_resources, parent_resource=None):
             singularize(clean_uri), pluralize(clean_uri),
             **resource_kwargs)
 
+        # Set new resource to view's '_resource' attr to allow performing
+        # generic operations in view
+        resource_kwargs['view']._resource = new_resource
+
         # Configure child resources if present
         configure_resources(
             config=config,

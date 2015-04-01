@@ -24,12 +24,23 @@ item_methods = {
 class BaseView(NefertariBaseView):
     """ Base view class that defines provides generic implementation
     for handling every supported HTTP method requests.
-    """
 
+    """
     def __init__(self, *args, **kwargs):
         super(BaseView, self).__init__(*args, **kwargs)
         if self.request.method == 'GET':
             self._params.process_int_param('_limit', 20)
+
+    def _location(self, obj):
+        """ Get location of the `obj`
+
+        Arguments:
+            :obj: self._model_class instance.
+        """
+        id_name = self._resource.id_name or 'id'
+        return self.request.route_url(
+            self._resource.uid,
+            **{id_name: getattr(obj, id_name)})
 
     def index(self):
         return self._model_class.get_collection(**self._params)
@@ -40,16 +51,17 @@ class BaseView(NefertariBaseView):
     def create(self):
         obj = self._model_class(**self._params).save()
         return JHTTPCreated(
+            location=self._location(obj),
             resource=obj.to_dict(request=self.request))
 
     def update(self, **kwargs):
         obj = self._model_class.get_resource(**kwargs)
         obj.update(self._params)
-        return JHTTPOk()
+        return JHTTPOk('Updated', location=self._location(obj))
 
     def delete(self, **kwargs):
         self._model_class._delete(**kwargs)
-        return JHTTPOk()
+        return JHTTPOk('Deleted')
 
     def delete_many(self):
         objects = self._model_class.get_collection(**self._params)
@@ -59,14 +71,14 @@ class BaseView(NefertariBaseView):
             return objects
 
         self._model_class._delete_many(objects)
-        return JHTTPOk("Delete %s %s(s) objects" % (
+        return JHTTPOk('Deleted %s %s(s) objects' % (
             count, self._model_class.__name__))
 
     def update_many(self):
         _limit = self._params.pop('_limit', None)
         objects = self._model_class.get_collection(_limit=_limit)
         self._model_class._update_many(objects, **self._params)
-        return JHTTPOk("Updated %s %s(s) objects" % (
+        return JHTTPOk('Updated %s %s(s) objects' % (
             objects.count(), self._model_class.__name__))
 
 
