@@ -64,13 +64,13 @@ def clean_dynamic_uri(uri):
     return uri.replace('/', '').replace('{', '').replace('}', '')
 
 
-def resource_model_name(route_name):
+def generate_model_name(name):
     """ Generate model name.
 
     Arguments:
-        :route_name: String representing route's name.
+        :name: String representing field or route name.
     """
-    model_name = inflection.camelize(route_name.replace(':', '_'))
+    model_name = inflection.camelize(name.strip('/'))
     return inflection.singularize(model_name)
 
 

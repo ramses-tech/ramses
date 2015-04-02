@@ -7,11 +7,11 @@ from .views import generate_rest_view
 from .acl import generate_acl
 from .utils import (
     ContentTypes, fields_dict, is_dynamic_uri,
-    clean_dynamic_uri, resource_view_attrs, resource_model_name,
+    clean_dynamic_uri, resource_view_attrs, generate_model_name,
     is_restful_uri)
 
 
-def setup_data_model(config, raml_resource, model_name):
+def setup_data_model(raml_resource, model_name):
     """ Setup storage/data model and return generated model class.
 
     Process follows these steps:
@@ -23,7 +23,6 @@ def setup_data_model(config, raml_resource, model_name):
         `generate_model_cls`.
 
     Arguments:
-        :config: Pyramid Configurator instance.
         :raml_resource: Instance of pyraml.entities.RamlResource.
         :model_name: String representing model name.
     """
@@ -51,6 +50,7 @@ def setup_data_model(config, raml_resource, model_name):
             return generate_model_cls(
                 properties=properties,
                 model_name=model_name,
+                raml_resource=raml_resource,
             )
     else:
         raise Exception('Missing schema for route `{}`'.format())
@@ -116,9 +116,9 @@ def configure_resources(config, raml_resources, parent_resource=None):
                 parent_resource=parent_resource)
 
         # Generate DB model
-        model_name = resource_model_name(route_name)
+        model_name = generate_model_name(route_name)
         try:
-            model_cls = setup_data_model(config, raml_resource, model_name)
+            model_cls = setup_data_model(raml_resource, model_name)
         except ValueError as ex:
             raise ValueError('{}: {}'.format(route_name, str(ex)))
 
