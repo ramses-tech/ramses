@@ -82,7 +82,22 @@ class BaseView(NefertariBaseView):
             objects.count(), self._model_class.__name__))
 
 
-def generate_rest_view(model_cls, attrs=None):
+class ESBaseView(BaseView):
+    """ Elasticsearch based view. Does collection reads from ES.
+
+    """
+    def index(self):
+        from nefertari.elasticsearch import ES
+        search_params = []
+        if 'q' in self._params:
+            search_params.append(self._params.pop('q'))
+        self._raw_terms = ' AND '.join(search_params)
+
+        return ES(self._model_class.__name__).get_collection(
+            _raw_terms=self._raw_terms, **self._params)
+
+
+def generate_rest_view(model_cls, attrs=None, es_based=True):
     """ Generate REST view for model class.
 
     Arguments:
@@ -91,15 +106,19 @@ def generate_rest_view(model_cls, attrs=None):
             generated view should support. Not supported methods are replaced
             with property that raises AttributeError to display MethodNotAllowed
             error.
+        :es_based: Boolean indicating if generated view should read from
+            elasticsearch. If True - collection reads are performed from
+            elasticsearch; database is used for reads instead. Defaults to True.
     """
     from nefertari.engine import JSONEncoder
     valid_attrs = collection_methods.values() + item_methods.values()
     missing_attrs = set(valid_attrs) - set(attrs)
+    base_view_cls = ESBaseView if es_based else BaseView
 
     def _attr_error(*args, **kwargs):
         raise AttributeError
 
-    class RESTView(BaseView):
+    class RESTView(base_view_cls):
         _json_encoder = JSONEncoder
         _model_class = model_cls
 

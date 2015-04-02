@@ -47,7 +47,10 @@ def setup_data_model(config, raml_resource, model_name):
             # Restructure arbitrary schema to dict or {name: {...: ...}}
             properties = fields_dict(schema, schema_ct)
             print('Generating model class `{}`'.format(model_name))
-            return generate_model_cls(properties, model_name)
+            return generate_model_cls(
+                properties=properties,
+                model_name=model_name,
+            )
     else:
         raise Exception('Missing schema for route `{}`'.format())
 

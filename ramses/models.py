@@ -1,4 +1,4 @@
-from nefertari import engine
+from nefertari import engine as eng
 
 
 """
@@ -6,16 +6,16 @@ Map of RAML types names to nefertari.engine fields.
 
 """
 type_fields = {
-    'string':   engine.StringField,
-    'number':   engine.FloatField,
-    'integer':  engine.IntegerField,
-    'boolean':  engine.BooleanField,
-    'date':     engine.DateTimeField,
-    'file':     engine.BinaryField,
+    'string':   eng.StringField,
+    'number':   eng.FloatField,
+    'integer':  eng.IntegerField,
+    'boolean':  eng.BooleanField,
+    'date':     eng.DateTimeField,
+    'file':     eng.BinaryField,
 }
 
 
-def generate_model_cls(properties, model_name):
+def generate_model_cls(properties, model_name, es_based=True):
     """ Generate model class.
 
     Engine DB field types are determined using `type_fields` and only those
@@ -26,9 +26,14 @@ def generate_model_cls(properties, model_name):
         :properties: Dictionary of DB schema fields which looks like
             {field_name: {required: boolean, type: type_name}, ...}
         :model_name: String that is used as new model's name.
+        :es_based: Boolean indicating if generated model should be a
+            subclass of Elasticsearch-based document class or not.
+            It True, ESBaseDocument is used; BaseDocument is used otherwise.
+            Defaults to True.
     """
-    metaclass = type(engine.BaseDocument)
-    bases = (engine.BaseDocument,)
+    base_cls = eng.ESBaseDocument if es_based else eng.BaseDocument
+    metaclass = type(base_cls)
+    bases = (base_cls,)
     attrs = {
         '__tablename__': model_name.lower(),
     }
@@ -44,7 +49,7 @@ def generate_model_cls(properties, model_name):
 
         # Assume field is a Primary Key, if its name is 'id'
         if field_name.lower() == 'id':
-            field_cls = engine.PrimaryKeyField
+            field_cls = eng.PrimaryKeyField
         else:
             field_cls = type_fields[raml_type]
 
