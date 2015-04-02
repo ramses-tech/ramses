@@ -30,6 +30,19 @@ def fields_dict(raml_schema, schema_ct):
         pass
 
 
+def is_restful_uri(uri):
+    """ Check whether `uri` is a RESTful uri.
+
+    Uri is assumed to be restful if it only contains a single token.
+    E.g. 'stories', 'users' but NOT 'stories/comments', 'users/{id}'
+
+    Arguments:
+        :uri: URI as a string
+    """
+    uri = uri.strip('/')
+    return '/' not in uri
+
+
 def is_dynamic_uri(uri):
     """ Determine whether `uri` is a dynamic uri or not.
 

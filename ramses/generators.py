@@ -7,7 +7,8 @@ from .views import generate_rest_view
 from .acl import generate_acl
 from .utils import (
     ContentTypes, fields_dict, is_dynamic_uri,
-    clean_dynamic_uri, resource_view_attrs, resource_model_name)
+    clean_dynamic_uri, resource_view_attrs, resource_model_name,
+    is_restful_uri)
 
 
 def setup_data_model(config, raml_resource, model_name):
@@ -95,6 +96,10 @@ def configure_resources(config, raml_resources, parent_resource=None):
         parent_resource = config.get_root_resource()
 
     for resource_uri, raml_resource in raml_resources.items():
+        if not is_restful_uri(resource_uri):
+            raise ValueError('Resource URI `{}` is not RESTful'.format(
+                resource_uri))
+
         clean_uri = route_name = resource_uri.strip('/')
         print('\nConfiguring resource: `{}`. Parent: `{}`'.format(
             route_name, parent_resource.uid or 'root'))
@@ -143,7 +148,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
             attrs=resource_view_attrs(raml_resource),
         )
 
-        # Create new nefertari route
+        # Create new nefertari resource
         print('Creating new resource for `{}`'.format(route_name))
         new_resource = parent_resource.add(
             singularize(clean_uri), pluralize(clean_uri),
