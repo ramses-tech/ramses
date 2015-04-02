@@ -12,7 +12,23 @@ type_fields = {
     'boolean':  eng.BooleanField,
     'date':     eng.DateTimeField,
     'file':     eng.BinaryField,
+    'object':   eng.Relationship,
+    # 'array':    eng.ListField,  # Not implemented in sqla yet
 }
+
+
+def get_existing_model(model_name):
+    """ Try to find existing model class named `model_name`.
+
+    Arguments:
+        :model_name: String name of the model class.
+    """
+    try:
+        model_cls = eng.get_document_cls(model_name)
+        print('Model `{}` already exists. Using existing one')
+        return model_cls
+    except ValueError:
+        print('Model `{}` does not exist'.format(model_name))
 
 
 def generate_model_cls(properties, model_name, es_based=True):
@@ -31,6 +47,10 @@ def generate_model_cls(properties, model_name, es_based=True):
             It True, ESBaseDocument is used; BaseDocument is used otherwise.
             Defaults to True.
     """
+    model_cls = get_existing_model(model_name)
+    if model_cls is not None:
+        return model_cls
+
     base_cls = eng.ESBaseDocument if es_based else eng.BaseDocument
     metaclass = type(base_cls)
     bases = (base_cls,)

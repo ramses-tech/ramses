@@ -64,23 +64,14 @@ def clean_dynamic_uri(uri):
     return uri.replace('/', '').replace('{', '').replace('}', '')
 
 
-def resource_model_name(parent_resource, route_name):
+def resource_model_name(route_name):
     """ Generate model name.
 
-    Model name is generated using `parent_resource`s `uid` which contains
-    all resources chain in a form if 'parent:child' and a name of the route
-    `route_name`.
-
     Arguments:
-        :parent_resource: Instance of `nefertari.resource.Resource`.
         :route_name: String representing route's name.
     """
-    if parent_resource.uid:
-        uid = parent_resource.uid + ':' + route_name
-    else:
-        uid = route_name
-    uid = inflection.camelize(uid.replace(':', '_'))
-    return inflection.singularize(uid)
+    model_name = inflection.camelize(route_name.replace(':', '_'))
+    return inflection.singularize(model_name)
 
 
 def resource_view_attrs(raml_resource):

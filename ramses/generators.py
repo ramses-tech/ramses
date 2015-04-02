@@ -116,7 +116,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
                 parent_resource=parent_resource)
 
         # Generate DB model
-        model_name = resource_model_name(parent_resource, route_name)
+        model_name = resource_model_name(route_name)
         try:
             model_cls = setup_data_model(config, raml_resource, model_name)
         except ValueError as ex:
