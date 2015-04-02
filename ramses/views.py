@@ -37,18 +37,19 @@ class BaseView(NefertariBaseView):
         Arguments:
             :obj: self._model_class instance.
         """
-        id_name = self._resource.id_name or 'id'
+        id_name = self._resource.id_name
+        field_name = id_name.split('_', 1)[1]
         return self.request.route_url(
             self._resource.uid,
-            **{id_name: getattr(obj, id_name)})
+            **{id_name: getattr(obj, field_name)})
 
-    def index(self):
+    def index(self, **kwargs):
         return self._model_class.get_collection(**self._params)
 
     def show(self, **kwargs):
         return self.context
 
-    def create(self):
+    def create(self, **kwargs):
         obj = self._model_class(**self._params).save()
         return JHTTPCreated(
             location=self._location(obj),
@@ -63,7 +64,7 @@ class BaseView(NefertariBaseView):
         self._model_class._delete(**kwargs)
         return JHTTPOk('Deleted')
 
-    def delete_many(self):
+    def delete_many(self, **kwargs):
         objects = self._model_class.get_collection(**self._params)
         count = objects.count()
 
@@ -74,7 +75,7 @@ class BaseView(NefertariBaseView):
         return JHTTPOk('Deleted %s %s(s) objects' % (
             count, self._model_class.__name__))
 
-    def update_many(self):
+    def update_many(self, **kwargs):
         _limit = self._params.pop('_limit', None)
         objects = self._model_class.get_collection(_limit=_limit)
         self._model_class._update_many(objects, **self._params)
@@ -86,7 +87,7 @@ class ESBaseView(BaseView):
     """ Elasticsearch based view. Does collection reads from ES.
 
     """
-    def index(self):
+    def index(self, **kwargs):
         from nefertari.elasticsearch import ES
         search_params = []
         if 'q' in self._params:

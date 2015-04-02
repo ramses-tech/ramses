@@ -7,8 +7,8 @@ from .views import generate_rest_view
 from .acl import generate_acl
 from .utils import (
     ContentTypes, fields_dict, is_dynamic_uri,
-    clean_dynamic_uri, resource_view_attrs, generate_model_name,
-    is_restful_uri)
+    resource_view_attrs, generate_model_name,
+    is_restful_uri, dynamic_part_name)
 
 
 def setup_data_model(raml_resource, model_name):
@@ -39,10 +39,11 @@ def setup_data_model(raml_resource, model_name):
         raise ValueError('No methods to setup database schema from')
 
     # Find what schema from 'schemas' is defined
+    body = method.body or {}
     for schema_ct in schemas:
-        if schema_ct not in method.body:
+        if schema_ct not in body:
             continue
-        schema = method.body[schema_ct].schema
+        schema = body[schema_ct].schema
         if schema:
             # Restructure arbitrary schema to dict or {name: {...: ...}}
             properties = fields_dict(schema, schema_ct)
@@ -131,15 +132,8 @@ def configure_resources(config, raml_resources, parent_resource=None):
             base_cls=GuestACL,
         )
 
-        # If one of subresources has dynamic part, the name of part is
-        # the name of the field that should be used to get a particular object
-        # from collection
-        subresources = raml_resource.resources or {}
-        dynamic_uris = [uri for uri in subresources.keys()
-                        if is_dynamic_uri(uri)]
-
-        if dynamic_uris:
-            resource_kwargs['id_name'] = clean_dynamic_uri(dynamic_uris[0])
+        # Generate dynamic part name
+        resource_kwargs['id_name'] = dynamic_part_name(raml_resource, clean_uri)
 
         # Generate REST view
         print('Generating view for `{}`'.format(route_name))

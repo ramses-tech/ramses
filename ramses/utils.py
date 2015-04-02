@@ -74,6 +74,40 @@ def generate_model_name(name):
     return inflection.singularize(model_name)
 
 
+def find_dymanic_resource(raml_resource):
+    """ Find dymanic resource in :raml_resource:'s resources.
+
+    Arguments:
+        :raml_resource: Instance of pyraml.entities.RamlResource.
+    """
+    subresources = raml_resource.resources or {}
+    dynamic_uris = [res for uri, res in subresources.items()
+                    if is_dynamic_uri(uri)]
+    return dynamic_uris[0] if dynamic_uris else None
+
+
+def dynamic_part_name(raml_resource, clean_uri):
+    """ Generate dynamic part for resource :raml_resource:.
+
+    Dynamic part is generated using 2 parts: :clean_uri: of the resource and
+    dynamic part of dymanic subresource. If no :raml_resource: has no dynamic
+    subresources, 'id' is used as the 2nd part.
+    E.g. if your dynamic part on route 'stories' is named 'superId' then dynamic
+    part will be 'storied_superId'.
+
+    Arguments:
+        :raml_resource: Instance of pyraml.entities.RamlResource for which
+            dynamic part name is being generated.
+        :clean_uri: Cleaned URI of :raml_resource:
+    """
+    subresources = raml_resource.resources or {}
+    dynamic_uris = [uri for uri in subresources.keys() if is_dynamic_uri(uri)]
+    dynamic_part = 'id'
+    if dynamic_uris:
+        dynamic_part = clean_dynamic_uri(dynamic_uris[0])
+    return '_'.join([clean_uri, dynamic_part])
+
+
 def resource_view_attrs(raml_resource):
     """ Generate view methods names needed for `raml_resource` view.
 

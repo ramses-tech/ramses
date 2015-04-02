@@ -11,7 +11,7 @@ from .generators import generate_server
 def includeme(config):
     config.include('nefertari.engine')
     config.include('nefertari')
-    config.include('nefertari.view')
+    # config.include('nefertari.view')
     config.include('nefertari.elasticsearch')
 
     # Set root factory

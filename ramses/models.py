@@ -1,6 +1,7 @@
 from nefertari import engine as eng
 
-from .utils import generate_model_name
+from .utils import generate_model_name, find_dymanic_resource
+from .generators import setup_data_model
 
 
 """
@@ -55,12 +56,13 @@ def prepare_relationship(field_name, model_name, raml_resource):
         document=rel_model_name,
         backref_name=model_name.lower(),
     )
-    subresources = raml_resource.resources or {}
     if get_existing_model(rel_model_name) is None:
+        dynamic_res = find_dymanic_resource(raml_resource)
+        subresources = getattr(dynamic_res, 'resources', {}) or {}
+        subresources = {k.strip('/'): v for k, v in subresources.items()}
         if field_name not in subresources:
             raise ValueError('Model `{}` used in relationship `{}` is not '
                              'defined'.format(rel_model_name, field_name))
-        from .generators import setup_data_model
         setup_data_model(subresources[field_name], rel_model_name)
     return field_kwargs
 
@@ -121,4 +123,4 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
         attrs[field_name] = field_cls(**field_kwargs)
 
     # Generate new model class
-    return metaclass(model_name, bases, attrs)
+    return metaclass(str(model_name), bases, attrs)
