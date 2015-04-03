@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 from inflection import pluralize, singularize
-from nefertari.acl import GuestACL
 
 from .views import generate_rest_view
 from .acl import generate_acl
@@ -116,7 +115,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
         print('Generating ACL for `{}`'.format(route_name))
         resource_kwargs['factory'] = generate_acl(
             context_cls=model_cls,
-            base_cls=GuestACL,
+            raml_resource=raml_resource,
         )
 
         # Generate dynamic part name

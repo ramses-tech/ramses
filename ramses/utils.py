@@ -186,3 +186,22 @@ def attr_subresource(raml_resource, route_name):
     ancestor = raml_resource.parentResource.parentResource
     props = get_resource_schema(ancestor) or {}
     return (route_name in props) and ('title' in props[route_name])
+
+
+def closest_secured_by(raml_resource):
+    """ Get closest securedBy attr valid for current resource.
+
+    Finds the attr by going up the inheritance tree and stops
+    when first 'securedBy' attr is met.
+
+    Attributes:
+        :raml_resource: Instance of pyraml.entities.RamlResource.
+    """
+    secured_by = []
+    resource = raml_resource
+
+    while not secured_by and resource:
+        secured_by = resource.securedBy or []
+        resource = resource.parentResource
+
+    return secured_by
