@@ -17,6 +17,7 @@ type_fields = {
     'file':         eng.BinaryField,
     'object':       eng.Relationship,
     'nested':       eng.DictField,
+    'foreign_key':  eng.ForeignKeyField,
     # 'array':    eng.ListField,  # Not implemented in sqla yet
 }
 
@@ -63,17 +64,11 @@ def prepare_relationship(field_name, model_name, raml_resource):
         if field_name not in subresources:
             raise ValueError('Model `{}` used in relationship `{}` is not '
                              'defined'.format(rel_model_name, field_name))
-        # Auto-add FK field to other side of relationship.
-        # FK field links to model_name.id and is named model_name + '_id'
-        fk = eng.ForeignKeyField(ref_document=model_name,
-                                 ref_column=model_name.lower() + '.id')
-        fields = {model_name.lower() + '_id': fk}
-        setup_data_model(subresources[field_name], rel_model_name, fields)
+        setup_data_model(subresources[field_name], rel_model_name)
     return field_kwargs
 
 
-def generate_model_cls(properties, model_name, raml_resource, es_based=True,
-                       predefined_fields=None):
+def generate_model_cls(properties, model_name, raml_resource, es_based=True):
     """ Generate model class.
 
     Engine DB field types are determined using `type_fields` and only those
@@ -92,9 +87,6 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True,
         :predefined_fields: Dictionary of {field_name: field_obj} of fields
             that are already instantiated.
     """
-    if predefined_fields is None:
-        predefined_fields = {}
-
     model_cls = get_existing_model(model_name)
     if model_cls is not None:
         return model_cls
@@ -105,7 +97,6 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True,
     attrs = {
         '__tablename__': model_name.lower(),
     }
-    attrs.update(predefined_fields)
 
     # Generate fields from properties
     for field_name, props in properties.items():
@@ -134,6 +125,12 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True,
             rel_kwargs = prepare_relationship(
                 field_name, model_name, raml_resource)
             field_kwargs.update(rel_kwargs)
+        elif field_cls is eng.ForeignKeyField:
+            model, field = field_name.split('_')
+            field_kwargs.update(
+                ref_document=model.title(),
+                ref_column='.'.join([model, field]),
+            )
 
         attrs[field_name] = field_cls(**field_kwargs)
 
