@@ -9,14 +9,14 @@ Map of RAML types names to nefertari.engine fields.
 
 """
 type_fields = {
-    'string':   eng.StringField,
-    'number':   eng.FloatField,
-    'integer':  eng.IntegerField,
-    'boolean':  eng.BooleanField,
-    'date':     eng.DateTimeField,
-    'file':     eng.BinaryField,
-    'object':   eng.Relationship,
-    'nested':   eng.DictField,
+    'string':       eng.StringField,
+    'number':       eng.FloatField,
+    'integer':      eng.IntegerField,
+    'boolean':      eng.BooleanField,
+    'date':         eng.DateTimeField,
+    'file':         eng.BinaryField,
+    'object':       eng.Relationship,
+    'nested':       eng.DictField,
     # 'array':    eng.ListField,  # Not implemented in sqla yet
 }
 
@@ -63,11 +63,17 @@ def prepare_relationship(field_name, model_name, raml_resource):
         if field_name not in subresources:
             raise ValueError('Model `{}` used in relationship `{}` is not '
                              'defined'.format(rel_model_name, field_name))
-        setup_data_model(subresources[field_name], rel_model_name)
+        # Auto-add FK field to other side of relationship.
+        # FK field links to model_name.id and is named model_name + '_id'
+        fk = eng.ForeignKeyField(ref_document=model_name,
+                                 ref_column=model_name.lower() + '.id')
+        fields = {model_name.lower() + '_id': fk}
+        setup_data_model(subresources[field_name], rel_model_name, fields)
     return field_kwargs
 
 
-def generate_model_cls(properties, model_name, raml_resource, es_based=True):
+def generate_model_cls(properties, model_name, raml_resource, es_based=True,
+                       predefined_fields=None):
     """ Generate model class.
 
     Engine DB field types are determined using `type_fields` and only those
@@ -83,7 +89,12 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
             subclass of Elasticsearch-based document class or not.
             It True, ESBaseDocument is used; BaseDocument is used otherwise.
             Defaults to True.
+        :predefined_fields: Dictionary of {field_name: field_obj} of fields
+            that are already instantiated.
     """
+    if predefined_fields is None:
+        predefined_fields = {}
+
     model_cls = get_existing_model(model_name)
     if model_cls is not None:
         return model_cls
@@ -94,9 +105,13 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
     attrs = {
         '__tablename__': model_name.lower(),
     }
+    attrs.update(predefined_fields)
 
     # Generate fields from properties
     for field_name, props in properties.items():
+        if field_name in attrs:
+            continue
+
         field_kwargs = {
             'required': props.get('required', False) or False
         }

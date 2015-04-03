@@ -11,7 +11,7 @@ from .utils import (
     attr_subresource)
 
 
-def setup_data_model(raml_resource, model_name):
+def setup_data_model(raml_resource, model_name, predefined_fields=None):
     """ Setup storage/data model and return generated model class.
 
     Process follows these steps:
@@ -33,6 +33,7 @@ def setup_data_model(raml_resource, model_name):
         properties=properties,
         model_name=model_name,
         raml_resource=raml_resource,
+        predefined_fields=predefined_fields,
     )
 
 
