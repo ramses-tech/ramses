@@ -9,7 +9,8 @@ VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 requires = [
     'pyramid',
     'cryptacular',
-    'pyraml-parser'
+    'pyraml-parser',
+    'inflection'
 ]
 
 setup(name='ramses',
