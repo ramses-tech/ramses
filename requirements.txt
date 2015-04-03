@@ -1,3 +1,0 @@
-pyramid
-cryptacular
-pyraml-parser==0.1.1

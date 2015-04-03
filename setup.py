@@ -12,7 +12,6 @@ requires = [
     'pyraml-parser'
 ]
 
-
 setup(name='ramses',
       version=VERSION,
       description='ramses',
