@@ -31,6 +31,9 @@ class BaseView(NefertariBaseView):
         if self.request.method == 'GET':
             self._params.process_int_param('_limit', 20)
 
+    def resolve_kw(self, kwargs):
+        return {k.split('_', 1)[1]: v for k, v in kwargs.items()}
+
     def _location(self, obj):
         """ Get location of the `obj`
 
@@ -56,12 +59,12 @@ class BaseView(NefertariBaseView):
             resource=obj.to_dict(request=self.request))
 
     def update(self, **kwargs):
-        obj = self._model_class.get_resource(**kwargs)
+        obj = self._model_class.get_resource(**self.resolve_kw(kwargs))
         obj.update(self._params)
         return JHTTPOk('Updated', location=self._location(obj))
 
     def delete(self, **kwargs):
-        self._model_class._delete(**kwargs)
+        self._model_class._delete(**self.resolve_kw(kwargs))
         return JHTTPOk('Deleted')
 
     def delete_many(self, **kwargs):
@@ -98,7 +101,27 @@ class ESBaseView(BaseView):
             _raw_terms=self._raw_terms, **self._params)
 
 
-def generate_rest_view(model_cls, attrs=None, es_based=True):
+class AttributesView(BaseView):
+    def __init__(self, *args, **kw):
+        super(AttributesView, self).__init__(*args, **kw)
+        self.attr = self.request.path.split('/')[-1]
+        self.value_type = None
+        self.unique = False
+
+    def index(self, **kwargs):
+        obj = self._model_class.get_resource(**self.resolve_kw(kwargs))
+        return getattr(obj, self.attr)
+
+    def create(self, **kwargs):
+        obj = self._model_class.get_resource(**self.resolve_kw(kwargs))
+        obj.update_iterables(
+            self._params, self.attr,
+            unique=self.unique,
+            value_type=self.value_type)
+        return JHTTPCreated(resource=getattr(obj, self.attr, None))
+
+
+def generate_rest_view(model_cls, attrs=None, es_based=True, attr_view=False):
     """ Generate REST view for model class.
 
     Arguments:
@@ -110,11 +133,19 @@ def generate_rest_view(model_cls, attrs=None, es_based=True):
         :es_based: Boolean indicating if generated view should read from
             elasticsearch. If True - collection reads are performed from
             elasticsearch; database is used for reads instead. Defaults to True.
+        :attr_view: Boolean indicating if AttributesView should be used as a
+            base class for generated view.
     """
     from nefertari.engine import JSONEncoder
     valid_attrs = collection_methods.values() + item_methods.values()
     missing_attrs = set(valid_attrs) - set(attrs)
-    base_view_cls = ESBaseView if es_based else BaseView
+
+    if attr_view:
+        base_view_cls = AttributesView
+    elif es_based:
+        base_view_cls = ESBaseView
+    else:
+        base_view_cls = BaseView
 
     def _attr_error(*args, **kwargs):
         raise AttributeError

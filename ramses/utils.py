@@ -140,3 +140,49 @@ def resource_view_attrs(raml_resource):
         attrs += [item_methods.get(m.lower()) for m in http_submethods]
 
     return set(filter(bool, attrs))
+
+
+def get_resource_schema(raml_resource):
+    """ Get schema of RAML resource :raml_resource:.
+
+    Process follows these steps:
+      * :raml_resource: post, put, patch methods body chemas are checked
+        to see if any defines schema.
+      * Found schema is restructured into dict of form
+        {field_name: {required: boolean, type: type_name}} and returned.
+
+    Arguments:
+        :raml_resource: Instance of pyraml.entities.RamlResource.
+    """
+    print('Searching for model schema')
+    schemas = (ContentTypes.JSON, ContentTypes.TEXT_XML)
+    methods = raml_resource.methods or {}
+
+    # Get 'schema' from particular methods' bodies
+    method = (methods.get('post') or
+              methods.get('put') or
+              methods.get('patch'))
+    if not method:
+        raise ValueError('No methods to setup database schema from')
+
+    # Find what schema from 'schemas' is defined
+    body = method.body or {}
+    for schema_ct in schemas:
+        if schema_ct not in body:
+            continue
+        schema = body[schema_ct].schema
+        if schema:
+            return fields_dict(schema, schema_ct)
+    print('No model schema found.')
+
+
+def attr_subresource(raml_resource, route_name):
+    """ Determine if :raml_resource: is an attribute subresource.
+
+    Attribute:
+        :raml_resource: Instance of pyraml.entities.RamlResource.
+        :route_name: Name of the :raml_resource:.
+    """
+    ancestor = raml_resource.parentResource.parentResource
+    props = get_resource_schema(ancestor) or {}
+    return (route_name in props) and ('title' in props[route_name])

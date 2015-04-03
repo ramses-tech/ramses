@@ -6,19 +6,16 @@ from nefertari.acl import GuestACL
 from .views import generate_rest_view
 from .acl import generate_acl
 from .utils import (
-    ContentTypes, fields_dict, is_dynamic_uri,
-    resource_view_attrs, generate_model_name,
-    is_restful_uri, dynamic_part_name)
+    is_dynamic_uri, resource_view_attrs, generate_model_name,
+    is_restful_uri, dynamic_part_name, get_resource_schema,
+    attr_subresource)
 
 
 def setup_data_model(raml_resource, model_name):
     """ Setup storage/data model and return generated model class.
 
     Process follows these steps:
-      * `raml_resource` post, put, patch methods body chemas are checked
-        to see if any defines schema.
-      * Found schema is restructured into dict of form
-        {field_name: {required: boolean, type: type_name}}
+      * Resource schema is found and restructured by `get_resource_schema`.
       * Model class is generated from properties dict using util function
         `generate_model_cls`.
 
@@ -27,34 +24,16 @@ def setup_data_model(raml_resource, model_name):
         :model_name: String representing model name.
     """
     from .models import generate_model_cls
-    print('Configuring storage model `{}`'.format(model_name))
-    schemas = (ContentTypes.JSON, ContentTypes.TEXT_XML)
-    methods = raml_resource.methods or {}
-
-    # Get 'schema' from particular methods' bodies
-    method = (methods.get('post') or
-              methods.get('put') or
-              methods.get('patch'))
-    if not method:
-        raise ValueError('No methods to setup database schema from')
-
-    # Find what schema from 'schemas' is defined
-    body = method.body or {}
-    for schema_ct in schemas:
-        if schema_ct not in body:
-            continue
-        schema = body[schema_ct].schema
-        if schema:
-            # Restructure arbitrary schema to dict or {name: {...: ...}}
-            properties = fields_dict(schema, schema_ct)
-            print('Generating model class `{}`'.format(model_name))
-            return generate_model_cls(
-                properties=properties,
-                model_name=model_name,
-                raml_resource=raml_resource,
-            )
-    else:
+    properties = get_resource_schema(raml_resource)
+    if not properties:
         raise Exception('Missing schema for route `{}`'.format())
+
+    print('Generating model class `{}`'.format(model_name))
+    return generate_model_cls(
+        properties=properties,
+        model_name=model_name,
+        raml_resource=raml_resource,
+    )
 
 
 def configure_resources(config, raml_resources, parent_resource=None):
@@ -93,6 +72,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
         return
 
     # Use root factory for root-level resources
+    parent_arg = parent_resource
     if parent_resource is None:
         parent_resource = config.get_root_resource()
 
@@ -108,7 +88,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
         # No need to setup routes/views for dynamic resource as it was already
         # setup when parent was configured.
         if is_dynamic_uri(resource_uri):
-            if parent_resource is None:
+            if parent_arg is None:
                 raise Exception("Top-level resources can't be dynamic and must "
                                 "represent collections instead")
             return configure_resources(
@@ -117,11 +97,17 @@ def configure_resources(config, raml_resources, parent_resource=None):
                 parent_resource=parent_resource)
 
         # Generate DB model
-        model_name = generate_model_name(route_name)
-        try:
-            model_cls = setup_data_model(raml_resource, model_name)
-        except ValueError as ex:
-            raise ValueError('{}: {}'.format(route_name, str(ex)))
+        is_attr_res = False
+        # If this is an attribute resource, we don't need to generate model
+        if parent_arg is not None and attr_subresource(raml_resource, route_name):
+            is_attr_res = True
+            model_cls = parent_resource.view._model_class
+        else:
+            model_name = generate_model_name(route_name)
+            try:
+                model_cls = setup_data_model(raml_resource, model_name)
+            except ValueError as ex:
+                raise ValueError('{}: {}'.format(route_name, str(ex)))
 
         resource_kwargs = {}
 
@@ -140,6 +126,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
         resource_kwargs['view'] = generate_rest_view(
             model_cls=model_cls,
             attrs=resource_view_attrs(raml_resource),
+            attr_view=is_attr_res,
         )
 
         # Create new nefertari resource
