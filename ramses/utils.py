@@ -185,7 +185,7 @@ def attr_subresource(raml_resource, route_name):
     """
     ancestor = raml_resource.parentResource.parentResource
     props = get_resource_schema(ancestor) or {}
-    return (route_name in props) and ('title' in props[route_name])
+    return (route_name in props) and (props[route_name]['type'] == 'dict')
 
 
 def closest_secured_by(raml_resource):
