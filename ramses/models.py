@@ -1,6 +1,6 @@
 from nefertari import engine as eng
 
-from .utils import generate_model_name, find_dymanic_resource
+from .utils import generate_model_name, find_dynamic_resource
 from .generators import setup_data_model
 
 
@@ -30,7 +30,7 @@ type_fields = {
     'unicode':          eng.UnicodeField,
     'unicode_text':     eng.UnicodeTextField,
     'primary_key':      eng.PrimaryKeyField,
-    # 'array':    eng.ListField,  # Not implemented in sqla yet
+    # 'array':            eng.ListField,  # Not implemented in sqla yet
 }
 
 
@@ -66,7 +66,7 @@ def prepare_relationship(field_name, model_name, raml_resource):
     """
     rel_model_name = generate_model_name(field_name)
     if get_existing_model(rel_model_name) is None:
-        dynamic_res = find_dymanic_resource(raml_resource)
+        dynamic_res = find_dynamic_resource(raml_resource)
         subresources = getattr(dynamic_res, 'resources', {}) or {}
         subresources = {k.strip('/'): v for k, v in subresources.items()}
         if field_name not in subresources:
@@ -114,6 +114,7 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
             'required': props.get('required', False) or False
         }
         field_kwargs.update(props.get('args', {}) or {})
+
 
         raml_type = (props.get('type', 'string') or 'string').lower()
         if raml_type not in type_fields:
