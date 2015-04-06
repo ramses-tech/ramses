@@ -127,6 +127,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
             attrs=resource_view_attrs(raml_resource),
             attr_view=is_attr_res,
         )
+        resource_kwargs['view']._factory = resource_kwargs['factory']
 
         # Create new nefertari resource
         print('Creating new resource for `{}`'.format(route_name))
