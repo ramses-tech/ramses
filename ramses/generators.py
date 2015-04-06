@@ -127,7 +127,6 @@ def configure_resources(config, raml_resources, parent_resource=None):
             attrs=resource_view_attrs(raml_resource),
             attr_view=is_attr_res,
         )
-        resource_kwargs['view']._factory = resource_kwargs['factory']
 
         # Create new nefertari resource
         print('Creating new resource for `{}`'.format(route_name))
@@ -135,9 +134,10 @@ def configure_resources(config, raml_resources, parent_resource=None):
             singularize(clean_uri), pluralize(clean_uri),
             **resource_kwargs)
 
-        # Set new resource to view's '_resource' attr to allow performing
-        # generic operations in view
+        # Set new resource to view's '_resource' and '_factory' attrs to allow
+        # performing generic operations in view
         resource_kwargs['view']._resource = new_resource
+        resource_kwargs['view']._factory = resource_kwargs['factory']
 
         # Configure child resources if present
         configure_resources(
