@@ -22,7 +22,11 @@ def setup_data_model(raml_resource, model_name):
         :raml_resource: Instance of pyraml.entities.RamlResource.
         :model_name: String representing model name.
     """
-    from .models import generate_model_cls
+    from .models import generate_model_cls, get_existing_model
+    model_cls = get_existing_model(model_name)
+    if model_cls is not None:
+        return model_cls
+
     properties = get_resource_schema(raml_resource)
     if not properties:
         raise Exception('Missing schema for model `{}`'.format(model_name))
@@ -33,6 +37,24 @@ def setup_data_model(raml_resource, model_name):
         model_name=model_name,
         raml_resource=raml_resource,
     )
+
+
+def generate_model_cls(raml_resource, route_name):
+    """ Renerate model class for :raml_resource: with name :route_name:
+
+    Generates model name using `generate_model_name` util function and
+    then generates model itself by calling `setup_data_model`.
+
+    Arguments:
+        :raml_resource: Instance of pyraml.entities.RamlResource.
+        :route_name: String name of the resource.
+    """
+    model_name = generate_model_name(route_name)
+    try:
+        model_cls = setup_data_model(raml_resource, model_name)
+    except ValueError as ex:
+        raise ValueError('{}: {}'.format(model_name, str(ex)))
+    return model_cls
 
 
 def configure_resources(config, raml_resources, parent_resource=None):
@@ -96,17 +118,14 @@ def configure_resources(config, raml_resources, parent_resource=None):
                 parent_resource=parent_resource)
 
         # Generate DB model
-        is_attr_res = False
-        # If this is an attribute resource, we don't need to generate model
-        if parent_arg is not None and attr_subresource(raml_resource, route_name):
-            is_attr_res = True
+        # If this is an attribute or singular resource, we don't need to
+        # generate model
+        is_singular = singular_subresource(raml_resource, route_name)
+        is_attr_res = attr_subresource(raml_resource, route_name)
+        if parent_arg is not None and (is_attr_res or is_singular):
             model_cls = parent_resource.view._model_class
         else:
-            model_name = generate_model_name(route_name)
-            try:
-                model_cls = setup_data_model(raml_resource, model_name)
-            except ValueError as ex:
-                raise ValueError('{}: {}'.format(route_name, str(ex)))
+            model_cls = generate_model_cls(raml_resource, route_name)
 
         resource_kwargs = {}
 
@@ -118,24 +137,36 @@ def configure_resources(config, raml_resources, parent_resource=None):
         )
 
         # Generate dynamic part name
-        resource_kwargs['id_name'] = dynamic_part_name(raml_resource, clean_uri)
+        if not is_singular:
+            resource_kwargs['id_name'] = dynamic_part_name(
+                raml_resource, clean_uri)
 
         # Generate REST view
         print('Generating view for `{}`'.format(route_name))
         resource_kwargs['view'] = generate_rest_view(
             model_cls=model_cls,
-            attrs=resource_view_attrs(raml_resource),
+            attrs=resource_view_attrs(raml_resource, is_singular),
             attr_view=is_attr_res,
+            singular=is_singular,
         )
+
+        # In case of singular resource, model still needs to be generated,
+        # but we store it on a different view attribute
+        if is_singular:
+            resource_kwargs['view']._singular_model = generate_model_cls(
+                raml_resource, route_name)
 
         # Create new nefertari resource
         print('Creating new resource for `{}`'.format(route_name))
-        new_resource = parent_resource.add(
-            singularize(clean_uri), pluralize(clean_uri),
-            **resource_kwargs)
+        resource_args = (singularize(clean_uri),)
+
+        if not is_singular:
+            resource_args += (pluralize(clean_uri),)
+
+        new_resource = parent_resource.add(*resource_args, **resource_kwargs)
 
         # Set new resource to view's '_resource' and '_factory' attrs to allow
-        # performing generic operations in view
+        # performing' generic operations in view
         resource_kwargs['view']._resource = new_resource
         resource_kwargs['view']._factory = resource_kwargs['factory']
 

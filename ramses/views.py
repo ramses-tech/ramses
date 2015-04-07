@@ -15,6 +15,7 @@ collection_methods = {
 }
 item_methods = {
     'get':      'show',
+    'post':     'create',
     'put':      'update',
     'patch':    'update',
     'delete':   'delete',
@@ -48,13 +49,15 @@ class BaseView(NefertariBaseView):
 
     def _parent_queryset(self):
         parent = self._resource.parent
-        if hasattr(parent, 'view') and not isinstance(self, AttributesView):
+        if hasattr(parent, 'view'):
             req = self.request.blank(self.request.path)
             req.registry = self.request.registry
             req.matchdict = {
                 parent.id_name: self.request.matchdict.get(parent.id_name)}
             parent_view = parent.view(parent.view._factory, req)
             obj = parent_view.get_item(**req.matchdict)
+            if isinstance(self, (AttributesView, SingularView)):
+                return
             prop = self._resource.collection_name
             return getattr(obj, prop, None)
 
@@ -149,7 +152,35 @@ class AttributesView(BaseView):
         return JHTTPCreated(resource=getattr(obj, self.attr, None))
 
 
-def generate_rest_view(model_cls, attrs=None, es_based=True, attr_view=False):
+class SingularView(BaseView):
+    def __init__(self, *args, **kw):
+        super(SingularView, self).__init__(*args, **kw)
+        self.attr = self.request.path.split('/')[-1]
+
+    def show(self, **kwargs):
+        obj = self.get_item(**kwargs)
+        return getattr(obj, self.attr)
+
+    def create(self, **kwargs):
+        parent_obj = self.get_item(**kwargs)
+        obj = self._singular_model(**self._params).save()
+        parent_obj.update({self.attr: obj})
+        return JHTTPCreated(resource=getattr(obj, self.attr, None))
+
+    def update(self, **kwargs):
+        parent_obj = self.get_item(**kwargs)
+        obj = getattr(parent_obj, self.attr)
+        obj.update(self._params)
+        return JHTTPCreated(resource=getattr(obj, self.attr, None))
+
+    def delete(self, **kwargs):
+        parent_obj = self.get_item(**kwargs)
+        parent_obj.update({self.attr: None})
+        return JHTTPOk('Deleted')
+
+
+def generate_rest_view(model_cls, attrs=None, es_based=True,
+                       attr_view=False, singular=False):
     """ Generate REST view for model class.
 
     Arguments:
@@ -163,12 +194,16 @@ def generate_rest_view(model_cls, attrs=None, es_based=True, attr_view=False):
             elasticsearch; database is used for reads instead. Defaults to True.
         :attr_view: Boolean indicating if AttributesView should be used as a
             base class for generated view.
+        :singular: Boolean indicating if SingularView should be used as a
+            base class for generated view.
     """
     from nefertari.engine import JSONEncoder
     valid_attrs = collection_methods.values() + item_methods.values()
     missing_attrs = set(valid_attrs) - set(attrs)
 
-    if attr_view:
+    if singular:
+        base_view_cls = SingularView
+    elif attr_view:
         base_view_cls = AttributesView
     elif es_based:
         base_view_cls = BaseView

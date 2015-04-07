@@ -94,10 +94,6 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
         :predefined_fields: Dictionary of {field_name: field_obj} of fields
             that are already instantiated.
     """
-    model_cls = get_existing_model(model_name)
-    if model_cls is not None:
-        return model_cls
-
     base_cls = eng.ESBaseDocument if es_based else eng.BaseDocument
     metaclass = type(base_cls)
     bases = (base_cls,)

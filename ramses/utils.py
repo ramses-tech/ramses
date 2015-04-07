@@ -108,7 +108,7 @@ def dynamic_part_name(raml_resource, clean_uri):
     return '_'.join([clean_uri, dynamic_part])
 
 
-def resource_view_attrs(raml_resource):
+def resource_view_attrs(raml_resource, singular=False):
     """ Generate view methods names needed for `raml_resource` view.
 
     Collects HTTP method names from `raml_resource.methods` and
@@ -124,6 +124,9 @@ def resource_view_attrs(raml_resource):
         :raml_resource: Instance of pyraml.entities.RamlResource.
     """
     from .views import collection_methods, item_methods
+
+    if singular:
+        collection_methods = item_methods
 
     http_methods = (raml_resource.methods or {}).keys()
     attrs = [collection_methods.get(m.lower()) for m in http_methods]
