@@ -158,8 +158,8 @@ class SingularView(BaseView):
         self.attr = self.request.path.split('/')[-1]
 
     def show(self, **kwargs):
-        obj = self.get_item(**kwargs)
-        return getattr(obj, self.attr)
+        parent_obj = self.get_item(**kwargs)
+        return getattr(parent_obj, self.attr)
 
     def create(self, **kwargs):
         parent_obj = self.get_item(**kwargs)

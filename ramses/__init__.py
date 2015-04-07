@@ -42,10 +42,10 @@ def includeme(config):
         Settings['raml_schema'])
     generate_server(parsed_raml, config)
 
+    config.include('ramses.auth', route_prefix='/auth')
+
     print('\nRunning nefertari.engine.setup_database')
     from nefertari.engine import setup_database
     setup_database(config)
-
-    config.include('ramses.auth', route_prefix='/auth')
 
     print('Server succesfully generated\n')

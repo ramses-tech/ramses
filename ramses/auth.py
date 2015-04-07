@@ -60,8 +60,8 @@ class AuthUser(eng.BaseDocument):
     def authenticate(cls, params):
         success = False
         user = None
-
         login = params['login'].lower().strip()
+
         if '@' in login:
             user = cls.get_resource(email=login)
         else:
@@ -100,17 +100,12 @@ class AuthorizationView(BaseView):
     _model_class = AuthUser
 
     def create(self):
-        user, _ = self._model_class.create_account(self._params)
+        user, created = self._model_class.create_account(self._params)
 
-        def login():
-            if not user.verify_password(self._params['password']):
-                raise JHTTPConflict(
-                    'Looks like you already have an account.')
-            return self.login(
-                login=user.email,
-                password=self._params['password'])
+        if not created:
+            raise JHTTPConflict('Looks like you already have an account.')
 
-        return login()
+        return JHTTPOk('Registered')
 
     def login(self, **params):
         self._params.update(params)
@@ -125,7 +120,7 @@ class AuthorizationView(BaseView):
         if success:
             headers = remember(self.request, user.uid)
             if next:
-                raise JHTTPOk('Logged in', headers=headers)
+                return JHTTPOk('Logged in', headers=headers)
             else:
                 return JHTTPOk('Logged in', headers=headers)
         if user:
@@ -169,12 +164,15 @@ def create_admin_user(config):
         s_user = settings['system.user']
         s_pass = settings['system.password']
         s_email = settings['system.email']
-        user, _ = AuthUser.get_or_create(
+        user, created = AuthUser.get_or_create(
             username=s_user,
             defaults=dict(
                 password=s_pass,
                 email=s_email,
                 group='admin'
             ))
+        if created:
+            import transaction
+            transaction.commit()
     except KeyError as e:
         log.error('Failed to create system user. Missing config: %s' % e)

@@ -24,9 +24,21 @@ def generate_acl(context_cls, raml_resource):
     class GeneratedACL(base_cls):
         __context_class__ = context_cls
 
-        def set_acls(self, obj, key):
+        def __getitem__(self, key):
+            """ Hack to use current nefertari ACLs usage logic but don't get
+            an object from database here.
+
+            We define a fake class that represents a resource and on which ACL
+            values are set. Thus defined resource class allows us to have
+            benefits of ACL and does not query the database.
+            """
+            class MockResource(object):
+                pass
+
+            obj = MockResource()
             obj.__acl__ = self.context_acl(obj)
             obj.__parent__ = self
             obj.__name__ = key
+            return obj
 
     return GeneratedACL
