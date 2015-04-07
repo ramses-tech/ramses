@@ -1,6 +1,6 @@
 from nefertari import engine as eng
 
-from .utils import generate_model_name, find_dymanic_resource
+from .utils import generate_model_name, find_dynamic_resource
 from .generators import setup_data_model
 
 
@@ -9,16 +9,28 @@ Map of RAML types names to nefertari.engine fields.
 
 """
 type_fields = {
-    'string':       eng.StringField,
-    'number':       eng.FloatField,
-    'integer':      eng.IntegerField,
-    'boolean':      eng.BooleanField,
-    'date':         eng.DateTimeField,
-    'file':         eng.BinaryField,
-    'object':       eng.Relationship,
-    'nested':       eng.DictField,
-    'foreign_key':  eng.ForeignKeyField,
-    # 'array':    eng.ListField,  # Not implemented in sqla yet
+    'string':           eng.StringField,
+    'float':            eng.FloatField,
+    'integer':          eng.IntegerField,
+    'boolean':          eng.BooleanField,
+    'datetime':         eng.DateTimeField,
+    'file':             eng.BinaryField,
+    'object':           eng.Relationship,
+    'dict':             eng.DictField,
+    'foreign_key':      eng.ForeignKeyField,
+    'big_integer':      eng.BigIntegerField,
+    'date':             eng.DateField,
+    'choice':           eng.ChoiceField,
+    'interval':         eng.IntervalField,
+    'decimal':          eng.DecimalField,
+    'pickle':           eng.PickleField,
+    'small_integer':    eng.SmallIntegerField,
+    'text':             eng.TextField,
+    'time':             eng.TimeField,
+    'unicode':          eng.UnicodeField,
+    'unicode_text':     eng.UnicodeTextField,
+    'primary_key':      eng.PrimaryKeyField,
+    # 'array':            eng.ListField,  # Not implemented in sqla yet
 }
 
 
@@ -38,7 +50,7 @@ def get_existing_model(model_name):
 
 
 def prepare_relationship(field_name, model_name, raml_resource):
-    """ Prepare `Relationship` kwargs and create referenced model if not exists.
+    """ Create referenced model if not exists.
 
     When preparing relationship, we check to see if model that will be
     referenced already exists. If not, it is created so it would be possible
@@ -53,19 +65,14 @@ def prepare_relationship(field_name, model_name, raml_resource):
             for which :model_name: will is being defined.
     """
     rel_model_name = generate_model_name(field_name)
-    field_kwargs = dict(
-        document=rel_model_name,
-        backref_name=model_name.lower(),
-    )
     if get_existing_model(rel_model_name) is None:
-        dynamic_res = find_dymanic_resource(raml_resource)
+        dynamic_res = find_dynamic_resource(raml_resource)
         subresources = getattr(dynamic_res, 'resources', {}) or {}
         subresources = {k.strip('/'): v for k, v in subresources.items()}
         if field_name not in subresources:
             raise ValueError('Model `{}` used in relationship `{}` is not '
                              'defined'.format(rel_model_name, field_name))
         setup_data_model(subresources[field_name], rel_model_name)
-    return field_kwargs
 
 
 def generate_model_cls(properties, model_name, raml_resource, es_based=True):
@@ -106,31 +113,17 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
         field_kwargs = {
             'required': props.get('required', False) or False
         }
+        field_kwargs.update(props.get('args', {}) or {})
 
-        if 'title' in props:
-            raml_type = 'nested'
-        else:
-            raml_type = (props.get('type', 'string') or 'string').lower()
 
+        raml_type = (props.get('type', 'string') or 'string').lower()
         if raml_type not in type_fields:
             raise ValueError('Unknown type: {}'.format(raml_type))
 
-        # Assume field is a Primary Key, if its name is 'id'
-        if field_name.lower() == 'id':
-            field_cls = eng.PrimaryKeyField
-        else:
-            field_cls = type_fields[raml_type]
+        field_cls = type_fields[raml_type]
 
         if field_cls is eng.Relationship:
-            rel_kwargs = prepare_relationship(
-                field_name, model_name, raml_resource)
-            field_kwargs.update(rel_kwargs)
-        elif field_cls is eng.ForeignKeyField:
-            model, field = field_name.split('_')
-            field_kwargs.update(
-                ref_document=model.title(),
-                ref_column='.'.join([model, field]),
-            )
+            prepare_relationship(field_name, model_name, raml_resource)
 
         attrs[field_name] = field_cls(**field_kwargs)
 

@@ -7,7 +7,7 @@ from .acl import generate_acl
 from .utils import (
     is_dynamic_uri, resource_view_attrs, generate_model_name,
     is_restful_uri, dynamic_part_name, get_resource_schema,
-    attr_subresource)
+    attr_subresource, singular_subresource)
 
 
 def setup_data_model(raml_resource, model_name):
@@ -25,7 +25,7 @@ def setup_data_model(raml_resource, model_name):
     from .models import generate_model_cls
     properties = get_resource_schema(raml_resource)
     if not properties:
-        raise Exception('Missing schema for route `{}`'.format())
+        raise Exception('Missing schema for model `{}`'.format(model_name))
 
     print('Generating model class `{}`'.format(model_name))
     return generate_model_cls(

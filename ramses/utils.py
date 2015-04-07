@@ -74,16 +74,16 @@ def generate_model_name(name):
     return inflection.singularize(model_name)
 
 
-def find_dymanic_resource(raml_resource):
+def find_dynamic_resource(raml_resource):
     """ Find dymanic resource in :raml_resource:'s resources.
 
     Arguments:
         :raml_resource: Instance of pyraml.entities.RamlResource.
     """
     subresources = raml_resource.resources or {}
-    dynamic_uris = [res for uri, res in subresources.items()
-                    if is_dynamic_uri(uri)]
-    return dynamic_uris[0] if dynamic_uris else None
+    dynamic_resources = [res for uri, res in subresources.items()
+                         if is_dynamic_uri(uri)]
+    return dynamic_resources[0] if dynamic_resources else None
 
 
 def dynamic_part_name(raml_resource, clean_uri):
@@ -176,6 +176,30 @@ def get_resource_schema(raml_resource):
     print('No model schema found.')
 
 
+def is_dynamic_resource(raml_resource):
+    """ Determine if :raml_resource: is a dynamic resource.
+
+    Arguments:
+        :raml_resource:Instance of pyraml.entities.RamlResource.
+    """
+    if not (raml_resource and raml_resource.parentResource):
+        return False
+    dyn = find_dynamic_resource(raml_resource.parentResource)
+    return dyn is raml_resource
+
+
+def get_static_parent(raml_resource):
+    """ Get static parent resource of :raml_resource:.
+
+    Arguments:
+        :raml_resource:Instance of pyraml.entities.RamlResource.
+    """
+    parent = raml_resource.parentResource
+    while is_dynamic_resource(parent):
+        parent = parent.parentResource
+    return parent
+
+
 def attr_subresource(raml_resource, route_name):
     """ Determine if :raml_resource: is an attribute subresource.
 
@@ -183,9 +207,31 @@ def attr_subresource(raml_resource, route_name):
         :raml_resource: Instance of pyraml.entities.RamlResource.
         :route_name: Name of the :raml_resource:.
     """
-    ancestor = raml_resource.parentResource.parentResource
-    props = get_resource_schema(ancestor) or {}
-    return (route_name in props) and ('title' in props[route_name])
+    static_parent = get_static_parent(raml_resource)
+    if static_parent is None:
+        return False
+    props = get_resource_schema(static_parent) or {}
+    return (route_name in props and
+            props[route_name]['type'] == 'dict')
+
+
+def singular_subresource(raml_resource, route_name):
+    """ Determine if :raml_resource: is a singular subresource.
+
+    Attribute:
+        :raml_resource: Instance of pyraml.entities.RamlResource.
+        :route_name: Name of the :raml_resource:.
+    """
+    static_parent = get_static_parent(raml_resource)
+    if static_parent is None:
+        return False
+    props = get_resource_schema(static_parent) or {}
+    if route_name not in props:
+        return False
+    is_obj = props[route_name]['type'] == 'object'
+    args = props[route_name].get('args', {})
+    single_obj = not args.get('uselist', True)
+    return is_obj and single_obj
 
 
 def closest_secured_by(raml_resource):
