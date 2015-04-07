@@ -46,11 +46,38 @@ class BaseView(NefertariBaseView):
             self._resource.uid,
             **{id_name: getattr(obj, field_name)})
 
-    def index(self, **kwargs):
+    def _parent_queryset(self):
+        parent = self._resource.parent
+        if hasattr(parent, 'view') and not isinstance(self, AttributesView):
+            req = self.request.blank(self.request.path)
+            req.registry = self.request.registry
+            req.matchdict = {
+                parent.id_name: self.request.matchdict.get(parent.id_name)}
+            parent_view = parent.view(parent.view._factory, req)
+            obj = parent_view.get_item(**req.matchdict)
+            prop = self._resource.collection_name
+            return getattr(obj, prop, None)
+
+    def get_collection(self, **kwargs):
+        self._params.update(kwargs)
+        objects = self._parent_queryset()
+        if objects is not None:
+            return self._model_class.filter_objects(objects, **self._params)
         return self._model_class.get_collection(**self._params)
 
+    def get_item(self, **kwargs):
+        kwargs = self.resolve_kw(kwargs)
+        objects = self._parent_queryset()
+        if objects is not None:
+            return self._model_class.filter_objects(
+                objects, first=True, **kwargs)
+        return self._model_class.get_resource(**kwargs)
+
+    def index(self, **kwargs):
+        return self.get_collection()
+
     def show(self, **kwargs):
-        return self.context
+        return self.get_item(**kwargs)
 
     def create(self, **kwargs):
         obj = self._model_class(**self._params).save()
@@ -59,7 +86,7 @@ class BaseView(NefertariBaseView):
             resource=obj.to_dict(request=self.request))
 
     def update(self, **kwargs):
-        obj = self._model_class.get_resource(**self.resolve_kw(kwargs))
+        obj = self.get_item(**kwargs)
         obj.update(self._params)
         return JHTTPOk('Updated', location=self._location(obj))
 
@@ -68,7 +95,7 @@ class BaseView(NefertariBaseView):
         return JHTTPOk('Deleted')
 
     def delete_many(self, **kwargs):
-        objects = self._model_class.get_collection(**self._params)
+        objects = self.get_collection()
         count = objects.count()
 
         if self.needs_confirmation():
@@ -80,7 +107,7 @@ class BaseView(NefertariBaseView):
 
     def update_many(self, **kwargs):
         _limit = self._params.pop('_limit', None)
-        objects = self._model_class.get_collection(_limit=_limit)
+        objects = self.get_collection(_limit=_limit)
         self._model_class._update_many(objects, **self._params)
         return JHTTPOk('Updated %s %s(s) objects' % (
             objects.count(), self._model_class.__name__))
@@ -97,8 +124,9 @@ class ESBaseView(BaseView):
             search_params.append(self._params.pop('q'))
         self._raw_terms = ' AND '.join(search_params)
 
-        return ES(self._model_class.__name__).get_collection(
+        documents = ES(self._model_class.__name__).get_collection(
             _raw_terms=self._raw_terms, **self._params)
+        return documents
 
 
 class AttributesView(BaseView):
@@ -109,11 +137,11 @@ class AttributesView(BaseView):
         self.unique = False
 
     def index(self, **kwargs):
-        obj = self._model_class.get_resource(**self.resolve_kw(kwargs))
+        obj = self.get_item(**kwargs)
         return getattr(obj, self.attr)
 
     def create(self, **kwargs):
-        obj = self._model_class.get_resource(**self.resolve_kw(kwargs))
+        obj = self.get_item(**kwargs)
         obj.update_iterables(
             self._params, self.attr,
             unique=self.unique,
@@ -143,7 +171,8 @@ def generate_rest_view(model_cls, attrs=None, es_based=True, attr_view=False):
     if attr_view:
         base_view_cls = AttributesView
     elif es_based:
-        base_view_cls = ESBaseView
+        base_view_cls = BaseView
+        # base_view_cls = ESBaseView
     else:
         base_view_cls = BaseView
 

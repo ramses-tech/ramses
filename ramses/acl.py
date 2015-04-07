@@ -24,4 +24,9 @@ def generate_acl(context_cls, raml_resource):
     class GeneratedACL(base_cls):
         __context_class__ = context_cls
 
+        def set_acls(self, obj, key):
+            obj.__acl__ = self.context_acl(obj)
+            obj.__parent__ = self
+            obj.__name__ = key
+
     return GeneratedACL
