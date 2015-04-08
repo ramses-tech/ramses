@@ -1,6 +1,6 @@
 from nefertari.view import BaseView as NefertariBaseView
 from nefertari.json_httpexceptions import (
-    JHTTPCreated, JHTTPOk)
+    JHTTPCreated, JHTTPOk, JHTTPNotFound)
 
 """
 Maps of {HTTP_method: neferteri view method name}
@@ -117,19 +117,62 @@ class BaseView(NefertariBaseView):
 
 
 class ESBaseView(BaseView):
-    """ Elasticsearch based view. Does collection reads from ES.
+    """ Elasticsearch based view that reads from ES.
 
     """
-    def index(self, **kwargs):
-        from nefertari.elasticsearch import ES
+    def _get_raw_terms(self):
         search_params = []
         if 'q' in self._params:
             search_params.append(self._params.pop('q'))
-        self._raw_terms = ' AND '.join(search_params)
+        _raw_terms = ' AND '.join(search_params)
+        return _raw_terms
 
-        documents = ES(self._model_class.__name__).get_collection(
-            _raw_terms=self._raw_terms, **self._params)
-        return documents
+    def _parent_queryset_es(self):
+        parent = self._resource.parent
+        if hasattr(parent, 'view'):
+            req = self.request.blank(self.request.path)
+            req.registry = self.request.registry
+            req.matchdict = {
+                parent.id_name: self.request.matchdict.get(parent.id_name)}
+            parent_view = parent.view(parent.view._factory, req)
+            obj = parent_view.get_item_es(**req.matchdict)
+            prop = self._resource.collection_name
+            objects_ids = getattr(obj, prop, None)
+            if objects_ids is not None:
+                objects_ids = [str(id_) for id_ in objects_ids]
+            return objects_ids
+
+    def get_collection_es(self, **kwargs):
+        from nefertari.elasticsearch import ES
+        es = ES(self._model_class.__name__)
+        objects_ids = self._parent_queryset_es()
+
+        if objects_ids is not None:
+            if not objects_ids:
+                return []
+            self._params['id'] = objects_ids
+        return es.get_collection(
+            _raw_terms=self._get_raw_terms(),
+            **self._params)
+
+    def get_item_es(self, **kwargs):
+        from nefertari.elasticsearch import ES
+        es = ES(self._model_class.__name__)
+        item_id = str(kwargs.get(self._resource.id_name))
+        objects_ids = self._parent_queryset_es()
+
+        if (objects_ids is not None) and (item_id not in objects_ids):
+            raise JHTTPNotFound('{}(id={}) resource not found'.format(
+                self._model_class.__name__, item_id))
+
+        kwargs = {self._resource.id_name: item_id}
+        return es.get_resource(**self.resolve_kw(kwargs))
+
+    def index(self, **kwargs):
+        return self.get_collection_es(**kwargs)
+
+    def show(self, **kwargs):
+        return self.get_item_es(**kwargs)
 
 
 class AttributesView(BaseView):
@@ -206,8 +249,7 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
     elif attr_view:
         base_view_cls = AttributesView
     elif es_based:
-        base_view_cls = BaseView
-        # base_view_cls = ESBaseView
+        base_view_cls = ESBaseView
     else:
         base_view_cls = BaseView
 
