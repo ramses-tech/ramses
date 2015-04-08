@@ -1,6 +1,11 @@
+import logging
+
 from nefertari.view import BaseView as NefertariBaseView
 from nefertari.json_httpexceptions import (
-    JHTTPCreated, JHTTPOk)
+    JHTTPCreated, JHTTPOk, JHTTPNotFound)
+
+
+log = logging.getLogger(__name__)
 
 """
 Maps of {HTTP_method: neferteri view method name}
@@ -15,6 +20,7 @@ collection_methods = {
 }
 item_methods = {
     'get':      'show',
+    'post':     'create',
     'put':      'update',
     'patch':    'update',
     'delete':   'delete',
@@ -32,6 +38,9 @@ class BaseView(NefertariBaseView):
             self._params.process_int_param('_limit', 20)
 
     def resolve_kw(self, kwargs):
+        """ Resolve :kwargs: like `story_id: 1` to the form of `id: 1`.
+
+        """
         return {k.split('_', 1)[1]: v for k, v in kwargs.items()}
 
     def _location(self, obj):
@@ -46,11 +55,58 @@ class BaseView(NefertariBaseView):
             self._resource.uid,
             **{id_name: getattr(obj, field_name)})
 
-    def index(self, **kwargs):
+    def _parent_queryset(self):
+        """ Get queryset of parent view.
+
+        Generated queryset is used to run queries in the current level view.
+        """
+        parent = self._resource.parent
+        if hasattr(parent, 'view'):
+            req = self.request.blank(self.request.path)
+            req.registry = self.request.registry
+            req.matchdict = {
+                parent.id_name: self.request.matchdict.get(parent.id_name)}
+            parent_view = parent.view(parent.view._factory, req)
+            obj = parent_view.get_item(**req.matchdict)
+            if isinstance(self, (AttributesView, SingularView)):
+                return
+            prop = self._resource.collection_name
+            return getattr(obj, prop, None)
+
+    def get_collection(self, **kwargs):
+        """ Get objects collection taking into account generated queryset
+        of parent view.
+
+        This method allows to work with nested resources properly. Thus queryset
+        returned by this method will be a subset of parent view's queryset, thus
+        filtering out objects that don't belong to parent object.
+        """
+        self._params.update(kwargs)
+        objects = self._parent_queryset()
+        if objects is not None:
+            return self._model_class.filter_objects(objects, **self._params)
         return self._model_class.get_collection(**self._params)
 
+    def get_item(self, **kwargs):
+        """ Get collection item taking into account generated queryset
+        of parent view.
+
+        This method allows to work with nested resources properly. Thus item
+        returned by this method will belong to parent view's queryset, thus
+        filtering out objects that don't belong to parent object.
+        """
+        kwargs = self.resolve_kw(kwargs)
+        objects = self._parent_queryset()
+        if objects is not None:
+            return self._model_class.filter_objects(
+                objects, first=True, **kwargs)
+        return self._model_class.get_resource(**kwargs)
+
+    def index(self, **kwargs):
+        return self.get_collection()
+
     def show(self, **kwargs):
-        return self.context
+        return self.get_item(**kwargs)
 
     def create(self, **kwargs):
         obj = self._model_class(**self._params).save()
@@ -59,7 +115,7 @@ class BaseView(NefertariBaseView):
             resource=obj.to_dict(request=self.request))
 
     def update(self, **kwargs):
-        obj = self._model_class.get_resource(**self.resolve_kw(kwargs))
+        obj = self.get_item(**kwargs)
         obj.update(self._params)
         return JHTTPOk('Updated', location=self._location(obj))
 
@@ -68,7 +124,7 @@ class BaseView(NefertariBaseView):
         return JHTTPOk('Deleted')
 
     def delete_many(self, **kwargs):
-        objects = self._model_class.get_collection(**self._params)
+        objects = self.get_collection()
         count = objects.count()
 
         if self.needs_confirmation():
@@ -80,28 +136,95 @@ class BaseView(NefertariBaseView):
 
     def update_many(self, **kwargs):
         _limit = self._params.pop('_limit', None)
-        objects = self._model_class.get_collection(_limit=_limit)
+        objects = self.get_collection(_limit=_limit)
         self._model_class._update_many(objects, **self._params)
         return JHTTPOk('Updated %s %s(s) objects' % (
             objects.count(), self._model_class.__name__))
 
 
 class ESBaseView(BaseView):
-    """ Elasticsearch based view. Does collection reads from ES.
+    """ Elasticsearch based view that reads from ES.
 
     """
-    def index(self, **kwargs):
-        from nefertari.elasticsearch import ES
+    def _get_raw_terms(self):
         search_params = []
         if 'q' in self._params:
             search_params.append(self._params.pop('q'))
-        self._raw_terms = ' AND '.join(search_params)
+        _raw_terms = ' AND '.join(search_params)
+        return _raw_terms
 
-        return ES(self._model_class.__name__).get_collection(
-            _raw_terms=self._raw_terms, **self._params)
+    def _parent_queryset_es(self):
+        """ Get queryset (list of object IDs) of parent view.
+
+        Generated queryset is used to run queries in the current level
+        view.
+        """
+        parent = self._resource.parent
+        if hasattr(parent, 'view'):
+            req = self.request.blank(self.request.path)
+            req.registry = self.request.registry
+            req.matchdict = {
+                parent.id_name: self.request.matchdict.get(parent.id_name)}
+            parent_view = parent.view(parent.view._factory, req)
+            obj = parent_view.get_item_es(**req.matchdict)
+            prop = self._resource.collection_name
+            objects_ids = getattr(obj, prop, None)
+            if objects_ids is not None:
+                objects_ids = [str(id_) for id_ in objects_ids]
+            return objects_ids
+
+    def get_collection_es(self, **kwargs):
+        """ Get ES objects collection taking into account generated queryset
+        of parent view.
+
+        This method allows to work with nested resources properly. Thus queryset
+        returned by this method will be a subset of parent view's queryset, thus
+        filtering out objects that don't belong to parent object.
+        """
+        from nefertari.elasticsearch import ES
+        es = ES(self._model_class.__name__)
+        objects_ids = self._parent_queryset_es()
+
+        if objects_ids is not None:
+            if not objects_ids:
+                return []
+            self._params['id'] = objects_ids
+        return es.get_collection(
+            _raw_terms=self._get_raw_terms(),
+            **self._params)
+
+    def get_item_es(self, **kwargs):
+        """ Get ES collection item taking into account generated queryset
+        of parent view.
+
+        This method allows to work with nested resources properly. Thus item
+        returned by this method will belong to parent view's queryset, thus
+        filtering out objects that don't belong to parent object.
+        """
+        from nefertari.elasticsearch import ES
+        es = ES(self._model_class.__name__)
+        item_id = str(kwargs.get(self._resource.id_name))
+        objects_ids = self._parent_queryset_es()
+
+        if (objects_ids is not None) and (item_id not in objects_ids):
+            raise JHTTPNotFound('{}(id={}) resource not found'.format(
+                self._model_class.__name__, item_id))
+
+        kwargs = {self._resource.id_name: item_id}
+        return es.get_resource(**self.resolve_kw(kwargs))
+
+    def index(self, **kwargs):
+        return self.get_collection_es(**kwargs)
+
+    def show(self, **kwargs):
+        return self.get_item_es(**kwargs)
 
 
 class AttributesView(BaseView):
+    """ View used to work with attribute resources.
+
+    Attribute resources represent field: ListField, DictField.
+    """
     def __init__(self, *args, **kw):
         super(AttributesView, self).__init__(*args, **kw)
         self.attr = self.request.path.split('/')[-1]
@@ -109,11 +232,11 @@ class AttributesView(BaseView):
         self.unique = False
 
     def index(self, **kwargs):
-        obj = self._model_class.get_resource(**self.resolve_kw(kwargs))
+        obj = self.get_item(**kwargs)
         return getattr(obj, self.attr)
 
     def create(self, **kwargs):
-        obj = self._model_class.get_resource(**self.resolve_kw(kwargs))
+        obj = self.get_item(**kwargs)
         obj.update_iterables(
             self._params, self.attr,
             unique=self.unique,
@@ -121,7 +244,39 @@ class AttributesView(BaseView):
         return JHTTPCreated(resource=getattr(obj, self.attr, None))
 
 
-def generate_rest_view(model_cls, attrs=None, es_based=True, attr_view=False):
+class SingularView(BaseView):
+    """ View used to work with singular resources.
+
+    Singular resources represent one-to-one relationship. E.g. users/1/profile.
+    """
+    def __init__(self, *args, **kw):
+        super(SingularView, self).__init__(*args, **kw)
+        self.attr = self.request.path.split('/')[-1]
+
+    def show(self, **kwargs):
+        parent_obj = self.get_item(**kwargs)
+        return getattr(parent_obj, self.attr)
+
+    def create(self, **kwargs):
+        parent_obj = self.get_item(**kwargs)
+        obj = self._singular_model(**self._params).save()
+        parent_obj.update({self.attr: obj})
+        return JHTTPCreated(resource=getattr(obj, self.attr, None))
+
+    def update(self, **kwargs):
+        parent_obj = self.get_item(**kwargs)
+        obj = getattr(parent_obj, self.attr)
+        obj.update(self._params)
+        return JHTTPCreated(resource=getattr(obj, self.attr, None))
+
+    def delete(self, **kwargs):
+        parent_obj = self.get_item(**kwargs)
+        parent_obj.update({self.attr: None})
+        return JHTTPOk('Deleted')
+
+
+def generate_rest_view(model_cls, attrs=None, es_based=True,
+                       attr_view=False, singular=False):
     """ Generate REST view for model class.
 
     Arguments:
@@ -135,12 +290,16 @@ def generate_rest_view(model_cls, attrs=None, es_based=True, attr_view=False):
             elasticsearch; database is used for reads instead. Defaults to True.
         :attr_view: Boolean indicating if AttributesView should be used as a
             base class for generated view.
+        :singular: Boolean indicating if SingularView should be used as a
+            base class for generated view.
     """
     from nefertari.engine import JSONEncoder
     valid_attrs = collection_methods.values() + item_methods.values()
     missing_attrs = set(valid_attrs) - set(attrs)
 
-    if attr_view:
+    if singular:
+        base_view_cls = SingularView
+    elif attr_view:
         base_view_cls = AttributesView
     elif es_based:
         base_view_cls = ESBaseView

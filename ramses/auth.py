@@ -12,8 +12,9 @@ In particular:
     :create_admin_user: Function that creates system/admin user.
 
 """
-import cryptacular.bcrypt
+import logging
 
+import cryptacular.bcrypt
 from pyramid.security import authenticated_userid
 from pyramid.security import remember, forget
 
@@ -22,7 +23,7 @@ from nefertari.utils import dictset
 from nefertari.json_httpexceptions import *
 from nefertari.view import BaseView
 
-
+log = logging.getLogger(__name__)
 crypt = cryptacular.bcrypt.BCRYPTPasswordManager()
 
 
@@ -60,8 +61,8 @@ class AuthUser(eng.BaseDocument):
     def authenticate(cls, params):
         success = False
         user = None
-
         login = params['login'].lower().strip()
+
         if '@' in login:
             user = cls.get_resource(email=login)
         else:
@@ -100,17 +101,12 @@ class AuthorizationView(BaseView):
     _model_class = AuthUser
 
     def create(self):
-        user, _ = self._model_class.create_account(self._params)
+        user, created = self._model_class.create_account(self._params)
 
-        def login():
-            if not user.verify_password(self._params['password']):
-                raise JHTTPConflict(
-                    'Looks like you already have an account.')
-            return self.login(
-                login=user.email,
-                password=self._params['password'])
+        if not created:
+            raise JHTTPConflict('Looks like you already have an account.')
 
-        return login()
+        return JHTTPOk('Registered')
 
     def login(self, **params):
         self._params.update(params)
@@ -125,7 +121,7 @@ class AuthorizationView(BaseView):
         if success:
             headers = remember(self.request, user.uid)
             if next:
-                raise JHTTPOk('Logged in', headers=headers)
+                return JHTTPOk('Logged in', headers=headers)
             else:
                 return JHTTPOk('Logged in', headers=headers)
         if user:
@@ -142,7 +138,7 @@ class AuthorizationView(BaseView):
 
 
 def includeme(config):
-    print('Connecting auth routes and views')
+    log.info('Connecting auth routes and views')
     config.add_request_method(AuthUser.get_auth_user, 'user', reify=True)
     config.add_route('login', '/login')
     config.add_view(
@@ -163,18 +159,21 @@ def includeme(config):
 
 
 def create_admin_user(config):
-    print('Creating system user')
+    log.info('Creating system user')
     settings = config.registry.settings
     try:
         s_user = settings['system.user']
         s_pass = settings['system.password']
         s_email = settings['system.email']
-        user, _ = AuthUser.get_or_create(
+        user, created = AuthUser.get_or_create(
             username=s_user,
             defaults=dict(
                 password=s_pass,
                 email=s_email,
                 group='admin'
             ))
+        if created:
+            import transaction
+            transaction.commit()
     except KeyError as e:
         log.error('Failed to create system user. Missing config: %s' % e)

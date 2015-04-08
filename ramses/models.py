@@ -1,8 +1,12 @@
+import logging
+
 from nefertari import engine as eng
 
 from .utils import generate_model_name, find_dynamic_resource
 from .generators import setup_data_model
 
+
+log = logging.getLogger(__name__)
 
 """
 Map of RAML types names to nefertari.engine fields.
@@ -42,11 +46,11 @@ def get_existing_model(model_name):
     """
     try:
         model_cls = eng.get_document_cls(model_name)
-        print('Model `{}` already exists. Using existing one'.format(
+        log.debug('Model `{}` already exists. Using existing one'.format(
             model_name))
         return model_cls
     except ValueError:
-        print('Model `{}` does not exist'.format(model_name))
+        log.debug('Model `{}` does not exist'.format(model_name))
 
 
 def prepare_relationship(field_name, model_name, raml_resource):
@@ -94,10 +98,6 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
         :predefined_fields: Dictionary of {field_name: field_obj} of fields
             that are already instantiated.
     """
-    model_cls = get_existing_model(model_name)
-    if model_cls is not None:
-        return model_cls
-
     base_cls = eng.ESBaseDocument if es_based else eng.BaseDocument
     metaclass = type(base_cls)
     bases = (base_cls,)
