@@ -1,6 +1,11 @@
+import logging
+
 from nefertari.view import BaseView as NefertariBaseView
 from nefertari.json_httpexceptions import (
     JHTTPCreated, JHTTPOk, JHTTPNotFound)
+
+
+log = logging.getLogger(__name__)
 
 """
 Maps of {HTTP_method: neferteri view method name}

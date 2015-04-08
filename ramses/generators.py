@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import logging
+
 from inflection import pluralize, singularize
 
 from .views import generate_rest_view
@@ -8,6 +10,9 @@ from .utils import (
     is_dynamic_uri, resource_view_attrs, generate_model_name,
     is_restful_uri, dynamic_part_name, get_resource_schema,
     attr_subresource, singular_subresource)
+
+
+log = logging.getLogger(__name__)
 
 
 def setup_data_model(raml_resource, model_name):
@@ -31,7 +36,7 @@ def setup_data_model(raml_resource, model_name):
     if not properties:
         raise Exception('Missing schema for model `{}`'.format(model_name))
 
-    print('Generating model class `{}`'.format(model_name))
+    log.info('Generating model class `{}`'.format(model_name))
     return generate_model_cls(
         properties=properties,
         model_name=model_name,
@@ -103,7 +108,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
                 resource_uri))
 
         clean_uri = route_name = resource_uri.strip('/')
-        print('\nConfiguring resource: `{}`. Parent: `{}`'.format(
+        log.info('Configuring resource: `{}`. Parent: `{}`'.format(
             route_name, parent_resource.uid or 'root'))
 
         # No need to setup routes/views for dynamic resource as it was already
@@ -130,7 +135,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
         resource_kwargs = {}
 
         # Generate ACL. Use GuestACL for now
-        print('Generating ACL for `{}`'.format(route_name))
+        log.info('Generating ACL for `{}`'.format(route_name))
         resource_kwargs['factory'] = generate_acl(
             context_cls=model_cls,
             raml_resource=raml_resource,
@@ -142,7 +147,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
                 raml_resource, clean_uri)
 
         # Generate REST view
-        print('Generating view for `{}`'.format(route_name))
+        log.info('Generating view for `{}`'.format(route_name))
         resource_kwargs['view'] = generate_rest_view(
             model_cls=model_cls,
             attrs=resource_view_attrs(raml_resource, is_singular),
@@ -157,7 +162,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
                 raml_resource, route_name)
 
         # Create new nefertari resource
-        print('Creating new resource for `{}`'.format(route_name))
+        log.info('Creating new resource for `{}`'.format(route_name))
         resource_args = (singularize(clean_uri),)
 
         if not is_singular:
@@ -184,6 +189,6 @@ def generate_server(parsed_raml, config):
         :config: Pyramid Configurator instance.
         :parsed_raml: Parsed pyraml structure.
     """
-    print('Server generation started')
+    log.info('Server generation started')
     # Setup resources
     configure_resources(config=config, raml_resources=parsed_raml.resources)

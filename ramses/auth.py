@@ -12,8 +12,9 @@ In particular:
     :create_admin_user: Function that creates system/admin user.
 
 """
-import cryptacular.bcrypt
+import logging
 
+import cryptacular.bcrypt
 from pyramid.security import authenticated_userid
 from pyramid.security import remember, forget
 
@@ -22,7 +23,7 @@ from nefertari.utils import dictset
 from nefertari.json_httpexceptions import *
 from nefertari.view import BaseView
 
-
+log = logging.getLogger(__name__)
 crypt = cryptacular.bcrypt.BCRYPTPasswordManager()
 
 
@@ -137,7 +138,7 @@ class AuthorizationView(BaseView):
 
 
 def includeme(config):
-    print('Connecting auth routes and views')
+    log.info('Connecting auth routes and views')
     config.add_request_method(AuthUser.get_auth_user, 'user', reify=True)
     config.add_route('login', '/login')
     config.add_view(
@@ -158,7 +159,7 @@ def includeme(config):
 
 
 def create_admin_user(config):
-    print('Creating system user')
+    log.info('Creating system user')
     settings = config.registry.settings
     try:
         s_user = settings['system.user']

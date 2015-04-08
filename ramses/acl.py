@@ -1,6 +1,11 @@
+import logging
+
 from nefertari.acl import GuestACL, AuthenticatedReadACL
 
 from .utils import closest_secured_by
+
+
+log = logging.getLogger(__name__)
 
 
 def generate_acl(context_cls, raml_resource):

@@ -1,5 +1,9 @@
-from __future__ import print_function
+import logging
+
 import inflection
+
+
+log = logging.getLogger(__name__)
 
 
 class ContentTypes(object):
@@ -159,7 +163,7 @@ def get_resource_schema(raml_resource):
     Arguments:
         :raml_resource: Instance of pyraml.entities.RamlResource.
     """
-    print('Searching for model schema')
+    log.info('Searching for model schema')
     schemas = (ContentTypes.JSON, ContentTypes.TEXT_XML)
     methods = raml_resource.methods or {}
 
@@ -178,7 +182,7 @@ def get_resource_schema(raml_resource):
         schema = body[schema_ct].schema
         if schema:
             return fields_dict(schema, schema_ct)
-    print('No model schema found.')
+    log.debug('No model schema found.')
 
 
 def is_dynamic_resource(raml_resource):

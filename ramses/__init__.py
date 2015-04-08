@@ -1,4 +1,4 @@
-from __future__ import print_function
+import logging
 
 import pyraml.parser
 from pyramid.authentication import AuthTktAuthenticationPolicy
@@ -7,6 +7,9 @@ from nefertari.acl import RootACL as NefertariRootACL
 from nefertari.utils import dictset
 
 from .generators import generate_server
+
+
+log = logging.getLogger(__name__)
 
 
 def includeme(config):
@@ -23,7 +26,7 @@ def includeme(config):
     root = config.get_root_resource()
     root.auth = Settings.asbool('auth', False)
 
-    print('Configuring auth policies')
+    log.info('Configuring auth policies')
     authz_policy = ACLAuthorizationPolicy()
     config.set_authorization_policy(authz_policy)
 
@@ -37,15 +40,15 @@ def includeme(config):
     )
     config.set_authentication_policy(authn_policy)
 
-    print('Parsing RAML and startign server generation')
+    log.info('Parsing RAML and startign server generation')
     parsed_raml = pyraml.parser.load(
         Settings['raml_schema'])
     generate_server(parsed_raml, config)
 
-    print('\nRunning nefertari.engine.setup_database')
+    log.info('Running nefertari.engine.setup_database')
     from nefertari.engine import setup_database
     setup_database(config)
 
     config.include('ramses.auth', route_prefix='/auth')
 
-    print('Server succesfully generated\n')
+    log.info('Server succesfully generated\n')
