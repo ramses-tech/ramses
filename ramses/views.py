@@ -33,6 +33,9 @@ class BaseView(NefertariBaseView):
             self._params.process_int_param('_limit', 20)
 
     def resolve_kw(self, kwargs):
+        """ Resolve :kwargs: like `story_id: 1` to the form of `id: 1`.
+
+        """
         return {k.split('_', 1)[1]: v for k, v in kwargs.items()}
 
     def _location(self, obj):
@@ -48,6 +51,10 @@ class BaseView(NefertariBaseView):
             **{id_name: getattr(obj, field_name)})
 
     def _parent_queryset(self):
+        """ Get queryset of parent view.
+
+        Generated queryset is used to run queries in the current level view.
+        """
         parent = self._resource.parent
         if hasattr(parent, 'view'):
             req = self.request.blank(self.request.path)
@@ -62,6 +69,13 @@ class BaseView(NefertariBaseView):
             return getattr(obj, prop, None)
 
     def get_collection(self, **kwargs):
+        """ Get objects collection taking into account generated queryset
+        of parent view.
+
+        This method allows to work with nested resources properly. Thus queryset
+        returned by this method will be a subset of parent view's queryset, thus
+        filtering out objects that don't belong to parent object.
+        """
         self._params.update(kwargs)
         objects = self._parent_queryset()
         if objects is not None:
@@ -69,6 +83,13 @@ class BaseView(NefertariBaseView):
         return self._model_class.get_collection(**self._params)
 
     def get_item(self, **kwargs):
+        """ Get collection item taking into account generated queryset
+        of parent view.
+
+        This method allows to work with nested resources properly. Thus item
+        returned by this method will belong to parent view's queryset, thus
+        filtering out objects that don't belong to parent object.
+        """
         kwargs = self.resolve_kw(kwargs)
         objects = self._parent_queryset()
         if objects is not None:
@@ -128,6 +149,11 @@ class ESBaseView(BaseView):
         return _raw_terms
 
     def _parent_queryset_es(self):
+        """ Get queryset (list of object IDs) of parent view.
+
+        Generated queryset is used to run queries in the current level
+        view.
+        """
         parent = self._resource.parent
         if hasattr(parent, 'view'):
             req = self.request.blank(self.request.path)
@@ -143,6 +169,13 @@ class ESBaseView(BaseView):
             return objects_ids
 
     def get_collection_es(self, **kwargs):
+        """ Get ES objects collection taking into account generated queryset
+        of parent view.
+
+        This method allows to work with nested resources properly. Thus queryset
+        returned by this method will be a subset of parent view's queryset, thus
+        filtering out objects that don't belong to parent object.
+        """
         from nefertari.elasticsearch import ES
         es = ES(self._model_class.__name__)
         objects_ids = self._parent_queryset_es()
@@ -156,6 +189,13 @@ class ESBaseView(BaseView):
             **self._params)
 
     def get_item_es(self, **kwargs):
+        """ Get ES collection item taking into account generated queryset
+        of parent view.
+
+        This method allows to work with nested resources properly. Thus item
+        returned by this method will belong to parent view's queryset, thus
+        filtering out objects that don't belong to parent object.
+        """
         from nefertari.elasticsearch import ES
         es = ES(self._model_class.__name__)
         item_id = str(kwargs.get(self._resource.id_name))
@@ -176,6 +216,10 @@ class ESBaseView(BaseView):
 
 
 class AttributesView(BaseView):
+    """ View used to work with attribute resources.
+
+    Attribute resources represent field: ListField, DictField.
+    """
     def __init__(self, *args, **kw):
         super(AttributesView, self).__init__(*args, **kw)
         self.attr = self.request.path.split('/')[-1]
@@ -196,6 +240,10 @@ class AttributesView(BaseView):
 
 
 class SingularView(BaseView):
+    """ View used to work with singular resources.
+
+    Singular resources represent one-to-one relationship. E.g. users/1/profile.
+    """
     def __init__(self, *args, **kw):
         super(SingularView, self).__init__(*args, **kw)
         self.attr = self.request.path.split('/')[-1]
