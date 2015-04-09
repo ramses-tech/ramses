@@ -3,8 +3,7 @@ from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.md')).read()
-CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
-VERSION = open(os.path.join(here, 'VERSION.txt')).read()
+VERSION = open(os.path.join(here, 'VERSION')).read()
 
 requires = [
     'pyramid',
@@ -16,7 +15,7 @@ requires = [
 setup(name='ramses',
       version=VERSION,
       description='ramses',
-      long_description=README + '\n\n' + CHANGES,
+      long_description=README,
       classifiers=[
           "Programming Language :: Python",
           "Framework :: Pyramid",
