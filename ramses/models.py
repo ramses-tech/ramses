@@ -33,7 +33,7 @@ type_fields = {
     'time':             eng.TimeField,
     'unicode':          eng.UnicodeField,
     'unicode_text':     eng.UnicodeTextField,
-    'primary_key':      eng.PrimaryKeyField,
+    'id_field':         eng.IdField,
     # 'array':            eng.ListField,  # Not implemented in sqla yet
 }
 
@@ -84,7 +84,6 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
 
     Engine DB field types are determined using `type_fields` and only those
     types may be used.
-    Assumes field is a Primary Key, if its name is 'id'.
 
     Arguments:
         :properties: Dictionary of DB schema fields which looks like
@@ -115,7 +114,6 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
         }
         field_kwargs.update(props.get('args', {}) or {})
 
-
         raml_type = (props.get('type', 'string') or 'string').lower()
         if raml_type not in type_fields:
             raise ValueError('Unknown type: {}'.format(raml_type))
@@ -124,6 +122,9 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
 
         if field_cls is eng.Relationship:
             prepare_relationship(field_name, model_name, raml_resource)
+        if field_cls is eng.ForeignKeyField:
+            key = 'ref_column_type'
+            field_kwargs[key] = type_fields[field_kwargs[key]]
 
         attrs[field_name] = field_cls(**field_kwargs)
 
