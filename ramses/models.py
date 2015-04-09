@@ -110,7 +110,7 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
             continue
 
         field_kwargs = {
-            'required': props.get('required', False) or False
+            'required': bool(props.get('required'))
         }
         field_kwargs.update(props.get('args', {}) or {})
 
