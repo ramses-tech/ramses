@@ -24,9 +24,10 @@ def includeme(config):
 
     # Process auth settings
     root = config.get_root_resource()
-    root.auth = Settings.asbool('ramses.auth', False)
+    ramses_auth = Settings.asbool('ramses.auth', False)
+    root.auth = ramses_auth
 
-    if root.auth:
+    if ramses_auth:
         log.info('Configuring auth policies')
         authz_policy = ACLAuthorizationPolicy()
         config.set_authorization_policy(authz_policy)
@@ -50,7 +51,7 @@ def includeme(config):
     from nefertari.engine import setup_database
     setup_database(config)
 
-    if root.auth:
+    if ramses_auth:
         config.include('ramses.auth', route_prefix='/auth')
 
     log.info('Server succesfully generated\n')
