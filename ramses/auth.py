@@ -40,7 +40,7 @@ def crypt_password(password):
 class AuthUser(eng.BaseDocument):
     __tablename__ = 'authuser'
 
-    id = eng.PrimaryKeyField()
+    id = eng.IdField(primary_key=True)
     username = eng.StringField(
         min_length=1, max_length=50, unique=True,
         required=True, processors=[lower_strip])
@@ -75,9 +75,13 @@ class AuthUser(eng.BaseDocument):
 
     @classmethod
     def groupfinder(cls, userid, request):
-        user = cls.get_resource(id=userid)
-        if user:
-            return ['g:%s' % user.group]
+        try:
+            user = cls.get_resource(id=userid)
+        except JHTTPNotFound:
+            forget(request)
+        else:
+            if user:
+                return ['g:%s' % user.group]
 
     @classmethod
     def create_account(cls, params):
