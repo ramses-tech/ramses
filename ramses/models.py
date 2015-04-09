@@ -19,7 +19,7 @@ type_fields = {
     'boolean':          eng.BooleanField,
     'datetime':         eng.DateTimeField,
     'file':             eng.BinaryField,
-    'object':           eng.Relationship,
+    'relationship':     eng.Relationship,
     'dict':             eng.DictField,
     'foreign_key':      eng.ForeignKeyField,
     'big_integer':      eng.BigIntegerField,
