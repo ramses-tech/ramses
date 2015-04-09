@@ -1,2 +1,2 @@
-# ramses
-API generator for Pyramid using RAML
+# `Ramses`
+Generate a RESTful API for Pyramid using [RAML](http://raml.org)
