@@ -221,7 +221,7 @@ def attr_subresource(raml_resource, route_name):
         return False
     props = get_resource_schema(static_parent) or {}
     return (route_name in props and
-            props[route_name]['type'] == 'dict')
+            props[route_name]['type'] in ('dict', 'list'))
 
 
 def singular_subresource(raml_resource, route_name):

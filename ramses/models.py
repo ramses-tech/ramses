@@ -34,7 +34,7 @@ type_fields = {
     'unicode':          eng.UnicodeField,
     'unicode_text':     eng.UnicodeTextField,
     'id_field':         eng.IdField,
-    # 'array':            eng.ListField,  # Not implemented in sqla yet
+    'list':             eng.ListField,
 }
 
 
@@ -124,6 +124,9 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
             prepare_relationship(field_name, model_name, raml_resource)
         if field_cls is eng.ForeignKeyField:
             key = 'ref_column_type'
+            field_kwargs[key] = type_fields[field_kwargs[key]]
+        if field_cls is eng.ListField:
+            key = 'item_type'
             field_kwargs[key] = type_fields[field_kwargs[key]]
 
         attrs[field_name] = field_cls(**field_kwargs)
