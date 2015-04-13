@@ -229,7 +229,7 @@ class AttributesView(BaseView):
         super(AttributesView, self).__init__(*args, **kw)
         self.attr = self.request.path.split('/')[-1]
         self.value_type = None
-        self.unique = False
+        self.unique = True
 
     def index(self, **kwargs):
         obj = self.get_item(**kwargs)
