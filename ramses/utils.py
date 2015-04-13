@@ -237,7 +237,7 @@ def singular_subresource(raml_resource, route_name):
     props = get_resource_schema(static_parent) or {}
     if route_name not in props:
         return False
-    is_obj = props[route_name]['type'] == 'object'
+    is_obj = props[route_name]['type'] == 'relationship'
     args = props[route_name].get('args', {})
     single_obj = not args.get('uselist', True)
     return is_obj and single_obj
