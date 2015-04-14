@@ -19,6 +19,20 @@ def includeme(config):
     config.include('nefertari.view')
     config.include('nefertari.elasticsearch')
 
+    # Process nefertari settings
+    if Settings.asbool('debug'):
+        log.warning('*** DEBUG DEBUG DEBUG mode ***')
+        config.add_tween('nefertari.tweens.get_tunneling')
+
+    if Settings.asbool('cors.enable'):
+        config.add_tween('nefertari.tweens.cors')
+
+    if Settings.asbool('ssl_middleware.enable'):
+        config.add_tween('nefertari.tweens.ssl')
+
+    if Settings.asbool('request_timing.enable'):
+        config.add_tween('nefertari.tweens.request_timing')
+
     # Set root factory
     config.root_factory = NefertariRootACL
 

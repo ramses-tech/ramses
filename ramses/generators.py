@@ -144,7 +144,9 @@ def configure_resources(config, raml_resources, parent_resource=None):
         # Generate dynamic part name
         if not is_singular:
             resource_kwargs['id_name'] = dynamic_part_name(
-                raml_resource, clean_uri)
+                raml_resource=raml_resource,
+                clean_uri=clean_uri,
+                id_field=model_cls.id_field())
 
         # Generate REST view
         log.info('Generating view for `{}`'.format(route_name))
