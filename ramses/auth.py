@@ -4,7 +4,7 @@ systems to run.
 
 In particular:
     :AuthUser: Class that is meant to be User class in Auth system.
-    :AuthorizationView: View for basic auth operations - login, logout, register.
+    :AuthorizationView: View for basic auth operations: login, logout, register.
         Is registered with '/auth' prefix and makes available routes:
         '/auth/login', '/auth/logout', '/auth/register'.
     :includeme: Function that actually creates routes listed above and
@@ -15,8 +15,10 @@ In particular:
 import logging
 
 import cryptacular.bcrypt
-from pyramid.security import authenticated_userid
-from pyramid.security import remember, forget
+from pyramid.security import authenticated_userid, remember, forget
+from pyramid.authentication import (
+    AuthTktAuthenticationPolicy, BasicAuthAuthenticationPolicy)
+from pyramid.authorization import ACLAuthorizationPolicy
 
 from nefertari import engine as eng
 from nefertari.utils import dictset
@@ -181,3 +183,92 @@ def create_admin_user(config):
             transaction.commit()
     except KeyError as e:
         log.error('Failed to create system user. Missing config: %s' % e)
+
+
+def _setup_ticket_policy(config, params):
+    """ Setup Pyramid AuthTktAuthenticationPolicy.
+
+    Arguments:
+        :config: Pyramid Configurator instance.
+        :params: Nefertari dictset which contains security scheme `settings`.
+
+    Notes:
+      * Initial `secret` params value is considered to be a name of config
+        param that represents a cookie name.
+      * `AuthUser.groupfinder` is used as a `callback`.
+      * Special processing is applied to boolean params to convert string
+        values like 'True', 'true' to booleans. This is done because pyraml
+        parser currently does not support setting value being a boolean.
+    """
+    if 'secret' not in params:
+        raise ValueError(
+            'Missing required security scheme settings: secret')
+    bool_keys = ('secure', 'include_ip', 'http_only', 'wild_domain', 'debug',
+                 'parent_domain')
+    for key in bool_keys:
+        params[key] = params.asbool(key)
+
+    params['secret'] = config.registry.settings[params['secret']]
+    params['callback'] = AuthUser.groupfinder
+    return AuthTktAuthenticationPolicy(**params)
+
+
+def _setup_basic_policy(config, params):
+    """ Setup BasicAuthAuthenticationPolicy.
+
+    """
+    pass
+
+
+""" Map of `security_scheme_type`: `generator_function`, where:
+
+  * `security_scheme_type`: String that represents RAML security scheme type
+    name that should be used to apply a particular authentication system.
+  * `generator_function`: Function that receives instance of Pyramid
+    Configurator instance and dictset of security scheme settings and returns
+    generated Pyramid authentication policy instance.
+
+"""
+AUTHENTICATION_POLICIES = {
+    'Basic':    _setup_basic_policy,
+    'x-Ticket': _setup_ticket_policy,
+}
+
+
+def setup_auth_policies(config, raml_data):
+    """ Setup authentication, authorization policies.
+
+    Performs basic validation to check all the required values are present
+    and performs authentication, authorization policies generation using
+    generator functions from `AUTHENTICATION_POLICIES`.
+
+    Arguments:
+        :config: Pyramid Configurator instance.
+        :raml_data: Instance of pyraml.parser.entities.RamlRoot.
+    """
+    log.info('Configuring auth policies')
+    secured_by = filter(bool, (raml_data.securedBy or []))
+    if not secured_by:
+        log.info('API is not secured. `securedBy` attribute value missing.')
+        return
+    secured_by = secured_by[0]
+
+    if secured_by not in raml_data.securitySchemes:
+        raise ValueError(
+            'Not defined security scheme used in `securedBy`: {}'.format(
+                secured_by))
+
+    scheme = raml_data.securitySchemes[secured_by]
+    if scheme.type not in AUTHENTICATION_POLICIES:
+        raise ValueError('Not supported security scheme type: {}'.format(
+            scheme.type))
+
+    # Setup Authentication policy
+    policy_generator = AUTHENTICATION_POLICIES[scheme.type]
+    params = dictset(scheme.settings)
+    authn_policy = policy_generator(config, params)
+    config.set_authentication_policy(authn_policy)
+
+    # Setup Authorization policy
+    authz_policy = ACLAuthorizationPolicy()
+    config.set_authorization_policy(authz_policy)
