@@ -19,6 +19,8 @@ from pyramid.security import authenticated_userid, remember, forget
 from pyramid.authentication import (
     AuthTktAuthenticationPolicy, BasicAuthAuthenticationPolicy)
 from pyramid.authorization import ACLAuthorizationPolicy
+from pyramid.httpexceptions import HTTPUnauthorized
+from pyramid.view import forbidden_view_config
 
 from nefertari import engine as eng
 from nefertari.utils import dictset
@@ -61,19 +63,36 @@ class AuthUser(eng.BaseDocument):
 
     @classmethod
     def authenticate(cls, params):
-        success = False
-        user = None
         login = params['login'].lower().strip()
+        key = 'email' if '@' in login else 'username'
 
-        if '@' in login:
-            user = cls.get_resource(email=login)
-        else:
-            user = cls.get_resource(username=login)
+        try:
+            user = cls.get_resource(**{key: login})
+        except JHTTPNotFound:
+            success = False
+            user = None
 
         if user:
             password = params.get('password', None)
             success = (password and user.verify_password(password))
         return success, user
+
+    @classmethod
+    def auth_groupfinder(cls, username, password, request):
+        """ Authenticate user with :username: and :password: and return
+        user's groups if passed credentials are valid.
+
+        In case username/password are not valid, Pyramid `forget` is
+        performed.
+        """
+        success, user = cls.authenticate(params={
+            'login': username,
+            'password': password,
+        })
+        if success:
+            return ['g:%s' % user.group]
+        else:
+            forget(request)
 
     @classmethod
     def groupfinder(cls, userid, request):
@@ -188,10 +207,6 @@ def create_admin_user(config):
 def _setup_ticket_policy(config, params):
     """ Setup Pyramid AuthTktAuthenticationPolicy.
 
-    Arguments:
-        :config: Pyramid Configurator instance.
-        :params: Nefertari dictset which contains security scheme `settings`.
-
     Notes:
       * Initial `secret` params value is considered to be a name of config
         param that represents a cookie name.
@@ -199,6 +214,10 @@ def _setup_ticket_policy(config, params):
       * Special processing is applied to boolean params to convert string
         values like 'True', 'true' to booleans. This is done because pyraml
         parser currently does not support setting value being a boolean.
+
+    Arguments:
+        :config: Pyramid Configurator instance.
+        :params: Nefertari dictset which contains security scheme `settings`.
     """
     if 'secret' not in params:
         raise ValueError(
@@ -216,8 +235,36 @@ def _setup_ticket_policy(config, params):
 def _setup_basic_policy(config, params):
     """ Setup BasicAuthAuthenticationPolicy.
 
+    Also registers "Forbidden" view. From Pyramid docs:
+      Regular browsers will not send username/password credentials unless
+      they first receive a challenge from the server. The following recipe
+      will register a view that will send a Basic Auth challenge to the user
+      whenever there is an attempt to call a view which results in a Forbidden
+      response.
+
+    Notes:
+      * AuthUser.auth_groupfinder is used as `check` param value.
+      * Special processing is applied to boolean params to convert string
+        values like 'True', 'true' to booleans. This is done because pyraml
+        parser currently does not support setting value being a boolean.
+
+    Arguments:
+        :config: Pyramid Configurator instance.
+        :params: Nefertari dictset which contains security scheme `settings`.
     """
-    pass
+    bool_keys = ('debug',)
+    for key in bool_keys:
+        params[key] = params.asbool(key)
+    params['check'] = AuthUser.auth_groupfinder
+    policy = BasicAuthAuthenticationPolicy(**params)
+
+    @forbidden_view_config()
+    def basic_challenge(request):
+        response = HTTPUnauthorized()
+        response.headers.update(forget(request))
+        return response
+
+    return policy
 
 
 """ Map of `security_scheme_type`: `generator_function`, where:
