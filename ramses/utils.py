@@ -90,11 +90,11 @@ def find_dynamic_resource(raml_resource):
     return dynamic_resources[0] if dynamic_resources else None
 
 
-def dynamic_part_name(raml_resource, clean_uri):
+def dynamic_part_name(raml_resource, clean_uri, id_field):
     """ Generate dynamic part for resource :raml_resource:.
 
     Dynamic part is generated using 2 parts: :clean_uri: of the resource and
-    dynamic part of dymanic subresource. If no :raml_resource: has no dynamic
+    dynamic part of dymanic subresource. If :raml_resource: has no dynamic
     subresources, 'id' is used as the 2nd part.
     E.g. if your dynamic part on route 'stories' is named 'superId' then dynamic
     part will be 'storied_superId'.
@@ -106,9 +106,10 @@ def dynamic_part_name(raml_resource, clean_uri):
     """
     subresources = raml_resource.resources or {}
     dynamic_uris = [uri for uri in subresources.keys() if is_dynamic_uri(uri)]
-    dynamic_part = 'id'
     if dynamic_uris:
         dynamic_part = clean_dynamic_uri(dynamic_uris[0])
+    else:
+        dynamic_part = id_field
     return '_'.join([clean_uri, dynamic_part])
 
 

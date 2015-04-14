@@ -211,7 +211,10 @@ class ESBaseView(BaseView):
                 self._model_class.__name__, item_id))
 
         kwargs = {self._resource.id_name: item_id}
-        return es.get_resource(**self.resolve_kw(kwargs))
+        kwargs = self.resolve_kw(kwargs)
+        kwargs['_limit'] = 1
+        kwargs['__raise_on_empty'] = True
+        return es.get_collection(**kwargs)[0]
 
     def index(self, **kwargs):
         return self.get_collection_es(**kwargs)
