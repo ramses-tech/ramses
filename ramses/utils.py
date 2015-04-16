@@ -28,6 +28,10 @@ def fields_dict(raml_schema, schema_ct):
         :schema_ct: ContentType of the schema as a string from RAML file.
     """
     if schema_ct == ContentTypes.JSON:
+        if not isinstance(raml_schema, dict):
+            raise TypeError(
+                'Schema is not a valid JSON. Please check your '
+                'schema syntax.\n{}...'.format(str(raml_schema)[:60]))
         return raml_schema['properties']
     if schema_ct == ContentTypes.TEXT_XML:
         # Process XML schema
