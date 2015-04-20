@@ -54,6 +54,6 @@ def includeme(config):
     setup_database(config)
 
     if ramses_auth:
-        config.include('ramses.auth', route_prefix='/auth')
+        config.include('ramses.auth')
 
     log.info('Server succesfully generated\n')
