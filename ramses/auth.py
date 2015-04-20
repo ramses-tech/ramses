@@ -223,27 +223,6 @@ class TokenAuthenticationView(BaseView):
         return JHTTPOk('Registered', headers=headers)
 
 
-def create_admin_user(config):
-    log.info('Creating system user')
-    settings = config.registry.settings
-    try:
-        s_user = settings['system.user']
-        s_pass = settings['system.password']
-        s_email = settings['system.email']
-        user, created = AuthUser.get_or_create(
-            username=s_user,
-            defaults=dict(
-                password=s_pass,
-                email=s_email,
-                groups=['admin']
-            ))
-        if created:
-            import transaction
-            transaction.commit()
-    except KeyError as e:
-        log.error('Failed to create system user. Missing config: %s' % e)
-
-
 def _setup_ticket_policy(config, params):
     """ Setup Pyramid AuthTktAuthenticationPolicy.
 
@@ -388,6 +367,27 @@ def setup_auth_policies(config, raml_data):
     # Setup Authorization policy
     authz_policy = ACLAuthorizationPolicy()
     config.set_authorization_policy(authz_policy)
+
+
+def create_admin_user(config):
+    log.info('Creating system user')
+    settings = config.registry.settings
+    try:
+        s_user = settings['system.user']
+        s_pass = settings['system.password']
+        s_email = settings['system.email']
+        user, created = AuthUser.get_or_create(
+            username=s_user,
+            defaults=dict(
+                password=s_pass,
+                email=s_email,
+                groups=['admin']
+            ))
+        if created:
+            import transaction
+            transaction.commit()
+    except KeyError as e:
+        log.error('Failed to create system user. Missing config: %s' % e)
 
 
 def includeme(config):
