@@ -172,9 +172,8 @@ def configure_resources(config, raml_resources, parent_resource=None):
 
         new_resource = parent_resource.add(*resource_args, **resource_kwargs)
 
-        # Set new resource to view's '_resource' and '_factory' attrs to allow
+        # Set new resource to view's '_factory' attrs to allow
         # performing' generic operations in view
-        resource_kwargs['view']._resource = new_resource
         resource_kwargs['view']._factory = resource_kwargs['factory']
 
         # Configure child resources if present
