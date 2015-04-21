@@ -1,226 +1,28 @@
 """
 Auth module that contains all code needed for authentication/authorization
-systems to run.
+policies setup.
 
 In particular:
-    :AuthUser: Class that is meant to be User class in Auth system.
-    :TicketAuthenticationView: View for auth operations to use with Pyramid
-        ticket-based auth. Is registered with '/auth' prefix and makes
-        available routes:
-            /auth/login (POST): Login the user with 'login' and 'password'
-            /auth/logout: Logout user
-            /auth/register (POST): Register new user
-    :TokenAuthenticationView: View for auth operations to use with
-        nefertari.ApiKeyAuthenticationPolicy token-based auth. Is registered
-        with '/auth' prefix and makes available routes:
-            /auth/register (POST): Register new user
-            /auth/token (POST): Claim current token by submitting 'login' and
-              'password'
-            /auth/token_reset (POST): Reset current token by submitting 'login'
-              and 'password'
     :includeme: Function that actually creates routes listed above and
-        connects view to them.
-    :create_admin_user: Function that creates system/admin user.
-
+        connects view to them
+    :create_admin_user: Function that creates system/admin user
+    :_setup_ticket_policy: Setup Pyramid AuthTktAuthenticationPolicy
+    :_setup_apikey_policy: Setup nefertari.ApiKeyAuthenticationPolicy
+    :setup_auth_policies: Runs generation of particular auth policy
 """
 import logging
 
-import cryptacular.bcrypt
-from pyramid.security import authenticated_userid, remember, forget
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 
-from nefertari import engine as eng
 from nefertari.utils import dictset
 from nefertari.json_httpexceptions import *
-from nefertari.view import BaseView
-from nefertari.authentication import ApiKeyAuthenticationPolicy
+from nefertari.authentication.models import AuthUser
+from nefertari.authentication.policies import ApiKeyAuthenticationPolicy
+from nefertari.authentication.views import (
+    TicketAuthenticationView, TokenAuthenticationView)
 
 log = logging.getLogger(__name__)
-crypt = cryptacular.bcrypt.BCRYPTPasswordManager()
-
-
-def lower_strip(value):
-    return (value or '').lower().strip()
-
-
-def crypt_password(password):
-    if password:
-        password = unicode(crypt.encode(password))
-    return password
-
-
-class AuthUser(eng.BaseDocument):
-    __tablename__ = 'authuser'
-
-    id = eng.IdField(primary_key=True)
-    username = eng.StringField(
-        min_length=1, max_length=50, unique=True,
-        required=True, processors=[lower_strip])
-    email = eng.StringField(
-        unique=True, required=True, processors=[lower_strip])
-    password = eng.StringField(
-        min_length=3, required=True, processors=[crypt_password])
-    groups = eng.ListField(
-        item_type=eng.StringField,
-        choices=['admin', 'user'], default=['user'])
-
-    uid = property(lambda self: str(self.id))
-
-    def verify_password(self, password):
-        return crypt.check(self.password, password)
-
-    @classmethod
-    def get_api_credentials(cls, userid, request):
-        """ Get username and api token for user with id of :userid: """
-        try:
-            user = cls.get_resource(id=userid)
-        except JHTTPNotFound:
-            forget(request)
-        if user:
-            return user.username, user.api_key.token
-        return None, None
-
-    @classmethod
-    def authenticate_token(cls, username, token, request):
-        """ Get user's groups if user with :username: exists and his api key
-        token equals to :token:
-        """
-        try:
-            user = cls.get_resource(username=username)
-        except JHTTPNotFound:
-            forget(request)
-        if user and user.api_key.token == token:
-            return ['g:%s' % g for g in user.groups]
-
-    @classmethod
-    def authenticate(cls, params):
-        login = params['login'].lower().strip()
-        key = 'email' if '@' in login else 'username'
-
-        try:
-            user = cls.get_resource(**{key: login})
-        except JHTTPNotFound:
-            success = False
-            user = None
-
-        if user:
-            password = params.get('password', None)
-            success = (password and user.verify_password(password))
-        return success, user
-
-    @classmethod
-    def groupfinder(cls, userid, request):
-        try:
-            user = cls.get_resource(id=userid)
-        except JHTTPNotFound:
-            forget(request)
-        else:
-            if user:
-                return ['g:%s' % g for g in user.groups]
-
-    @classmethod
-    def create_account(cls, params):
-        user_params = dictset(params).subset(
-            ['username', 'email', 'password'])
-        try:
-            return cls.get_or_create(
-                email=user_params['email'],
-                defaults=user_params)
-        except JHTTPBadRequest:
-            raise JHTTPBadRequest('Failed to create account.')
-
-    @classmethod
-    def get_auth_user_by_id(cls, request):
-        _id = authenticated_userid(request)
-        if _id:
-            return cls.get_resource(id=_id)
-
-    @classmethod
-    def get_auth_user_by_name(cls, request):
-        username = authenticated_userid(request)
-        if username:
-            return cls.get_resource(username=username)
-
-
-class TicketAuthenticationView(BaseView):
-    """ View that defines basic auth operations that may be performed
-    when using Pyramid Ticket authentication.
-    """
-    _model_class = AuthUser
-
-    def register(self):
-        user, created = self._model_class.create_account(self._params)
-
-        if not created:
-            raise JHTTPConflict('Looks like you already have an account.')
-
-        return JHTTPOk('Registered')
-
-    def login(self, **params):
-        self._params.update(params)
-        next = self._params.get('next', '')
-        login_url = self.request.route_url('login')
-        if next.startswith(login_url):
-            next = ''  # never use the login form itself as next
-
-        unauthorized_url = self._params.get('unauthorized', None)
-        success, user = self._model_class.authenticate(self._params)
-
-        if success:
-            headers = remember(self.request, user.uid)
-            if next:
-                return JHTTPOk('Logged in', headers=headers)
-            else:
-                return JHTTPOk('Logged in', headers=headers)
-        if user:
-            if unauthorized_url:
-                return JHTTPUnauthorized(location=unauthorized_url+'?error=1')
-
-            raise JHTTPUnauthorized('Failed to Login.')
-        else:
-            raise JHTTPNotFound('User not found')
-
-    def logout(self):
-        headers = forget(self.request)
-        return JHTTPOk('Logged out', headers=headers)
-
-
-class TokenAuthenticationView(BaseView):
-    """ View that defines basic operations that may be performed when using
-    nefertari.ApiKeyAuthenticationPolicy.
-    """
-    _model_class = AuthUser
-
-    def register(self):
-        user, created = self._model_class.create_account(self._params)
-
-        if not created:
-            raise JHTTPConflict('Looks like you already have an account.')
-
-        headers = remember(self.request, user.uid)
-        return JHTTPOk('Registered', headers=headers)
-
-    def claim_token(self, **params):
-        self._params.update(params)
-        success, self.user = self._model_class.authenticate(self._params)
-
-        if success:
-            headers = remember(self.request, self.user.uid)
-            return JHTTPOk('Token claimed', headers=headers)
-        if self.user:
-            raise JHTTPUnauthorized('Wrong login or password')
-        else:
-            raise JHTTPNotFound('User not found')
-
-    def token_reset(self, **params):
-        response = self.claim_token(**params)
-        if not self.user:
-            return response
-
-        self.user.api_key.reset_token()
-        headers = remember(self.request, self.user.uid)
-        return JHTTPOk('Registered', headers=headers)
 
 
 def _setup_ticket_policy(config, params):
