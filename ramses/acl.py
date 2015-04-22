@@ -6,6 +6,7 @@ from pyramid.security import (
     ALL_PERMISSIONS, DENY_ALL)
 
 from .views import collection_methods, item_methods
+from . import registry
 
 
 log = logging.getLogger(__name__)
@@ -19,6 +20,29 @@ special_principals = {
     'everyone': Everyone,
     'authenticated': Authenticated,
 }
+
+
+def methods_to_perms(perms, methods_map):
+    """ Convert permissions (perms) which are either HTTP methods or
+    keyword 'all' to a set of valid Pyramid permissions.
+
+    Arguments:
+        :perms: List or comma-separated string of HTTP methods, or 'all'
+        :methods_map: Map of HTTP methods to permission names (nefertari view
+            methods)
+    """
+    if isinstance(perms, basestring):
+        perms = perms.split(',')
+    perms = [perm.strip().lower() for perm in perms]
+    if 'all' in perms:
+        return ALL_PERMISSIONS
+    else:
+        try:
+            return [methods_map[p] for p in perms]
+        except KeyError:
+            raise ValueError(
+                'Unknown method name in permissions: {}. Valid methods: '
+                '{}'.format(perms, methods_map.keys()))
 
 
 def parse_acl(acl_string, methods_map):
@@ -57,20 +81,14 @@ def parse_acl(acl_string, methods_map):
         princ_str = princ_str.strip().lower()
         if princ_str in special_principals:
             principal = special_principals[princ_str]
+        elif princ_str.startswith('{{'):
+            princ_str = princ_str.strip('{{').strip('}}').strip()
+            principal = registry.get(princ_str)
         else:
             principal = 'g:' + princ_str
 
         # Process permissions
-        perms = [perm.strip().lower() for perm in perms]
-        if 'all' in perms:
-            permissions = ALL_PERMISSIONS
-        else:
-            try:
-                permissions = [methods_map[p] for p in perms]
-            except KeyError:
-                raise ValueError(
-                    'Unknown method name in permissions: {}. Valid methods: '
-                    '{}'.format(perms, methods_map.keys()))
+        permissions = methods_to_perms(perms, methods_map)
 
         result_acl.append((action, principal, permissions))
 
@@ -123,12 +141,30 @@ def generate_acl(context_cls, raml_resource, parsed_raml):
         def __init__(self, request):
             super(GeneratedACL, self).__init__()
             self.request = request
+            self.collection_acl = collection_acl
+            self.item_acl = item_acl
+
+        def _apply_callables(self, acl, methods_map, obj=None):
+            new_acl = []
+            for i, ace in enumerate(acl):
+                principal = ace[1]
+                if callable(principal):
+                    ace = principal(ace=ace, request=self.request, obj=obj)
+                    ace = [(a, b, methods_to_perms(c)) for a, b, c in ace]
+                if ace and any(ace):
+                    new_acl += ace
+            return new_acl
 
         def __acl__(self):
-            return collection_acl
+            return self._apply_callables(
+                acl=self.collection_acl,
+                methods_map=collection_methods)
 
         def context_acl(self, obj):
-            return item_acl
+            return self._apply_callables(
+                acl=self.item_acl,
+                methods_map=item_methods,
+                obj=obj)
 
         def __getitem__(self, key):
             """ Hack to use current nefertari ACLs usage logic but don't get
