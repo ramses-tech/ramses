@@ -95,13 +95,40 @@ class BaseView(NefertariBaseView):
         This method allows to work with nested resources properly. Thus item
         returned by this method will belong to parent view's queryset, thus
         filtering out objects that don't belong to parent object.
+
+        Returns an object got from applied ACL. If ACL wasn't applied, it is
+        applied explicitly.
         """
-        kwargs = self.resolve_kw(kwargs)
         objects = self._parent_queryset()
-        if objects is not None:
-            return self._model_class.filter_objects(
-                objects, first=True, **kwargs)
-        return self._model_class.get_resource(**kwargs)
+        if objects is not None and self.context not in objects:
+            raise JHTTPNotFound('{}({}) not found'.format(
+                self._model_class.__name__,
+                self._get_context_key(**kwargs)))
+
+        if callable(self.context):
+            self.reload_context(es_based=False, **kwargs)
+        return self.context
+
+    def _get_context_key(self, **kwargs):
+        """ Get value of `self._resource.id_name` from :kwargs: """
+        return str(kwargs.get(self._resource.id_name))
+
+    def reload_context(self, es_based, **kwargs):
+        """ Reload `self.context` object into a DB or ES object.
+
+        Reload is performed by getting object ID from :kwargs: and performing
+        key item get from new instance of `self._factory` which is an ACL
+        class used for current view.
+
+        Arguments:
+            :es_based: Boolean. Whether to init ACL ac es-based or not. This
+                affects the backend which will be queried - either DB or ES
+            :kwargs: Kwargs that contain value for current resource 'id_name'
+                key
+        """
+        key = self._get_context_key(**kwargs)
+        self.context = self._factory(
+            request=self.request, es_based=es_based)[key]
 
 
 class CollectionView(BaseView):
@@ -212,21 +239,20 @@ class ESBaseView(BaseView):
         This method allows to work with nested resources properly. Thus item
         returned by this method will belong to parent view's queryset, thus
         filtering out objects that don't belong to parent object.
+
+        Returns an object got from applied ACL. If ACL wasn't applied, it is
+        applied explicitly.
         """
-        from nefertari.elasticsearch import ES
-        es = ES(self._model_class.__name__)
-        item_id = str(kwargs.get(self._resource.id_name))
+        item_id = self._get_context_key(**kwargs)
         objects_ids = self._parent_queryset_es()
 
         if (objects_ids is not None) and (item_id not in objects_ids):
             raise JHTTPNotFound('{}(id={}) resource not found'.format(
                 self._model_class.__name__, item_id))
 
-        kwargs = {self._resource.id_name: item_id}
-        kwargs = self.resolve_kw(kwargs)
-        kwargs['_limit'] = 1
-        kwargs['__raise_on_empty'] = True
-        return es.get_collection(**kwargs)[0]
+        if callable(self.context):
+            self.reload_context(es_based=True, **kwargs)
+        return self.context
 
 
 class ESCollectionView(ESBaseView, CollectionView):
@@ -239,6 +265,13 @@ class ESCollectionView(ESBaseView, CollectionView):
 
     def show(self, **kwargs):
         return self.get_item_es(**kwargs)
+
+    def update(self, **kwargs):
+        """ Explicitly reload context with DB usage to get access
+        to complete DB object.
+        """
+        self.reload_context(es_based=False, **kwargs)
+        return super(ESCollectionView, self).update(**kwargs)
 
 
 class ItemSubresourceBaseView(BaseView):
@@ -253,8 +286,18 @@ class ItemSubresourceBaseView(BaseView):
 
     Moved into a separate class so all item subresources have a common
     base class, thus making checks like `isinstance(view, baseClass)` easier.
+    Also to override `_get_context_key` to return parent resource's id_name
+    and `get_item` to reload context on each access.
     """
-    pass
+
+    def _get_context_key(self, **kwargs):
+        """ Get value of `self._resource.parent.id_name` from :kwargs: """
+        return str(kwargs.get(self._resource.parent.id_name))
+
+    def get_item(self, **kwargs):
+        """ Reload context on each access. """
+        self.reload_context(es_based=False, **kwargs)
+        return super(ItemSubresourceBaseView, self).get_item(**kwargs)
 
 
 class ItemAttributeView(ItemSubresourceBaseView):

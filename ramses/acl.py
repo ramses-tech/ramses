@@ -95,7 +95,93 @@ def parse_acl(acl_string, methods_map):
     return result_acl
 
 
-def generate_acl(context_cls, raml_resource, parsed_raml):
+class BaseACL(object):
+    """ ACL Base class. """
+    __context_class__ = None
+    collection_acl = None
+    item_acl = None
+
+    def __init__(self, request):
+        super(BaseACL, self).__init__()
+        self.request = request
+
+    def _apply_callables(self, acl, methods_map, obj=None):
+        """ Iterate over ACEs from :acl: and apply callable principals if any.
+
+        Principals are passed 3 arguments on call:
+            :ace: Single ACE object that looks like (action, callable,
+                permission or [permission])
+            :request: Current request object
+            :obj: Object for which is being accessed though the ACL
+
+        Arguments:
+            :acl: Sequence of valid Pyramid ACEs which will be processed
+            :methods_map: Map of HTTP methods to nefertari view method names
+                (permissions)
+            :obj: Object for which is being accessed though the ACL
+        """
+        new_acl = []
+        for i, ace in enumerate(acl):
+            principal = ace[1]
+            if callable(principal):
+                ace = principal(ace=ace, request=self.request, obj=obj)
+                if not ace:
+                    continue
+                ace = [(a, b, methods_to_perms(c, item_methods))
+                       for a, b, c in ace]
+            if not isinstance(ace[0], (list, tuple)):
+                ace = [ace]
+            new_acl += ace
+        return new_acl
+
+    def __acl__(self):
+        """ Apply callables to `self.collection_acl` and return result. """
+        return self._apply_callables(
+            acl=self.collection_acl,
+            methods_map=collection_methods)
+
+    def context_acl(self, obj):
+        """ Apply callables to `self.item_acl` and return result. """
+        return self._apply_callables(
+            acl=self.item_acl,
+            methods_map=item_methods,
+            obj=obj)
+
+    def __getitem__(self, key):
+        """ Get item using method depending on value of `self.es_based` """
+        if self.es_based:
+            return self.getitem_es(key=key)
+        else:
+            return self.getitem_db(key=key)
+
+    def getitem_db(self, key):
+        """ Get item with ID of :key: from database """
+        id_field = self.__context_class__.id_field()
+        obj = self.__context_class__.get_resource(
+            **{id_field: key})
+        obj.__acl__ = self.context_acl(obj)
+        obj.__parent__ = self
+        obj.__name__ = key
+        return obj
+
+    def getitem_es(self, key):
+        """ Get item with ID of :key: from elasticsearch """
+        from nefertari.elasticsearch import ES
+        es = ES(self.__context_class__.__name__)
+        id_field = self.__context_class__.id_field()
+        kwargs = {
+            id_field: key,
+            '_limit': 1,
+            '__raise_on_empty': True,
+        }
+        obj = es.get_collection(**kwargs)[0]
+        obj.__acl__ = self.context_acl(obj)
+        obj.__parent__ = self
+        obj.__name__ = key
+        return obj
+
+
+def generate_acl(context_cls, raml_resource, parsed_raml, es_based=True):
     """ Generate an ACL.
 
     Generated ACL class has `__context_class__` attribute set to :context_cls:.
@@ -111,6 +197,8 @@ def generate_acl(context_cls, raml_resource, parsed_raml):
         :raml_resource: Instance of pyraml.entities.RamlResource for which
             ACL is being generated
         :parsed_raml: Whole parsed RAML object
+        :es_based: Boolean inidicating whether ACL should query ES or not
+            when getting an object
     """
     security_schemes = parsed_raml.securitySchemes or {}
     secured_by = raml_resource.securedBy or []
@@ -135,52 +223,13 @@ def generate_acl(context_cls, raml_resource, parsed_raml):
             acl_string=settings.get('item'),
             methods_map=item_methods)
 
-    class GeneratedACL(object):
+    class GeneratedACL(BaseACL):
         __context_class__ = context_cls
 
-        def __init__(self, request):
-            super(GeneratedACL, self).__init__()
-            self.request = request
+        def __init__(self, request, es_based=es_based):
+            super(GeneratedACL, self).__init__(request=request)
+            self.es_based = es_based
             self.collection_acl = collection_acl
             self.item_acl = item_acl
-
-        def _apply_callables(self, acl, methods_map, obj=None):
-            new_acl = []
-            for i, ace in enumerate(acl):
-                principal = ace[1]
-                if callable(principal):
-                    ace = principal(ace=ace, request=self.request, obj=obj)
-                    ace = [(a, b, methods_to_perms(c)) for a, b, c in ace]
-                if ace and any(ace):
-                    new_acl += ace
-            return new_acl
-
-        def __acl__(self):
-            return self._apply_callables(
-                acl=self.collection_acl,
-                methods_map=collection_methods)
-
-        def context_acl(self, obj):
-            return self._apply_callables(
-                acl=self.item_acl,
-                methods_map=item_methods,
-                obj=obj)
-
-        def __getitem__(self, key):
-            """ Hack to use current nefertari ACLs usage logic but don't get
-            an object from database here.
-
-            We define a fake class that represents a resource and on which ACL
-            values are set. Thus defined resource class allows us to have
-            benefits of ACL and does not query the database.
-            """
-            class MockResource(object):
-                pass
-
-            obj = MockResource()
-            obj.__acl__ = self.context_acl(obj)
-            obj.__parent__ = self
-            obj.__name__ = key
-            return obj
 
     return GeneratedACL
