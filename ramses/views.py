@@ -126,9 +126,17 @@ class BaseView(NefertariBaseView):
             :kwargs: Kwargs that contain value for current resource 'id_name'
                 key
         """
+        from .acl import BaseACL
         key = self._get_context_key(**kwargs)
-        self.context = self._factory(
-            request=self.request, es_based=es_based)[key]
+        kwargs = {'request': self.request}
+        if issubclass(self._factory, BaseACL):
+            kwargs['es_based'] = es_based
+
+        acl = self._factory(**kwargs)
+        if acl.__context_class__ is None:
+            acl.__context_class__ = self._model_class
+
+        self.context = acl[key]
 
 
 class CollectionView(BaseView):
