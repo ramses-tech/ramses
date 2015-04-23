@@ -1,5 +1,50 @@
+"""
+Naive registry that is just a subclass of python dict.
+Is meant to be used to store object and retrieve when needed.
+Registry is recreated on each app launch and best fits to store some
+dynamic or short-term data.
+
+Storing should be performed using `add` function and retrieving using
+`get` function.
+
+
+Examples:
+
+Register a function under function name::
+
+    from ramses import registry
+
+    @registry.add
+    def foo():
+        print 'In foo'
+
+    assert registry.get('foo') is foo
+
+
+Register a function under different name::
+
+    from ramses import registry
+
+    @registry.add('bar')
+    def foo():
+        print 'In foo'
+
+    assert registry.get('bar') is foo
+
+
+Register arbitrary object::
+
+    from ramses import registry
+
+    myvar = 'my awesome var'
+    registry.add('my_stored_var', myvar)
+    assert registry.get('my_stored_var') == myvar
+
+"""
+
 class Registry(dict):
     pass
+
 
 registry = Registry()
 

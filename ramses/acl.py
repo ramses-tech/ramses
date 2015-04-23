@@ -113,6 +113,7 @@ class BaseACL(object):
                 permission or [permission])
             :request: Current request object
             :obj: Object for which is being accessed though the ACL
+        Principal must return single ACE or a list of ACEs.
 
         Arguments:
             :acl: Sequence of valid Pyramid ACEs which will be processed
