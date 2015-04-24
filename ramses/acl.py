@@ -20,6 +20,7 @@ special_principals = {
     'everyone': Everyone,
     'authenticated': Authenticated,
 }
+ALLOW_ALL = (Allow, Everyone, ALL_PERMISSIONS)
 
 
 def methods_to_perms(perms, methods_map):
@@ -48,7 +49,7 @@ def methods_to_perms(perms, methods_map):
 def parse_acl(acl_string, methods_map):
     """ Parse raw string :acl_string: of RAML-defined ACLs.
 
-    If :acl_string: is blank or None, DENY_ALL is returned.
+    If :acl_string: is blank or None, all permissions are given.
     Values of ACL action and principal are parsed using `actions` and
     `special_principals` maps and are looked up after `strip()` and `lower()`.
 
@@ -62,7 +63,7 @@ def parse_acl(acl_string, methods_map):
         :methods_map: Map of HTTP methods to nefertari method handlers' names.
     """
     if not acl_string:
-        return [DENY_ALL]
+        return [ALLOW_ALL]
 
     aces_list = acl_string.replace('\n', ';').split(';')
     aces_list = [ace.strip().split(' ', 2) for ace in aces_list if ace]
@@ -189,9 +190,8 @@ def generate_acl(context_cls, raml_resource, parsed_raml, es_based=True):
 
     ACLs used for collection and item access control are generated from a
     security scheme which has a name of :raml_resource.securedBy[0]:.
-    If :raml_resource.securedBy[0]: is None, everyone gets ALL_PERMISSIONS.
-    If :raml_resource: has no `securedBy` schemes defined DENY_ALL ACL is used.
-    If `collection` or `item` setting is empty, it is assigned DENY_ALL ACL.
+    If :raml_resource: has no `securedBy` schemes defined ALLOW_ALL ACL is used.
+    If `collection` or `item` setting is empty, it is assigned ALLOW_ALL ACL.
 
     Arguments:
         :context_cls: Generated model class
@@ -205,11 +205,8 @@ def generate_acl(context_cls, raml_resource, parsed_raml, es_based=True):
     secured_by = raml_resource.securedBy or []
 
     if not secured_by:
-        log.debug('No ACL scheme applied. Denying all permissions')
-        collection_acl = item_acl = [DENY_ALL]
-    elif secured_by[0] is None:
-        log.debug('null ACL scheme applied. Allowing all permissions')
-        collection_acl = item_acl = [(Allow, Everyone, ALL_PERMISSIONS)]
+        log.debug('No ACL scheme applied. Giving all permissions')
+        collection_acl = item_acl = [ALLOW_ALL]
     else:
         log.debug('{} ACL scheme applied'.format(secured_by[0]))
         sec_scheme = security_schemes.get(secured_by[0])
