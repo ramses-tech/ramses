@@ -16,12 +16,29 @@ class ContentTypes(object):
     FORM_URLENCODED = 'application/x-www-form-urlencoded'
 
 
-def fields_dict(raml_schema, schema_ct):
-    """ Restructure `raml_schema` to a dictionary that looks like
-    {field_name: {required: boolean, type: type_name}, ...}
+def convert_schema(raml_schema, schema_ct):
+    """ Restructure `raml_schema` to a dictionary that has 'properties'
+    as well as other schema keys/values.
+
+    Result dict looks like
+
+    {
+        "properties": {
+            "field1": {
+                "required": boolean,
+                "type": ...,
+                ...more field options
+            },
+            ...more properties
+        },
+        "hidden_fields": [...],
+        "auth_fields": [...],
+        ...more schema options
+    }
 
     Operations performer depend on a Content Type of `schema` which
-    is passed as `schema_ct` argument.
+    is passed as `schema_ct` argument. Returns JSON schema as is, because
+    it is the sample of what output dict looks like.
 
     Arguments:
         :raml_schema: pyraml.entities.RamlBody.schema.
@@ -32,7 +49,7 @@ def fields_dict(raml_schema, schema_ct):
             raise TypeError(
                 'Schema is not a valid JSON. Please check your '
                 'schema syntax.\n{}...'.format(str(raml_schema)[:60]))
-        return raml_schema['properties']
+        return raml_schema
     if schema_ct == ContentTypes.TEXT_XML:
         # Process XML schema
         pass
@@ -156,8 +173,8 @@ def resource_view_attrs(raml_resource, singular=False):
     return set(filter(bool, attrs))
 
 
-def get_resource_schema(raml_resource):
-    """ Get schema of RAML resource :raml_resource:.
+def resource_schema(raml_resource):
+    """ Get schema properties of RAML resource :raml_resource:.
 
     Process follows these steps:
       * :raml_resource: post, put, patch methods body chemas are checked
@@ -186,7 +203,7 @@ def get_resource_schema(raml_resource):
             continue
         schema = body[schema_ct].schema
         if schema:
-            return fields_dict(schema, schema_ct)
+            return convert_schema(schema, schema_ct)
     log.debug('No model schema found.')
 
 
@@ -224,9 +241,10 @@ def attr_subresource(raml_resource, route_name):
     static_parent = get_static_parent(raml_resource)
     if static_parent is None:
         return False
-    props = get_resource_schema(static_parent) or {}
-    return (route_name in props and
-            props[route_name]['type'] in ('dict', 'list'))
+    schema = resource_schema(static_parent) or {}
+    properties = schema.get('properties')
+    return (route_name in properties and
+            properties[route_name]['type'] in ('dict', 'list'))
 
 
 def singular_subresource(raml_resource, route_name):
@@ -239,11 +257,12 @@ def singular_subresource(raml_resource, route_name):
     static_parent = get_static_parent(raml_resource)
     if static_parent is None:
         return False
-    props = get_resource_schema(static_parent) or {}
-    if route_name not in props:
+    schema = resource_schema(static_parent) or {}
+    properties = schema.get('properties')
+    if route_name not in properties:
         return False
-    is_obj = props[route_name]['type'] == 'relationship'
-    args = props[route_name].get('args', {})
+    is_obj = properties[route_name]['type'] == 'relationship'
+    args = properties[route_name].get('args', {})
     single_obj = not args.get('uselist', True)
     return is_obj and single_obj
 

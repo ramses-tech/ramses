@@ -16,7 +16,7 @@ def includeme(config):
     Settings = dictset(config.registry.settings)
     config.include('nefertari.engine')
     config.include('nefertari')
-    config.include('nefertari.view')
+    # config.include('nefertari.view')
     config.include('nefertari.elasticsearch')
 
     # Process nefertari settings

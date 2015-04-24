@@ -38,44 +38,6 @@ type_fields = {
 }
 
 
-class BaseDocumentMixin(object):
-
-    def to_dict(self, **kw):
-        _dict = super(BaseDocumentMixin, self).to_dict(**kw)
-
-        request = kw.get('request', None)
-        _fields = set(_dict.keys())
-
-        user = getattr(request, 'user', None)
-        if request and user:
-            if not user.is_admin() and self._auth_fields:
-                _fields &= set(self._auth_fields)
-
-        elif self._public_fields:
-            _fields &= set(self._public_fields)
-
-        if _fields:
-            _fields.add('_type')
-            _dict = _dict.subset(_fields)
-        return _dict
-
-
-class BaseDocument(BaseDocumentMixin, eng.BaseDocument):
-    """ Inherit custom ``to_dict`` """
-    __abstract__ = True
-    meta = {
-        'abstract': True,
-    }
-
-
-class ESBaseDocument(BaseDocumentMixin, eng.ESBaseDocument):
-    """ Inherit custom ``to_dict`` """
-    __abstract__ = True
-    meta = {
-        'abstract': True,
-    }
-
-
 def get_existing_model(model_name):
     """ Try to find existing model class named `model_name`.
 
@@ -117,7 +79,7 @@ def prepare_relationship(field_name, model_name, raml_resource):
         setup_data_model(subresources[field_name], rel_model_name)
 
 
-def generate_model_cls(properties, model_name, raml_resource, es_based=True):
+def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     """ Generate model class.
 
     Engine DB field types are determined using `type_fields` and only those
@@ -135,14 +97,17 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
         :predefined_fields: Dictionary of {field_name: field_obj} of fields
             that are already instantiated.
     """
-    base_cls = ESBaseDocument if es_based else BaseDocument
+    base_cls = eng.ESBaseDocument if es_based else eng.BaseDocument
     metaclass = type(base_cls)
     bases = (base_cls,)
     attrs = {
         '__tablename__': model_name.lower(),
+        '_hidden_fields': schema.get('hidden_fields') or [],
+        '_auth_fields': schema.get('auth_fields') or [],
     }
 
     # Generate fields from properties
+    properties = schema.get('properties', {})
     for field_name, props in properties.items():
         if field_name in attrs:
             continue
