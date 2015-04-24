@@ -60,7 +60,8 @@ def handle_model_generation(raml_resource, route_name):
     return model_cls
 
 
-def configure_resources(config, raml_resources, parent_resource=None):
+def configure_resources(config, raml_resources, parsed_raml,
+                        parent_resource=None):
     """ Perform complete resources' configuration process
 
     Resources RAML data from `raml_resources` is used. Created resources
@@ -88,9 +89,10 @@ def configure_resources(config, raml_resources, parent_resource=None):
       * Collection resource may only have 1 dynamic child resource.
 
     Arguments:
-        :config: Pyramid Configurator instance.
-        :raml_resource: Map of {uri_string: pyraml.entities.RamlResource}.
-        :parent_resource: Instance of `nefertari.resource.Resource`.
+        :config: Pyramid Configurator instance
+        :raml_resource: Map of {uri_string: pyraml.entities.RamlResource}
+        :parsed_raml: Whole parsed RAML object
+        :parent_resource: Instance of `nefertari.resource.Resource`
     """
     if not raml_resources:
         return
@@ -118,6 +120,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
             return configure_resources(
                 config=config,
                 raml_resources=raml_resource.resources,
+                parsed_raml=parsed_raml,
                 parent_resource=parent_resource)
 
         # Generate DB model
@@ -137,6 +140,7 @@ def configure_resources(config, raml_resources, parent_resource=None):
         resource_kwargs['factory'] = generate_acl(
             context_cls=model_cls,
             raml_resource=raml_resource,
+            parsed_raml=parsed_raml,
         )
 
         # Generate dynamic part name
@@ -170,15 +174,11 @@ def configure_resources(config, raml_resources, parent_resource=None):
 
         new_resource = parent_resource.add(*resource_args, **resource_kwargs)
 
-        # Set new resource to view's '_resource' and '_factory' attrs to allow
-        # performing' generic operations in view
-        resource_kwargs['view']._resource = new_resource
-        resource_kwargs['view']._factory = resource_kwargs['factory']
-
         # Configure child resources if present
         configure_resources(
             config=config,
             raml_resources=raml_resource.resources,
+            parsed_raml=parsed_raml,
             parent_resource=new_resource)
 
 
@@ -190,5 +190,8 @@ def generate_server(parsed_raml, config):
         :parsed_raml: Parsed pyraml structure.
     """
     log.info('Server generation started')
+
     # Setup resources
-    configure_resources(config=config, raml_resources=parsed_raml.resources)
+    configure_resources(
+        config=config, raml_resources=parsed_raml.resources,
+        parsed_raml=parsed_raml)

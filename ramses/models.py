@@ -1,7 +1,6 @@
 import logging
 
 from nefertari import engine as eng
-
 from .utils import generate_model_name, find_dynamic_resource
 from .generators import setup_data_model
 

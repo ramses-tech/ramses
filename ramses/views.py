@@ -28,9 +28,10 @@ item_methods = {
 
 
 class BaseView(NefertariBaseView):
-    """ Base view class that defines provides generic implementation
-    for handling every supported HTTP method requests.
+    """ Base view class for other all views that defines few helper methods.
 
+    Use `self.get_collection` and `self.get_item` to get access to set of
+    objects and object respectively which are valid at current level.
     """
     def __init__(self, *args, **kwargs):
         super(BaseView, self).__init__(*args, **kwargs)
@@ -68,7 +69,7 @@ class BaseView(NefertariBaseView):
                 parent.id_name: self.request.matchdict.get(parent.id_name)}
             parent_view = parent.view(parent.view._factory, req)
             obj = parent_view.get_item(**req.matchdict)
-            if isinstance(self, (AttributesView, SingularView)):
+            if isinstance(self, ItemSubresourceBaseView):
                 return
             prop = self._resource.collection_name
             return getattr(obj, prop, None)
@@ -94,14 +95,55 @@ class BaseView(NefertariBaseView):
         This method allows to work with nested resources properly. Thus item
         returned by this method will belong to parent view's queryset, thus
         filtering out objects that don't belong to parent object.
-        """
-        kwargs = self.resolve_kw(kwargs)
-        objects = self._parent_queryset()
-        if objects is not None:
-            return self._model_class.filter_objects(
-                objects, first=True, **kwargs)
-        return self._model_class.get_resource(**kwargs)
 
+        Returns an object got from applied ACL. If ACL wasn't applied, it is
+        applied explicitly.
+        """
+        objects = self._parent_queryset()
+        if objects is not None and self.context not in objects:
+            raise JHTTPNotFound('{}({}) not found'.format(
+                self._model_class.__name__,
+                self._get_context_key(**kwargs)))
+
+        if callable(self.context):
+            self.reload_context(es_based=False, **kwargs)
+        return self.context
+
+    def _get_context_key(self, **kwargs):
+        """ Get value of `self._resource.id_name` from :kwargs: """
+        return str(kwargs.get(self._resource.id_name))
+
+    def reload_context(self, es_based, **kwargs):
+        """ Reload `self.context` object into a DB or ES object.
+
+        Reload is performed by getting object ID from :kwargs: and performing
+        key item get from new instance of `self._factory` which is an ACL
+        class used for current view.
+
+        Arguments:
+            :es_based: Boolean. Whether to init ACL ac es-based or not. This
+                affects the backend which will be queried - either DB or ES
+            :kwargs: Kwargs that contain value for current resource 'id_name'
+                key
+        """
+        from .acl import BaseACL
+        key = self._get_context_key(**kwargs)
+        kwargs = {'request': self.request}
+        if issubclass(self._factory, BaseACL):
+            kwargs['es_based'] = es_based
+
+        acl = self._factory(**kwargs)
+        if acl.__context_class__ is None:
+            acl.__context_class__ = self._model_class
+
+        self.context = acl[key]
+
+
+class CollectionView(BaseView):
+    """ View that works with database and implements handlers for all
+    available CRUD operations.
+
+    """
     def index(self, **kwargs):
         return self.get_collection()
 
@@ -143,8 +185,13 @@ class BaseView(NefertariBaseView):
 
 
 class ESBaseView(BaseView):
-    """ Elasticsearch based view that reads from ES.
+    """ Elasticsearch base view that fetches data from ES.
 
+    Implements analogues of _parent_queryset, get_collection, get_item
+    fetching data from ES instead of database.
+
+    Use `self.get_collection_es` and `self.get_item_es` to get access
+    to set of objects and object respectively which are valid at current level.
     """
     def _get_raw_terms(self):
         search_params = []
@@ -200,36 +247,78 @@ class ESBaseView(BaseView):
         This method allows to work with nested resources properly. Thus item
         returned by this method will belong to parent view's queryset, thus
         filtering out objects that don't belong to parent object.
+
+        Returns an object got from applied ACL. If ACL wasn't applied, it is
+        applied explicitly.
         """
-        from nefertari.elasticsearch import ES
-        es = ES(self._model_class.__name__)
-        item_id = str(kwargs.get(self._resource.id_name))
+        item_id = self._get_context_key(**kwargs)
         objects_ids = self._parent_queryset_es()
 
         if (objects_ids is not None) and (item_id not in objects_ids):
             raise JHTTPNotFound('{}(id={}) resource not found'.format(
                 self._model_class.__name__, item_id))
 
-        kwargs = {self._resource.id_name: item_id}
-        kwargs = self.resolve_kw(kwargs)
-        kwargs['_limit'] = 1
-        kwargs['__raise_on_empty'] = True
-        return es.get_collection(**kwargs)[0]
+        if callable(self.context):
+            self.reload_context(es_based=True, **kwargs)
+        return self.context
 
+
+class ESCollectionView(ESBaseView, CollectionView):
+    """ View that reads data from ES.
+
+    Write operations are inherited from :CollectionView:
+    """
     def index(self, **kwargs):
         return self.get_collection_es(**kwargs)
 
     def show(self, **kwargs):
         return self.get_item_es(**kwargs)
 
+    def update(self, **kwargs):
+        """ Explicitly reload context with DB usage to get access
+        to complete DB object.
+        """
+        self.reload_context(es_based=False, **kwargs)
+        return super(ESCollectionView, self).update(**kwargs)
 
-class AttributesView(BaseView):
+
+class ItemSubresourceBaseView(BaseView):
+    """ Base class for all subresources of collection item resource, that
+    don't represent a collection. E.g. /users/{id}/profile, where 'profile'
+    is a singular resource or /users/{id}/some_action, where 'some_action'
+    action may be performed when requesting this route.
+
+    Subclass ItemSubresourceBaseView in your project when you want to define
+    subroute and view of a item route defined in RAML and generated by ramses.
+    Use `self.get_item` to get an object on which actions are being performed.
+
+    Moved into a separate class so all item subresources have a common
+    base class, thus making checks like `isinstance(view, baseClass)` easier.
+    Also to override `_get_context_key` to return parent resource's id_name
+    and `get_item` to reload context on each access.
+    """
+
+    def _get_context_key(self, **kwargs):
+        """ Get value of `self._resource.parent.id_name` from :kwargs: """
+        return str(kwargs.get(self._resource.parent.id_name))
+
+    def get_item(self, **kwargs):
+        """ Reload context on each access. """
+        self.reload_context(es_based=False, **kwargs)
+        return super(ItemSubresourceBaseView, self).get_item(**kwargs)
+
+
+class ItemAttributeView(ItemSubresourceBaseView):
     """ View used to work with attribute resources.
 
     Attribute resources represent field: ListField, DictField.
+
+    You may subclass ItemAttributeView in your project when you want to define
+    custom attribute subroute and view of a item route defined in RAML and
+    generated by ramses.
     """
     def __init__(self, *args, **kw):
-        super(AttributesView, self).__init__(*args, **kw)
+        super(ItemAttributeView, self).__init__(*args, **kw)
         self.attr = self.request.path.split('/')[-1]
         self.value_type = None
         self.unique = True
@@ -247,13 +336,19 @@ class AttributesView(BaseView):
         return JHTTPCreated(resource=getattr(obj, self.attr, None))
 
 
-class SingularView(BaseView):
+class ItemSingularView(ItemSubresourceBaseView):
     """ View used to work with singular resources.
 
     Singular resources represent one-to-one relationship. E.g. users/1/profile.
+
+    You may subclass ItemSingularView in your project when you want to define
+    custom singular subroute and view of a item route defined in RAML and
+    generated by ramses.
+    If you decide fo do so, make sure to set `self._singular_model` to a model
+    class instances of which will be processed by this view.
     """
     def __init__(self, *args, **kw):
-        super(SingularView, self).__init__(*args, **kw)
+        super(ItemSingularView, self).__init__(*args, **kw)
         self.attr = self.request.path.split('/')[-1]
 
     def show(self, **kwargs):
@@ -291,9 +386,9 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
         :es_based: Boolean indicating if generated view should read from
             elasticsearch. If True - collection reads are performed from
             elasticsearch; database is used for reads instead. Defaults to True.
-        :attr_view: Boolean indicating if AttributesView should be used as a
+        :attr_view: Boolean indicating if ItemAttributeView should be used as a
             base class for generated view.
-        :singular: Boolean indicating if SingularView should be used as a
+        :singular: Boolean indicating if ItemSingularView should be used as a
             base class for generated view.
     """
     from nefertari.engine import JSONEncoder
@@ -301,13 +396,13 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
     missing_attrs = set(valid_attrs) - set(attrs)
 
     if singular:
-        base_view_cls = SingularView
+        base_view_cls = ItemSingularView
     elif attr_view:
-        base_view_cls = AttributesView
+        base_view_cls = ItemAttributeView
     elif es_based:
-        base_view_cls = ESBaseView
+        base_view_cls = ESCollectionView
     else:
-        base_view_cls = BaseView
+        base_view_cls = CollectionView
 
     def _attr_error(*args, **kwargs):
         raise AttributeError
