@@ -103,8 +103,8 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         '__tablename__': model_name.lower(),
         '_hidden_fields': schema.get('hidden_fields') or [],
         '_auth_fields': schema.get('auth_fields') or [],
+        '_nested_relationships': schema.get('nested_relationships') or [],
     }
-
     # Generate fields from properties
     properties = schema.get('properties', {})
     for field_name, props in properties.items():
