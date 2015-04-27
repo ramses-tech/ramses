@@ -14,6 +14,7 @@ import logging
 
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
+from zope.dottedname.resolve import resolve
 
 from nefertari.utils import dictset
 from nefertari.json_httpexceptions import *
@@ -23,6 +24,16 @@ from nefertari.authentication.views import (
     TicketAuthenticationView, TokenAuthenticationView)
 
 log = logging.getLogger(__name__)
+
+
+def resolve_if_exists(params, key, default):
+    """ Resolve :params[key]: import string if exists.
+    Return :default: otherwise.
+    """
+    value = params.pop(key, None)
+    if value:
+        return resolve(value)
+    return default
 
 
 def _setup_ticket_policy(config, params):
@@ -51,11 +62,14 @@ def _setup_ticket_policy(config, params):
         params[key] = params.asbool(key)
 
     params['secret'] = config.registry.settings[params['secret']]
-    params['callback'] = AuthUser.groupfinder
+    params['callback'] = resolve_if_exists(
+        params, 'callback', AuthUser.groupfinder)
+
+    auth_by_id = resolve_if_exists(
+        params, 'auth_by_id', AuthUser.get_auth_user_by_id)
+    config.add_request_method(auth_by_id, 'user', reify=True)
 
     policy = AuthTktAuthenticationPolicy(**params)
-
-    config.add_request_method(AuthUser.get_auth_user_by_id, 'user', reify=True)
 
     config.add_route('login', '/auth/login')
     config.add_view(
@@ -91,13 +105,18 @@ def _setup_apikey_policy(config, params):
         :params: Nefertari dictset which contains security scheme `settings`.
     """
     log.info('Configuring ApiKey Authn policy')
-    params['check'] = AuthUser.authenticate_token
-    params['credentials_callback'] = AuthUser.get_api_credentials
-    params['user_model'] = params.get('user_model') or 'AuthUser'
-    policy = ApiKeyAuthenticationPolicy(**params)
+    params['check'] = resolve_if_exists(
+        params, 'check', AuthUser.authenticate_token)
+    params['credentials_callback'] = resolve_if_exists(
+        params, 'credentials_callback', AuthUser.get_api_credentials)
 
-    config.add_request_method(AuthUser.get_auth_user_by_name,
-                              'user', reify=True)
+    params['user_model'] = params.get('user_model') or 'AuthUser'
+
+    auth_by_name = resolve_if_exists(
+        params, 'auth_by_name', AuthUser.get_auth_user_by_name)
+    config.add_request_method(auth_by_name, 'user', reify=True)
+
+    policy = ApiKeyAuthenticationPolicy(**params)
 
     config.add_route('token', '/auth/token')
     config.add_view(
