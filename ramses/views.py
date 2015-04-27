@@ -154,7 +154,7 @@ class CollectionView(BaseView):
         obj = self._model_class(**self._params).save()
         return JHTTPCreated(
             location=self._location(obj),
-            resource=obj.to_dict(request=self.request))
+            resource=obj.to_dict())
 
     def update(self, **kwargs):
         obj = self.get_item(**kwargs)
@@ -359,13 +359,13 @@ class ItemSingularView(ItemSubresourceBaseView):
         parent_obj = self.get_item(**kwargs)
         obj = self._singular_model(**self._params).save()
         parent_obj.update({self.attr: obj})
-        return JHTTPCreated(resource=getattr(obj, self.attr, None))
+        return JHTTPCreated(resource=getattr(obj, self.attr))
 
     def update(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
         obj = getattr(parent_obj, self.attr)
         obj.update(self._params)
-        return JHTTPCreated(resource=getattr(obj, self.attr, None))
+        return JHTTPOk('Updated', location=self.request.url)
 
     def delete(self, **kwargs):
         parent_obj = self.get_item(**kwargs)

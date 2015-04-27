@@ -78,7 +78,7 @@ def prepare_relationship(field_name, model_name, raml_resource):
         setup_data_model(subresources[field_name], rel_model_name)
 
 
-def generate_model_cls(properties, model_name, raml_resource, es_based=True):
+def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     """ Generate model class.
 
     Engine DB field types are determined using `type_fields` and only those
@@ -101,9 +101,12 @@ def generate_model_cls(properties, model_name, raml_resource, es_based=True):
     bases = (base_cls,)
     attrs = {
         '__tablename__': model_name.lower(),
+        '_hidden_fields': schema.get('hidden_fields') or [],
+        '_auth_fields': schema.get('auth_fields') or [],
     }
 
     # Generate fields from properties
+    properties = schema.get('properties', {})
     for field_name, props in properties.items():
         if field_name in attrs:
             continue
