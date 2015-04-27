@@ -154,7 +154,8 @@ class CollectionView(BaseView):
         obj = self._model_class(**self._params).save()
         return JHTTPCreated(
             location=self._location(obj),
-            resource=obj.to_dict())
+            resource=obj.to_dict(),
+            encoder=self._json_encoder)
 
     def update(self, **kwargs):
         obj = self.get_item(**kwargs)
@@ -333,7 +334,9 @@ class ItemAttributeView(ItemSubresourceBaseView):
             self._params, self.attr,
             unique=self.unique,
             value_type=self.value_type)
-        return JHTTPCreated(resource=getattr(obj, self.attr, None))
+        return JHTTPCreated(
+            resource=getattr(obj, self.attr, None),
+            encoder=self._json_encoder)
 
 
 class ItemSingularView(ItemSubresourceBaseView):
@@ -359,7 +362,9 @@ class ItemSingularView(ItemSubresourceBaseView):
         parent_obj = self.get_item(**kwargs)
         obj = self._singular_model(**self._params).save()
         parent_obj.update({self.attr: obj})
-        return JHTTPCreated(resource=getattr(obj, self.attr))
+        return JHTTPCreated(
+            resource=getattr(obj, self.attr),
+            encoder=self._json_encoder)
 
     def update(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
