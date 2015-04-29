@@ -31,7 +31,7 @@ def convert_schema(raml_schema, schema_ct):
             },
             ...more properties
         },
-        "hidden_fields": [...],
+        "public_fields": [...],
         "auth_fields": [...],
         ...more schema options
     }
