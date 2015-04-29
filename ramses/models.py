@@ -101,7 +101,7 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     bases = (base_cls,)
     attrs = {
         '__tablename__': model_name.lower(),
-        '_hidden_fields': schema.get('hidden_fields') or [],
+        '_public_fields': schema.get('public_fields') or [],
         '_auth_fields': schema.get('auth_fields') or [],
         '_nested_relationships': schema.get('nested_relationships') or [],
     }
