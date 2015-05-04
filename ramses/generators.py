@@ -90,10 +90,11 @@ def configure_resources(config, raml_resources, parsed_raml,
 
     Arguments:
         :config: Pyramid Configurator instance
-        :raml_resource: Map of {uri_string: pyraml.entities.RamlResource}
+        :raml_resources: Map of {uri_string: pyraml.entities.RamlResource}
         :parsed_raml: Whole parsed RAML object
         :parent_resource: Instance of `nefertari.resource.Resource`
     """
+    from .models import get_existing_model
     if not raml_resources:
         return
 
@@ -131,7 +132,8 @@ def configure_resources(config, raml_resources, parsed_raml,
         if parent_arg is not None and (is_attr_res or is_singular):
             model_cls = parent_resource.view._model_class
         else:
-            model_cls = handle_model_generation(raml_resource, route_name)
+            model_name = generate_model_name(route_name)
+            model_cls = get_existing_model(model_name)
 
         resource_kwargs = {}
 
@@ -162,8 +164,9 @@ def configure_resources(config, raml_resources, parsed_raml,
         # In case of singular resource, model still needs to be generated,
         # but we store it on a different view attribute
         if is_singular:
-            resource_kwargs['view']._singular_model = handle_model_generation(
-                raml_resource, route_name)
+            model_name = generate_model_name(route_name)
+            resource_kwargs['view']._singular_model = get_existing_model(
+                model_name)
 
         # Create new nefertari resource
         log.info('Creating new resource for `{}`'.format(route_name))
@@ -195,3 +198,28 @@ def generate_server(parsed_raml, config):
     configure_resources(
         config=config, raml_resources=parsed_raml.resources,
         parsed_raml=parsed_raml)
+
+
+def generate_models(raml_resources):
+    """ Generate model for each resource in :raml_resources:
+
+    Arguments:
+        :raml_resources: Map of {uri_string: pyraml.entities.RamlResource}
+    """
+    if not raml_resources:
+        return
+
+    for resource_uri, raml_resource in raml_resources.items():
+        # No need to generate models for dynamic resource
+        if is_dynamic_uri(resource_uri):
+            return generate_models(raml_resources=raml_resource.resources)
+
+        # Generate DB model
+        # If this is an attribute resource we don't need to generate model
+        route_name = resource_uri.strip('/')
+        if not attr_subresource(raml_resource, route_name):
+            log.info('Configuring model for route `{}`'.format(route_name))
+            handle_model_generation(raml_resource, route_name)
+
+        # Generate child models if present
+        generate_models(raml_resources=raml_resource.resources)

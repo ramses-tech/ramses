@@ -363,7 +363,7 @@ class ItemSingularView(ItemSubresourceBaseView):
         obj = self._singular_model(**self._params).save()
         parent_obj.update({self.attr: obj})
         return JHTTPCreated(
-            resource=getattr(obj, self.attr),
+            resource=getattr(parent_obj, self.attr),
             encoder=self._json_encoder)
 
     def update(self, **kwargs):

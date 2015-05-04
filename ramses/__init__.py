@@ -4,7 +4,7 @@ import pyraml.parser
 from nefertari.acl import RootACL as NefertariRootACL
 from nefertari.utils import dictset
 
-from .generators import generate_server
+from .generators import generate_server, generate_models
 
 
 log = logging.getLogger(__name__)
@@ -41,6 +41,9 @@ def includeme(config):
 
     log.info('Parsing RAML')
     parsed_raml = pyraml.parser.load(Settings['ramses.raml_schema'])
+
+    log.info('Starting models generation')
+    generate_models(raml_resources=parsed_raml.resources)
 
     if ramses_auth:
         from .auth import setup_auth_policies

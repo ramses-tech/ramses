@@ -2,7 +2,6 @@ import logging
 
 from nefertari import engine as eng
 from .utils import generate_model_name, find_dynamic_resource
-from .generators import setup_data_model
 
 
 log = logging.getLogger(__name__)
@@ -67,6 +66,7 @@ def prepare_relationship(field_name, model_name, raml_resource):
         :raml_resource: Instance of pyraml.entities.RamlResource. Resource
             for which :model_name: will is being defined.
     """
+    from .generators import setup_data_model
     rel_model_name = generate_model_name(field_name)
     if get_existing_model(rel_model_name) is None:
         dynamic_res = find_dynamic_resource(raml_resource)

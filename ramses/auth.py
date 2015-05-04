@@ -23,6 +23,8 @@ from nefertari.authentication.policies import ApiKeyAuthenticationPolicy
 from nefertari.authentication.views import (
     TicketAuthenticationView, TokenAuthenticationView)
 
+from .models import get_existing_model
+
 log = logging.getLogger(__name__)
 
 
@@ -110,7 +112,8 @@ def _setup_apikey_policy(config, params):
     params['credentials_callback'] = resolve_if_exists(
         params, 'credentials_callback', AuthUser.get_api_credentials)
 
-    params['user_model'] = params.get('user_model') or 'AuthUser'
+    params['user_model'] = get_existing_model(
+        params.get('user_model') or 'AuthUser')
 
     auth_by_name = resolve_if_exists(
         params, 'auth_by_name', AuthUser.get_auth_user_by_name)
