@@ -2,6 +2,7 @@ import logging
 
 from nefertari import engine as eng
 from .utils import generate_model_name, find_dynamic_resource
+from . import registry
 
 
 log = logging.getLogger(__name__)
@@ -115,6 +116,9 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
             'required': bool(props.get('required'))
         }
         field_kwargs.update(props.get('args', {}) or {})
+
+        processors = field_kwargs.get('processors', [])
+        field_kwargs['processors'] = [registry.get(name) for name in processors]
 
         raml_type = (props.get('type', 'string') or 'string').lower()
         if raml_type not in type_fields:
