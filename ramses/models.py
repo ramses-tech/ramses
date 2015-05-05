@@ -156,12 +156,8 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
 
         attrs[field_name] = field_cls(**field_kwargs)
 
-    # If model is authentication model, override its methods with ones
-    # from registry
-    if auth_model:
-        classmethods = {name: classmethod(f) for name, f
-                        in registry.mget(model_name).items()}
-        attrs.update(classmethods)
+    # Update model definition with methods and variables defined in registry
+    attrs.update(registry.mget(model_name))
 
     # Generate new model class
     return metaclass(model_name, bases, attrs), auth_model

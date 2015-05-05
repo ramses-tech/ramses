@@ -85,9 +85,10 @@ def get(name):
 
 
 def mget(namespace):
-    namespace += '.'
+    namespace = namespace.lower() + '.'
     data = {}
     for key, val in registry.items():
+        key = key.lower()
         if not key.startswith(namespace):
             continue
         clean_key = key.split(namespace)[-1]
