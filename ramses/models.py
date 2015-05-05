@@ -51,19 +51,6 @@ auth_methods = set([
 ])
 
 
-class RamsesAuthModelDefaultMixin(AuthModelDefaultMixin):
-
-    def __getattribute__(self, name):
-        super_get = super(RamsesAuthModelDefaultMixin, self).__getattribute__
-        if name in auth_methods:
-            try:
-                key = '{}.{}'.format(self.__class__.__name__, name)
-                return registry.get(key)
-            except KeyError:
-                return super_get(name)
-        return super_get(name)
-
-
 def get_existing_model(model_name):
     """ Try to find existing model class named `model_name`.
 
@@ -125,10 +112,11 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
             that are already instantiated.
     """
     base_cls = eng.ESBaseDocument if es_based else eng.BaseDocument
+    model_name = str(model_name)
     metaclass = type(base_cls)
     auth_model = schema.get('auth_model', False)
     if auth_model:
-        bases = (RamsesAuthModelDefaultMixin, base_cls)
+        bases = (AuthModelDefaultMixin, base_cls)
     else:
         bases = (base_cls,)
     attrs = {
@@ -168,5 +156,12 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
 
         attrs[field_name] = field_cls(**field_kwargs)
 
+    # If model is authentication model, override its methods with ones
+    # from registry
+    if auth_model:
+        classmethods = {name: classmethod(f) for name, f
+                        in registry.mget(model_name).items()}
+        attrs.update(classmethods)
+
     # Generate new model class
-    return metaclass(str(model_name), bases, attrs), auth_model
+    return metaclass(model_name, bases, attrs), auth_model
