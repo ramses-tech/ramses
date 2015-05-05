@@ -1,6 +1,7 @@
 import logging
 
 from nefertari import engine as eng
+from nefertari.authentication.models import AuthModelDefaultMixin
 from .utils import generate_model_name, find_dynamic_resource
 from . import registry
 
@@ -35,6 +36,32 @@ type_fields = {
     'id_field':         eng.IdField,
     'list':             eng.ListField,
 }
+
+
+auth_methods = set([
+    'is_admin',
+    'verify_password',
+    'token_credentials',
+    'groups_by_token',
+    'authenticate_by_password',
+    'groups_by_userid',
+    'create_account',
+    'authuser_by_userid',
+    'authuser_by_name',
+])
+
+
+class RamsesAuthModelDefaultMixin(AuthModelDefaultMixin):
+
+    def __getattribute__(self, name):
+        super_get = super(RamsesAuthModelDefaultMixin, self).__getattribute__
+        if name in auth_methods:
+            try:
+                key = '{}.{}'.format(self.__class__.__name__, name)
+                return registry.get(key)
+            except KeyError:
+                return super_get(name)
+        return super_get(name)
 
 
 def get_existing_model(model_name):
@@ -99,7 +126,11 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     """
     base_cls = eng.ESBaseDocument if es_based else eng.BaseDocument
     metaclass = type(base_cls)
-    bases = (base_cls,)
+    auth_model = schema.get('auth_model', False)
+    if auth_model:
+        bases = (RamsesAuthModelDefaultMixin, base_cls)
+    else:
+        bases = (base_cls,)
     attrs = {
         '__tablename__': model_name.lower(),
         '_public_fields': schema.get('public_fields') or [],
@@ -138,4 +169,4 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         attrs[field_name] = field_cls(**field_kwargs)
 
     # Generate new model class
-    return metaclass(str(model_name), bases, attrs)
+    return metaclass(str(model_name), bases, attrs), auth_model

@@ -42,6 +42,7 @@ Register arbitrary object::
 
 """
 
+
 class Registry(dict):
     pass
 

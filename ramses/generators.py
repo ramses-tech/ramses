@@ -30,7 +30,7 @@ def setup_data_model(raml_resource, model_name):
     from .models import generate_model_cls, get_existing_model
     model_cls = get_existing_model(model_name)
     if model_cls is not None:
-        return model_cls
+        return model_cls, False
 
     schema = resource_schema(raml_resource)
     if not schema:
@@ -54,10 +54,9 @@ def handle_model_generation(raml_resource, route_name):
     """
     model_name = generate_model_name(route_name)
     try:
-        model_cls = setup_data_model(raml_resource, model_name)
+        return setup_data_model(raml_resource, model_name)
     except ValueError as ex:
         raise ValueError('{}: {}'.format(model_name, str(ex)))
-    return model_cls
 
 
 def configure_resources(config, raml_resources, parsed_raml,
@@ -200,10 +199,11 @@ def generate_server(parsed_raml, config):
         parsed_raml=parsed_raml)
 
 
-def generate_models(raml_resources):
+def generate_models(config, raml_resources):
     """ Generate model for each resource in :raml_resources:
 
     Arguments:
+        :config: Pyramid Configurator instance
         :raml_resources: Map of {uri_string: pyraml.entities.RamlResource}
     """
     if not raml_resources:
@@ -212,14 +212,17 @@ def generate_models(raml_resources):
     for resource_uri, raml_resource in raml_resources.items():
         # No need to generate models for dynamic resource
         if is_dynamic_uri(resource_uri):
-            return generate_models(raml_resources=raml_resource.resources)
+            return generate_models(config, raml_resources=raml_resource.resources)
 
         # Generate DB model
         # If this is an attribute resource we don't need to generate model
         route_name = resource_uri.strip('/')
         if not attr_subresource(raml_resource, route_name):
             log.info('Configuring model for route `{}`'.format(route_name))
-            handle_model_generation(raml_resource, route_name)
+            model_cls, is_auth_model = handle_model_generation(
+                raml_resource, route_name)
+            if is_auth_model:
+                config.registry.auth_model = model_cls
 
         # Generate child models if present
-        generate_models(raml_resources=raml_resource.resources)
+        generate_models(config, raml_resources=raml_resource.resources)

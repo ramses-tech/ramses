@@ -14,28 +14,14 @@ import logging
 
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
-from zope.dottedname.resolve import resolve
 
 from nefertari.utils import dictset
 from nefertari.json_httpexceptions import *
-from nefertari.authentication.models import AuthUser
 from nefertari.authentication.policies import ApiKeyAuthenticationPolicy
 from nefertari.authentication.views import (
     TicketAuthenticationView, TokenAuthenticationView)
 
-from .models import get_existing_model
-
 log = logging.getLogger(__name__)
-
-
-def resolve_if_exists(params, key, default):
-    """ Resolve :params[key]: import string if exists.
-    Return :default: otherwise.
-    """
-    value = params.pop(key, None)
-    if value:
-        return resolve(value)
-    return default
 
 
 def _setup_ticket_policy(config, params):
@@ -44,7 +30,7 @@ def _setup_ticket_policy(config, params):
     Notes:
       * Initial `secret` params value is considered to be a name of config
         param that represents a cookie name.
-      * `AuthUser.groupfinder` is used as a `callback`.
+      * `auth_model.groups_by_userid` is used as a `callback`.
       * Special processing is applied to boolean params to convert string
         values like 'True', 'true' to booleans. This is done because pyraml
         parser currently does not support setting value being a boolean.
@@ -64,28 +50,31 @@ def _setup_ticket_policy(config, params):
         params[key] = params.asbool(key)
 
     params['secret'] = config.registry.settings[params['secret']]
-    params['callback'] = resolve_if_exists(
-        params, 'callback', AuthUser.groupfinder)
 
-    auth_by_id = resolve_if_exists(
-        params, 'auth_by_id', AuthUser.get_auth_user_by_id)
-    config.add_request_method(auth_by_id, 'user', reify=True)
+    auth_model = config.registry.auth_model
+    params['callback'] = auth_model.groups_by_userid
+
+    config.add_request_method(
+        auth_model.authuser_by_userid, 'user', reify=True)
 
     policy = AuthTktAuthenticationPolicy(**params)
 
+    class RamsesTicketAuthenticationView(TicketAuthenticationView):
+        _model_class = config.registry.auth_model
+
     config.add_route('login', '/auth/login')
     config.add_view(
-        view=TicketAuthenticationView,
+        view=RamsesTicketAuthenticationView,
         route_name='login', attr='login', request_method='POST')
 
     config.add_route('logout', '/auth/logout')
     config.add_view(
-        view=TicketAuthenticationView,
+        view=RamsesTicketAuthenticationView,
         route_name='logout', attr='logout')
 
     config.add_route('register', '/auth/register')
     config.add_view(
-        view=TicketAuthenticationView,
+        view=RamsesTicketAuthenticationView,
         route_name='register', attr='register', request_method='POST')
 
     return policy
@@ -97,8 +86,8 @@ def _setup_apikey_policy(config, params):
     Notes:
       * User may provide model name in :params['user_model']: do define
         the name of the user model.
-      * `AuthUser.authenticate_token` is used to perform username & token check
-      * `AuthUser.get_api_credentials` is used to get username and token from
+      * `auth_model.groups_by_token` is used to perform username & token check
+      * `auth_model.token_credentials` is used to get username and token from
         userid
       * Also connects basic routes to perform authn actions.
 
@@ -107,33 +96,32 @@ def _setup_apikey_policy(config, params):
         :params: Nefertari dictset which contains security scheme `settings`.
     """
     log.info('Configuring ApiKey Authn policy')
-    params['check'] = resolve_if_exists(
-        params, 'check', AuthUser.authenticate_token)
-    params['credentials_callback'] = resolve_if_exists(
-        params, 'credentials_callback', AuthUser.get_api_credentials)
 
-    params['user_model'] = get_existing_model(
-        params.get('user_model') or 'AuthUser')
-
-    auth_by_name = resolve_if_exists(
-        params, 'auth_by_name', AuthUser.get_auth_user_by_name)
-    config.add_request_method(auth_by_name, 'user', reify=True)
+    auth_model = config.registry.auth_model
+    params['check'] = auth_model.groups_by_token
+    params['credentials_callback'] = auth_model.token_credentials
+    params['user_model'] = auth_model
+    config.add_request_method(
+        auth_model.authuser_by_name, 'user', reify=True)
 
     policy = ApiKeyAuthenticationPolicy(**params)
 
+    class RamsesTokenAuthenticationView(TokenAuthenticationView):
+        _model_class = config.registry.auth_model
+
     config.add_route('token', '/auth/token')
     config.add_view(
-        view=TokenAuthenticationView,
+        view=RamsesTokenAuthenticationView,
         route_name='token', attr='claim_token', request_method='POST')
 
     config.add_route('token_reset', '/auth/token_reset')
     config.add_view(
-        view=TokenAuthenticationView,
+        view=RamsesTokenAuthenticationView,
         route_name='token_reset', attr='token_reset', request_method='POST')
 
     config.add_route('register', '/auth/register')
     config.add_view(
-        view=TokenAuthenticationView,
+        view=RamsesTokenAuthenticationView,
         route_name='register', attr='register', request_method='POST')
 
     return policy
@@ -197,10 +185,11 @@ def create_admin_user(config):
     log.info('Creating system user')
     settings = config.registry.settings
     try:
+        auth_model = config.registry.auth_model
         s_user = settings['system.user']
         s_pass = settings['system.password']
         s_email = settings['system.email']
-        user, created = AuthUser.get_or_create(
+        user, created = auth_model.get_or_create(
             username=s_user,
             defaults=dict(
                 password=s_pass,
