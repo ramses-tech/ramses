@@ -38,19 +38,6 @@ type_fields = {
 }
 
 
-auth_methods = set([
-    'is_admin',
-    'verify_password',
-    'token_credentials',
-    'groups_by_token',
-    'authenticate_by_password',
-    'groups_by_userid',
-    'create_account',
-    'authuser_by_userid',
-    'authuser_by_name',
-])
-
-
 def get_existing_model(model_name):
     """ Try to find existing model class named `model_name`.
 
