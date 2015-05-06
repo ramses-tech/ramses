@@ -1,8 +1,9 @@
 import logging
 
 from nefertari import engine as eng
+from nefertari.authentication.models import AuthModelDefaultMixin
 from .utils import generate_model_name, find_dynamic_resource
-from .generators import setup_data_model
+from . import registry
 
 
 log = logging.getLogger(__name__)
@@ -67,6 +68,7 @@ def prepare_relationship(field_name, model_name, raml_resource):
         :raml_resource: Instance of pyraml.entities.RamlResource. Resource
             for which :model_name: will is being defined.
     """
+    from .generators import setup_data_model
     rel_model_name = generate_model_name(field_name)
     if get_existing_model(rel_model_name) is None:
         dynamic_res = find_dynamic_resource(raml_resource)
@@ -97,8 +99,13 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
             that are already instantiated.
     """
     base_cls = eng.ESBaseDocument if es_based else eng.BaseDocument
+    model_name = str(model_name)
     metaclass = type(base_cls)
-    bases = (base_cls,)
+    auth_model = schema.get('auth_model', False)
+    if auth_model:
+        bases = (AuthModelDefaultMixin, base_cls)
+    else:
+        bases = (base_cls,)
     attrs = {
         '__tablename__': model_name.lower(),
         '_public_fields': schema.get('public_fields') or [],
@@ -115,6 +122,9 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
             'required': bool(props.get('required'))
         }
         field_kwargs.update(props.get('args', {}) or {})
+
+        processors = field_kwargs.get('processors', [])
+        field_kwargs['processors'] = [registry.get(name) for name in processors]
 
         raml_type = (props.get('type', 'string') or 'string').lower()
         if raml_type not in type_fields:
@@ -133,5 +143,8 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
 
         attrs[field_name] = field_cls(**field_kwargs)
 
+    # Update model definition with methods and variables defined in registry
+    attrs.update(registry.mget(model_name))
+
     # Generate new model class
-    return metaclass(str(model_name), bases, attrs)
+    return metaclass(model_name, bases, attrs), auth_model

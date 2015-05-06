@@ -40,7 +40,17 @@ Register arbitrary object::
     registry.add('my_stored_var', myvar)
     assert registry.get('my_stored_var') == myvar
 
+
+Register and get object by namespace::
+
+    from ramses import registry
+
+    myvar = 'my awesome var'
+    registry.add('Foo.my_stored_var', myvar)
+    assert registry.mget('Foo') == {'my_stored_var': myvar}
+
 """
+
 
 class Registry(dict):
     pass
@@ -72,3 +82,15 @@ def get(name):
         raise KeyError(
             "Object named '{}' is not registered in ramses "
             "registry".format(name))
+
+
+def mget(namespace):
+    namespace = namespace.lower() + '.'
+    data = {}
+    for key, val in registry.items():
+        key = key.lower()
+        if not key.startswith(namespace):
+            continue
+        clean_key = key.split(namespace)[-1]
+        data[clean_key] = val
+    return data
