@@ -36,7 +36,7 @@ class BaseView(NefertariBaseView):
     def __init__(self, *args, **kwargs):
         super(BaseView, self).__init__(*args, **kwargs)
         if self.request.method == 'GET':
-            self._params.process_int_param('_limit', 20)
+            self._query_params.process_int_param('_limit', 20)
 
     def resolve_kw(self, kwargs):
         """ Resolve :kwargs: like `story_id: 1` to the form of `id: 1`.
@@ -82,11 +82,12 @@ class BaseView(NefertariBaseView):
         returned by this method will be a subset of parent view's queryset, thus
         filtering out objects that don't belong to parent object.
         """
-        self._params.update(kwargs)
+        self._query_params.update(kwargs)
         objects = self._parent_queryset()
         if objects is not None:
-            return self._model_class.filter_objects(objects, **self._params)
-        return self._model_class.get_collection(**self._params)
+            return self._model_class.filter_objects(
+                objects, **self._query_params)
+        return self._model_class.get_collection(**self._query_params)
 
     def get_item(self, **kwargs):
         """ Get collection item taking into account generated queryset
@@ -151,7 +152,7 @@ class CollectionView(BaseView):
         return self.get_item(**kwargs)
 
     def create(self, **kwargs):
-        obj = self._model_class(**self._params).save()
+        obj = self._model_class(**self._json_params).save()
         return JHTTPCreated(
             location=self._location(obj),
             resource=obj.to_dict(),
@@ -159,7 +160,7 @@ class CollectionView(BaseView):
 
     def update(self, **kwargs):
         obj = self.get_item(**kwargs)
-        obj.update(self._params)
+        obj.update(self._json_params)
         return JHTTPOk('Updated', location=self._location(obj))
 
     def delete(self, **kwargs):
@@ -168,7 +169,7 @@ class CollectionView(BaseView):
 
     def delete_many(self, **kwargs):
         objects = self.get_collection()
-        count = objects.count()
+        count = self._model_class.count(objects)
 
         if self.needs_confirmation():
             return objects
@@ -178,11 +179,12 @@ class CollectionView(BaseView):
             count, self._model_class.__name__))
 
     def update_many(self, **kwargs):
-        _limit = self._params.pop('_limit', None)
-        objects = self.get_collection(_limit=_limit)
-        self._model_class._update_many(objects, **self._params)
+        self._query_params.process_int_param('_limit', 1000)
+        objects = self.get_collection(**self._query_params)
+        count = self._model_class.count(objects)
+        self._model_class._update_many(objects, **self._json_params)
         return JHTTPOk('Updated %s %s(s) objects' % (
-            objects.count(), self._model_class.__name__))
+            count, self._model_class.__name__))
 
 
 class ESBaseView(BaseView):
@@ -196,8 +198,8 @@ class ESBaseView(BaseView):
     """
     def _get_raw_terms(self):
         search_params = []
-        if 'q' in self._params:
-            search_params.append(self._params.pop('q'))
+        if 'q' in self._query_params:
+            search_params.append(self._query_params.pop('q'))
         _raw_terms = ' AND '.join(search_params)
         return _raw_terms
 
@@ -236,10 +238,10 @@ class ESBaseView(BaseView):
         if objects_ids is not None:
             if not objects_ids:
                 return []
-            self._params['id'] = objects_ids
+            self._query_params['id'] = objects_ids
         return es.get_collection(
             _raw_terms=self._get_raw_terms(),
-            **self._params)
+            **self._query_params)
 
     def get_item_es(self, **kwargs):
         """ Get ES collection item taking into account generated queryset
@@ -331,7 +333,7 @@ class ItemAttributeView(ItemSubresourceBaseView):
     def create(self, **kwargs):
         obj = self.get_item(**kwargs)
         obj.update_iterables(
-            self._params, self.attr,
+            self._json_params, self.attr,
             unique=self.unique,
             value_type=self.value_type)
         return JHTTPCreated(
@@ -360,7 +362,7 @@ class ItemSingularView(ItemSubresourceBaseView):
 
     def create(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
-        obj = self._singular_model(**self._params).save()
+        obj = self._singular_model(**self._json_params).save()
         parent_obj.update({self.attr: obj})
         return JHTTPCreated(
             resource=getattr(parent_obj, self.attr),
@@ -369,7 +371,7 @@ class ItemSingularView(ItemSubresourceBaseView):
     def update(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
         obj = getattr(parent_obj, self.attr)
-        obj.update(self._params)
+        obj.update(self._json_params)
         return JHTTPOk('Updated', location=self.request.url)
 
     def delete(self, **kwargs):
