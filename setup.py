@@ -9,7 +9,8 @@ requires = [
     'pyramid',
     'cryptacular',
     'pyraml-parser',
-    'inflection'
+    'inflection',
+    'nefertari'
 ]
 
 setup(name='ramses',

@@ -77,7 +77,7 @@ def is_dynamic_uri(uri):
     Arguments:
         :uri: URI as a string.
     """
-    return uri.endswith('}')
+    return uri.strip('/').endswith('}')
 
 
 def clean_dynamic_uri(uri):
@@ -242,7 +242,7 @@ def attr_subresource(raml_resource, route_name):
     if static_parent is None:
         return False
     schema = resource_schema(static_parent) or {}
-    properties = schema.get('properties')
+    properties = schema.get('properties', {})
     return (route_name in properties and
             properties[route_name]['type'] in ('dict', 'list'))
 
@@ -258,7 +258,7 @@ def singular_subresource(raml_resource, route_name):
     if static_parent is None:
         return False
     schema = resource_schema(static_parent) or {}
-    properties = schema.get('properties')
+    properties = schema.get('properties', {})
     if route_name not in properties:
         return False
     is_obj = properties[route_name]['type'] == 'relationship'
