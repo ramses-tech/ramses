@@ -38,11 +38,25 @@ class BaseView(NefertariBaseView):
         if self.request.method == 'GET':
             self._query_params.process_int_param('_limit', 20)
 
+    @property
+    def clean_id_name(self):
+        id_name = self._resource.id_name
+        if '_' in id_name:
+            return id_name.split('_', 1)[1]
+        else:
+            return id_name
+
     def resolve_kw(self, kwargs):
         """ Resolve :kwargs: like `story_id: 1` to the form of `id: 1`.
 
         """
-        return {k.split('_', 1)[1]: v for k, v in kwargs.items()}
+        resolved = {}
+        for key, value in kwargs.items():
+            split = key.split('_', 1)
+            if len(split) > 1:
+                key = split[1]
+            resolved[key] = value
+        return resolved
 
     def _location(self, obj):
         """ Get location of the `obj`
@@ -50,11 +64,10 @@ class BaseView(NefertariBaseView):
         Arguments:
             :obj: self._model_class instance.
         """
-        id_name = self._resource.id_name
-        field_name = id_name.split('_', 1)[1]
+        field_name = self.clean_id_name
         return self.request.route_url(
             self._resource.uid,
-            **{id_name: getattr(obj, field_name)})
+            **{self._resource.id_name: getattr(obj, field_name)})
 
     def _parent_queryset(self):
         """ Get queryset of parent view.
@@ -100,14 +113,15 @@ class BaseView(NefertariBaseView):
         Returns an object got from applied ACL. If ACL wasn't applied, it is
         applied explicitly.
         """
+        if callable(self.context):
+            self.reload_context(es_based=False, **kwargs)
+
         objects = self._parent_queryset()
         if objects is not None and self.context not in objects:
             raise JHTTPNotFound('{}({}) not found'.format(
                 self._model_class.__name__,
                 self._get_context_key(**kwargs)))
 
-        if callable(self.context):
-            self.reload_context(es_based=False, **kwargs)
         return self.context
 
     def _get_context_key(self, **kwargs):
@@ -219,9 +233,13 @@ class ESBaseView(BaseView):
             obj = parent_view.get_item_es(**req.matchdict)
             prop = self._resource.collection_name
             objects_ids = getattr(obj, prop, None)
-            if objects_ids is not None:
-                objects_ids = [str(id_) for id_ in objects_ids]
             return objects_ids
+
+    def get_es_object_ids(self, objects):
+        """ Return IDs of :objects: if they are not IDs already. """
+        id_field = self.clean_id_name
+        getter = lambda obj: str(getattr(obj, id_field, obj))
+        return list(set(getter(obj) for obj in objects))
 
     def get_collection_es(self, **kwargs):
         """ Get ES objects collection taking into account generated queryset
@@ -236,6 +254,8 @@ class ESBaseView(BaseView):
         objects_ids = self._parent_queryset_es()
 
         if objects_ids is not None:
+            objects_ids = self.get_es_object_ids(objects_ids)
+
             if not objects_ids:
                 return []
             self._query_params['id'] = objects_ids
@@ -256,13 +276,16 @@ class ESBaseView(BaseView):
         """
         item_id = self._get_context_key(**kwargs)
         objects_ids = self._parent_queryset_es()
+        if objects_ids is not None:
+            objects_ids = self.get_es_object_ids(objects_ids)
+
+        if callable(self.context):
+            self.reload_context(es_based=True, **kwargs)
 
         if (objects_ids is not None) and (item_id not in objects_ids):
             raise JHTTPNotFound('{}(id={}) resource not found'.format(
                 self._model_class.__name__, item_id))
 
-        if callable(self.context):
-            self.reload_context(es_based=True, **kwargs)
         return self.context
 
 
