@@ -179,7 +179,6 @@ class CollectionView(BaseView):
             count, self._model_class.__name__))
 
     def update_many(self, **kwargs):
-        self._query_params.process_int_param('_limit', 1000)
         objects = self.get_collection(**self._query_params)
         count = self._model_class.count(objects)
         self._model_class._update_many(objects, **self._json_params)
@@ -284,6 +283,13 @@ class ESCollectionView(ESBaseView, CollectionView):
         self.reload_context(es_based=False, **kwargs)
         return super(ESCollectionView, self).update(**kwargs)
 
+    def get_dbcollection_with_es(self, **kwargs):
+        """ Get DB objects collection by first querying ES. """
+        es_objects = self.get_collection_es(**kwargs)
+        db_objects = self._model_class.filter_objects(
+            es_objects, _limit=self._query_params.get('_limit'))
+        return db_objects
+
     def delete_many(self, **kwargs):
         """ Delete multiple objects from collection.
 
@@ -291,9 +297,7 @@ class ESCollectionView(ESBaseView, CollectionView):
         This is done to make sure deleted objects are those filtered
         by ES in 'index' method (so user deletes what he saw).
         """
-        es_objects = self.get_collection_es(**kwargs)
-        db_objects = self._model_class.filter_objects(
-            es_objects, _limit=self._query_params.get('_limit'))
+        db_objects = self.get_dbcollection_with_es(**kwargs)
         count = self._model_class.count(db_objects)
 
         if self.needs_confirmation():
@@ -310,10 +314,7 @@ class ESCollectionView(ESBaseView, CollectionView):
         This is done to make sure updated objects are those filtered
         by ES in 'index' method (so user updates what he saw).
         """
-        self._query_params.process_int_param('_limit', 1000)
-        es_objects = self.get_collection_es(**kwargs)
-        db_objects = self._model_class.filter_objects(
-            es_objects, _limit=self._query_params.get('_limit'))
+        db_objects = self.get_dbcollection_with_es(**kwargs)
         count = self._model_class.count(db_objects)
 
         self._model_class._update_many(db_objects, **self._json_params)
