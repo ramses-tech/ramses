@@ -242,3 +242,48 @@ class TestCollectionView(object):
         view._model_class._update_many.assert_called_once_with(
             view.get_collection(), foo2='bar2')
         assert isinstance(resp, JHTTPOk)
+
+
+class TestESBaseView(object):
+    def _simple_view(self):
+        request = Mock(**request_kwargs)
+        return views.ESBaseView(request=request, **view_kwargs)
+
+    def test_get_raw_terms(self):
+        view = self._simple_view()
+        view._query_params['q'] = 'foo'
+        assert view._get_raw_terms() == 'foo'
+
+    def test_parent_queryset_es(self):
+        from pyramid.config import Configurator
+        from ramses.acl import BaseACL
+        config = Configurator()
+        config.include('nefertari')
+        root = config.get_root_resource()
+        user = root.add(
+            'user', 'users', id_name='username',
+            view=views.ESBaseView, factory=BaseACL)
+        user.add(
+            'story', 'stories', id_name='prof_id',
+            view=views.ESBaseView, factory=BaseACL)
+        view_cls = root.resource_map['user:story'].view
+
+        request = Mock(
+            registry={'foo': 'bar'},
+            path='/foo/foo',
+            matchdict={'username': 'user12', 'prof_id': 4},
+            accept=[''], method='GET'
+        )
+        request.params.mixed.return_value = {'foo1': 'bar1'}
+        request.blank.return_value = request
+        stories_view = view_cls(
+            request=request,
+            context={},
+            _query_params={'foo1': 'bar1'},
+            _json_params={'foo2': 'bar2'},)
+
+        get_item_es = Mock()
+        stories_view._resource.parent.view.get_item_es = get_item_es
+        result = stories_view._parent_queryset_es()
+        get_item_es.assert_called_once_with(username='user12')
+        assert result == get_item_es().stories
