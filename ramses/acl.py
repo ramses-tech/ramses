@@ -3,7 +3,9 @@ import logging
 from pyramid.security import (
     Allow, Deny,
     Everyone, Authenticated,
-    ALL_PERMISSIONS, DENY_ALL)
+    ALL_PERMISSIONS)
+from nefertari.acl import SelfParamMixin
+
 
 from .views import collection_methods, item_methods
 from . import registry
@@ -96,7 +98,7 @@ def parse_acl(acl_string, methods_map):
     return result_acl
 
 
-class BaseACL(object):
+class BaseACL(SelfParamMixin):
     """ ACL Base class. """
     __context_class__ = None
     collection_acl = None
@@ -151,6 +153,7 @@ class BaseACL(object):
 
     def __getitem__(self, key):
         """ Get item using method depending on value of `self.es_based` """
+        key = self.convert_self_key(key)
         if self.es_based:
             return self.getitem_es(key=key)
         else:
