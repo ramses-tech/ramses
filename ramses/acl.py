@@ -153,7 +153,7 @@ class BaseACL(SelfParamMixin):
 
     def __getitem__(self, key):
         """ Get item using method depending on value of `self.es_based` """
-        key = self.convert_self_key(key)
+        key = self.resolve_self_key(key)
         if self.es_based:
             return self.getitem_es(key=key)
         else:
