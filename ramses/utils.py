@@ -111,7 +111,7 @@ def find_dynamic_resource(raml_resource):
     return dynamic_resources[0] if dynamic_resources else None
 
 
-def dynamic_part_name(raml_resource, clean_uri, id_field):
+def dynamic_part_name(raml_resource, clean_uri, pk_field):
     """ Generate dynamic part for resource :raml_resource:.
 
     Dynamic part is generated using 2 parts: :clean_uri: of the resource and
@@ -130,7 +130,7 @@ def dynamic_part_name(raml_resource, clean_uri, id_field):
     if dynamic_uris:
         dynamic_part = clean_dynamic_uri(dynamic_uris[0])
     else:
-        dynamic_part = id_field
+        dynamic_part = pk_field
     return '_'.join([clean_uri, dynamic_part])
 
 

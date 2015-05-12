@@ -161,9 +161,9 @@ class BaseACL(SelfParamMixin):
 
     def getitem_db(self, key):
         """ Get item with ID of :key: from database """
-        id_field = self.__context_class__.id_field()
+        pk_field = self.__context_class__.pk_field()
         obj = self.__context_class__.get_resource(
-            **{id_field: key})
+            **{pk_field: key})
         obj.__acl__ = self.context_acl(obj)
         obj.__parent__ = self
         obj.__name__ = key
@@ -173,9 +173,9 @@ class BaseACL(SelfParamMixin):
         """ Get item with ID of :key: from elasticsearch """
         from nefertari.elasticsearch import ES
         es = ES(self.__context_class__.__name__)
-        id_field = self.__context_class__.id_field()
+        pk_field = self.__context_class__.pk_field()
         kwargs = {
-            id_field: key,
+            pk_field: key,
             '_limit': 1,
             '__raise_on_empty': True,
         }

@@ -149,7 +149,7 @@ def configure_resources(config, raml_resources, parsed_raml,
             resource_kwargs['id_name'] = dynamic_part_name(
                 raml_resource=raml_resource,
                 clean_uri=clean_uri,
-                id_field=model_cls.id_field())
+                pk_field=model_cls.pk_field())
 
         # Generate REST view
         log.info('Generating view for `{}`'.format(route_name))
