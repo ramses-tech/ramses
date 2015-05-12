@@ -153,7 +153,7 @@ class BaseACL(SelfParamMixin):
 
     def __getitem__(self, key):
         """ Get item using method depending on value of `self.es_based` """
-        key = self.convert_self_key(key)
+        key = self.resolve_self_key(key)
         if self.es_based:
             return self.getitem_es(key=key)
         else:
@@ -161,9 +161,9 @@ class BaseACL(SelfParamMixin):
 
     def getitem_db(self, key):
         """ Get item with ID of :key: from database """
-        id_field = self.__context_class__.id_field()
+        pk_field = self.__context_class__.pk_field()
         obj = self.__context_class__.get_resource(
-            **{id_field: key})
+            **{pk_field: key})
         obj.__acl__ = self.context_acl(obj)
         obj.__parent__ = self
         obj.__name__ = key
@@ -173,9 +173,9 @@ class BaseACL(SelfParamMixin):
         """ Get item with ID of :key: from elasticsearch """
         from nefertari.elasticsearch import ES
         es = ES(self.__context_class__.__name__)
-        id_field = self.__context_class__.id_field()
+        pk_field = self.__context_class__.pk_field()
         kwargs = {
-            id_field: key,
+            pk_field: key,
             '_limit': 1,
             '__raise_on_empty': True,
         }
