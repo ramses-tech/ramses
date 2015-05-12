@@ -3,6 +3,7 @@ import logging
 from nefertari.view import BaseView as NefertariBaseView
 from nefertari.json_httpexceptions import (
     JHTTPCreated, JHTTPOk, JHTTPNotFound)
+from nefertari import engine
 
 
 log = logging.getLogger(__name__)
@@ -458,7 +459,6 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
         :singular: Boolean indicating if ItemSingularView should be used as a
             base class for generated view.
     """
-    from nefertari.engine import JSONEncoder
     valid_attrs = collection_methods.values() + item_methods.values()
     missing_attrs = set(valid_attrs) - set(attrs)
 
@@ -475,7 +475,7 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
         raise AttributeError
 
     class RESTView(base_view_cls):
-        _json_encoder = JSONEncoder
+        _json_encoder = engine.JSONEncoder
         _model_class = model_cls
 
     for attr in missing_attrs:

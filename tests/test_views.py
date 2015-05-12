@@ -2,7 +2,7 @@ import pytest
 from mock import Mock, patch
 
 from nefertari.json_httpexceptions import (
-    JHTTPNotFound, JHTTPCreated, JHTTPOk)
+    JHTTPNotFound, JHTTPCreated, JHTTPOk, JHTTPMethodNotAllowed)
 
 from ramses import views
 
@@ -559,3 +559,68 @@ class TestItemSingularView(ViewTestBase):
         view.get_item.assert_called_once_with(foo=1)
         parent = view.get_item()
         parent.update.assert_called_once_with({'profile': None})
+
+
+@patch('ramses.views.engine')
+class TestRestViewGeneration(object):
+
+    @patch('ramses.views.ESCollectionView._run_init_actions')
+    def test_only_provided_attrs_are_available(self, run_init, mock_eng):
+        view_cls = views.generate_rest_view(
+            model_cls='foo', attrs=['show', 'foobar'],
+            es_based=True, attr_view=False, singular=False)
+        assert issubclass(view_cls, views.ESCollectionView)
+        request = Mock(**ViewTestBase.request_kwargs)
+        view = view_cls(request=request, **ViewTestBase.view_kwargs)
+        assert not hasattr(view_cls, 'foobar')
+
+        try:
+            view.show()
+        except JHTTPMethodNotAllowed:
+            raise Exception('Unexpected error')
+        except Exception:
+            pass
+        with pytest.raises(JHTTPMethodNotAllowed):
+            view.delete_many()
+        with pytest.raises(JHTTPMethodNotAllowed):
+            view.create()
+        with pytest.raises(JHTTPMethodNotAllowed):
+            view.delete()
+        with pytest.raises(JHTTPMethodNotAllowed):
+            view.update_many()
+        with pytest.raises(JHTTPMethodNotAllowed):
+            view.index()
+
+    def test_singular_view(self, mock_eng):
+        view_cls = views.generate_rest_view(
+            model_cls='foo', attrs=['show'],
+            es_based=True, attr_view=False, singular=True)
+        assert issubclass(view_cls, views.ItemSingularView)
+
+    def test_attribute_view(self, mock_eng):
+        view_cls = views.generate_rest_view(
+            model_cls='foo', attrs=['show'],
+            es_based=True, attr_view=True, singular=False)
+        assert issubclass(view_cls, views.ItemAttributeView)
+
+    def test_escollection_view(self, mock_eng):
+        view_cls = views.generate_rest_view(
+            model_cls='foo', attrs=['show'],
+            es_based=True, attr_view=False, singular=False)
+        assert issubclass(view_cls, views.ESCollectionView)
+        assert issubclass(view_cls, views.CollectionView)
+
+    def test_dbcollection_view(self, mock_eng):
+        view_cls = views.generate_rest_view(
+            model_cls='foo', attrs=['show'],
+            es_based=False, attr_view=False, singular=False)
+        assert not issubclass(view_cls, views.ESCollectionView)
+        assert issubclass(view_cls, views.CollectionView)
+
+    def test_default_values(self, mock_eng):
+        view_cls = views.generate_rest_view(
+            model_cls='foo', attrs=['show'])
+        assert issubclass(view_cls, views.ESCollectionView)
+        assert issubclass(view_cls, views.CollectionView)
+        assert view_cls._model_class == 'foo'
+        assert view_cls._json_encoder == mock_eng.JSONEncoder
