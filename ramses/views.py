@@ -237,8 +237,8 @@ class ESBaseView(BaseView):
     def get_es_object_ids(self, objects):
         """ Return IDs of :objects: if they are not IDs already. """
         id_field = self.clean_id_name
-        getter = lambda obj: str(getattr(obj, id_field, obj))
-        return list(set(getter(obj) for obj in objects))
+        ids = [getattr(obj, id_field, obj) for obj in objects]
+        return list(set(str(id_) for id_ in ids))
 
     def get_collection_es(self, **kwargs):
         """ Get ES objects collection taking into account generated queryset
