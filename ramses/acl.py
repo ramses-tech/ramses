@@ -131,9 +131,11 @@ class BaseACL(SelfParamMixin):
                 ace = principal(ace=ace, request=self.request, obj=obj)
                 if not ace:
                     continue
-                ace = [(a, b, methods_to_perms(c, item_methods))
+                if not isinstance(ace[0], (list, tuple)):
+                    ace = [ace]
+                ace = [(a, b, methods_to_perms(c, methods_map))
                        for a, b, c in ace]
-            if not isinstance(ace[0], (list, tuple)):
+            else:
                 ace = [ace]
             new_acl += ace
         return new_acl
@@ -204,7 +206,6 @@ def generate_acl(context_cls, raml_resource, parsed_raml, es_based=True):
         :es_based: Boolean inidicating whether ACL should query ES or not
             when getting an object
     """
-    security_schemes = parsed_raml.securitySchemes or {}
     secured_by = raml_resource.securedBy or []
 
     if not secured_by:
@@ -212,6 +213,7 @@ def generate_acl(context_cls, raml_resource, parsed_raml, es_based=True):
         collection_acl = item_acl = [ALLOW_ALL]
     else:
         log.debug('{} ACL scheme applied'.format(secured_by[0]))
+        security_schemes = parsed_raml.securitySchemes or {}
         sec_scheme = security_schemes.get(secured_by[0])
         if sec_scheme is None:
             raise ValueError('Undefined ACL security scheme: {}'.format(
