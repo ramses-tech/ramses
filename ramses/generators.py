@@ -212,7 +212,8 @@ def generate_models(config, raml_resources):
     for resource_uri, raml_resource in raml_resources.items():
         # No need to generate models for dynamic resource
         if is_dynamic_uri(resource_uri):
-            return generate_models(config, raml_resources=raml_resource.resources)
+            return generate_models(
+                config, raml_resources=raml_resource.resources)
 
         # Generate DB model
         # If this is an attribute resource we don't need to generate model

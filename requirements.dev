@@ -1,2 +1,5 @@
 sphinx
 releases
+pytest
+pytest-cov
+mock

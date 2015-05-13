@@ -1,6 +1,6 @@
 import logging
 
-from nefertari import engine as eng
+from nefertari import engine
 from nefertari.authentication.models import AuthModelDefaultMixin
 from .utils import generate_model_name, find_dynamic_resource
 from . import registry
@@ -13,28 +13,28 @@ Map of RAML types names to nefertari.engine fields.
 
 """
 type_fields = {
-    'string':           eng.StringField,
-    'float':            eng.FloatField,
-    'integer':          eng.IntegerField,
-    'boolean':          eng.BooleanField,
-    'datetime':         eng.DateTimeField,
-    'file':             eng.BinaryField,
-    'relationship':     eng.Relationship,
-    'dict':             eng.DictField,
-    'foreign_key':      eng.ForeignKeyField,
-    'big_integer':      eng.BigIntegerField,
-    'date':             eng.DateField,
-    'choice':           eng.ChoiceField,
-    'interval':         eng.IntervalField,
-    'decimal':          eng.DecimalField,
-    'pickle':           eng.PickleField,
-    'small_integer':    eng.SmallIntegerField,
-    'text':             eng.TextField,
-    'time':             eng.TimeField,
-    'unicode':          eng.UnicodeField,
-    'unicode_text':     eng.UnicodeTextField,
-    'id_field':         eng.IdField,
-    'list':             eng.ListField,
+    'string':           engine.StringField,
+    'float':            engine.FloatField,
+    'integer':          engine.IntegerField,
+    'boolean':          engine.BooleanField,
+    'datetime':         engine.DateTimeField,
+    'file':             engine.BinaryField,
+    'relationship':     engine.Relationship,
+    'dict':             engine.DictField,
+    'foreign_key':      engine.ForeignKeyField,
+    'big_integer':      engine.BigIntegerField,
+    'date':             engine.DateField,
+    'choice':           engine.ChoiceField,
+    'interval':         engine.IntervalField,
+    'decimal':          engine.DecimalField,
+    'pickle':           engine.PickleField,
+    'small_integer':    engine.SmallIntegerField,
+    'text':             engine.TextField,
+    'time':             engine.TimeField,
+    'unicode':          engine.UnicodeField,
+    'unicode_text':     engine.UnicodeTextField,
+    'id_field':         engine.IdField,
+    'list':             engine.ListField,
 }
 
 
@@ -45,7 +45,7 @@ def get_existing_model(model_name):
         :model_name: String name of the model class.
     """
     try:
-        model_cls = eng.get_document_cls(model_name)
+        model_cls = engine.get_document_cls(model_name)
         log.debug('Model `{}` already exists. Using existing one'.format(
             model_name))
         return model_cls
@@ -98,7 +98,7 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         :predefined_fields: Dictionary of {field_name: field_obj} of fields
             that are already instantiated.
     """
-    base_cls = eng.ESBaseDocument if es_based else eng.BaseDocument
+    base_cls = engine.ESBaseDocument if es_based else engine.BaseDocument
     model_name = str(model_name)
     metaclass = type(base_cls)
     auth_model = schema.get('auth_model', False)
@@ -132,12 +132,12 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
 
         field_cls = type_fields[raml_type]
 
-        if field_cls is eng.Relationship:
+        if field_cls is engine.Relationship:
             prepare_relationship(field_name, model_name, raml_resource)
-        if field_cls is eng.ForeignKeyField:
+        if field_cls is engine.ForeignKeyField:
             key = 'ref_column_type'
             field_kwargs[key] = type_fields[field_kwargs[key]]
-        if field_cls is eng.ListField:
+        if field_cls is engine.ListField:
             key = 'item_type'
             field_kwargs[key] = type_fields[field_kwargs[key]]
 
