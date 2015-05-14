@@ -12,6 +12,7 @@ In particular:
 """
 import logging
 
+import transaction
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 
@@ -47,7 +48,8 @@ def _setup_ticket_policy(config, params):
     bool_keys = ('secure', 'include_ip', 'http_only', 'wild_domain', 'debug',
                  'parent_domain')
     for key in bool_keys:
-        params[key] = params.asbool(key)
+        if key in params:
+            params[key] = params.asbool(key)
 
     params['secret'] = config.registry.settings[params['secret']]
 
@@ -107,7 +109,7 @@ def _setup_apikey_policy(config, params):
     policy = ApiKeyAuthenticationPolicy(**params)
 
     class RamsesTokenAuthenticationView(TokenAuthenticationView):
-        _model_class = config.registry.auth_model
+        _model_class = auth_model
 
     config.add_route('token', '/auth/token')
     config.add_view(
@@ -197,7 +199,6 @@ def create_admin_user(config):
                 groups=['admin']
             ))
         if created:
-            import transaction
             transaction.commit()
     except KeyError as e:
         log.error('Failed to create system user. Missing config: %s' % e)
@@ -205,5 +206,4 @@ def create_admin_user(config):
 
 def includeme(config):
     log.info('Creating admin user')
-
     create_admin_user(config)
