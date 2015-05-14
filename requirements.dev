@@ -3,3 +3,5 @@ releases
 pytest
 pytest-cov
 mock
+
+-e .
