@@ -53,7 +53,7 @@ def get_existing_model(model_name):
         log.debug('Model `{}` does not exist'.format(model_name))
 
 
-def prepare_relationship(field_name, model_name, raml_resource):
+def prepare_relationship(field_name, raml_resource):
     """ Create referenced model if not exists.
 
     When preparing relationship, we check to see if model that will be
@@ -64,7 +64,6 @@ def prepare_relationship(field_name, model_name, raml_resource):
 
     Arguments:
         :field_name: Name of the field that should become a `Relationship`.
-        :model_name: Name of the model at which :field_name: will be defined.
         :raml_resource: Instance of pyraml.entities.RamlResource. Resource
             for which :model_name: will is being defined.
     """
@@ -124,7 +123,8 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         field_kwargs.update(props.get('args', {}) or {})
 
         processors = field_kwargs.get('processors', [])
-        field_kwargs['processors'] = [registry.get(name) for name in processors]
+        field_kwargs['processors'] = [
+            registry.get(name) for name in processors]
 
         raml_type = (props.get('type', 'string') or 'string').lower()
         if raml_type not in type_fields:
@@ -133,7 +133,7 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         field_cls = type_fields[raml_type]
 
         if field_cls is engine.Relationship:
-            prepare_relationship(field_name, model_name, raml_resource)
+            prepare_relationship(field_name, raml_resource)
         if field_cls is engine.ForeignKeyField:
             key = 'ref_column_type'
             field_kwargs[key] = type_fields[field_kwargs[key]]

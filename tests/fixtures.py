@@ -7,11 +7,18 @@ def clear_registry(request):
     registry.registry.clear()
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def engine_mock(request):
     import nefertari
     from mock import Mock
 
+    class BaseDocument(object):
+        pass
+
+    class ESBaseDocument(object):
+        pass
+
     nefertari.engine = Mock()
-    nefertari.engine.BaseDocument = object
+    nefertari.engine.BaseDocument = BaseDocument
+    nefertari.engine.ESBaseDocument = ESBaseDocument
     return nefertari.engine
