@@ -64,17 +64,18 @@ class TestHelperFunctions(object):
 @pytest.mark.usefixtures('engine_mock')
 class TestGenerateModelCls(object):
 
-    schema = {
-        'properties': {},
-        'auth_model': False,
-        'public_fields': ['public_field1'],
-        'auth_fields': ['auth_field1'],
-        'nested_relationships': ['nested_field1']
-    }
+    def _test_schema(self):
+        return {
+            'properties': {},
+            'auth_model': False,
+            'public_fields': ['public_field1'],
+            'auth_fields': ['auth_field1'],
+            'nested_relationships': ['nested_field1']
+        }
 
     def test_simple_case(self, mock_reg):
         from ramses import models
-        schema = self.schema.copy()
+        schema = self._test_schema()
         schema['properties']['progress'] = {
             "required": True,
             "type": "float",
@@ -104,7 +105,7 @@ class TestGenerateModelCls(object):
 
     def test_auth_model(self, mock_reg):
         from ramses import models
-        schema = self.schema.copy()
+        schema = self._test_schema()
         schema['properties']['progress'] = {}
         schema['auth_model'] = True
         mock_reg.mget.return_value = {'foo': 'bar'}
@@ -116,7 +117,7 @@ class TestGenerateModelCls(object):
 
     def test_db_based_model(self, mock_reg):
         from ramses import models
-        schema = self.schema.copy()
+        schema = self._test_schema()
         schema['properties']['progress'] = {}
         mock_reg.mget.return_value = {'foo': 'bar'}
 
@@ -129,7 +130,7 @@ class TestGenerateModelCls(object):
 
     def test_unknown_field_type(self, mock_reg):
         from ramses import models
-        schema = self.schema.copy()
+        schema = self._test_schema()
         schema['properties']['progress'] = {'type': 'foobar'}
         mock_reg.mget.return_value = {'foo': 'bar'}
 
@@ -141,7 +142,7 @@ class TestGenerateModelCls(object):
     @patch('ramses.models.prepare_relationship')
     def test_relationship_field(self, mock_prep, mock_reg):
         from ramses import models
-        schema = self.schema.copy()
+        schema = self._test_schema()
         schema['properties']['progress'] = {'type': 'relationship'}
         mock_reg.mget.return_value = {'foo': 'bar'}
         models.generate_model_cls(
@@ -150,7 +151,7 @@ class TestGenerateModelCls(object):
 
     def test_foreignkey_field(self, mock_reg):
         from ramses import models
-        schema = self.schema.copy()
+        schema = self._test_schema()
         schema['properties']['progress'] = {
             "type": "foreign_key",
             "args": {
@@ -166,7 +167,7 @@ class TestGenerateModelCls(object):
 
     def test_list_field(self, mock_reg):
         from ramses import models
-        schema = self.schema.copy()
+        schema = self._test_schema()
         schema['properties']['progress'] = {
             "type": "list",
             "args": {
@@ -179,3 +180,12 @@ class TestGenerateModelCls(object):
         models.engine.ListField.assert_called_once_with(
             required=False, item_type=models.engine.IntegerField,
             processors=[])
+
+    def test_duplicate_field_name(self, mock_reg):
+        from ramses import models
+        schema = self._test_schema()
+        schema['properties']['_public_fields'] = {'type': 'interval'}
+        mock_reg.mget.return_value = {'foo': 'bar'}
+        models.generate_model_cls(
+            schema=schema, model_name='Story', raml_resource=1)
+        assert not models.engine.IntervalField.called
