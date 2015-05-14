@@ -35,7 +35,7 @@ class TestSetupTicketPolicy(object):
         auth._setup_ticket_policy(config=config, params=params)
         mock_policy.assert_called_once_with(
             include_ip=True, secure=True, parent_domain=True,
-            callback=auth_model.groups_by_userid, secret=12345,
+            callback=auth_model.get_groups_by_userid, secret=12345,
             wild_domain=True, debug=True, http_only=False
         )
 
@@ -48,7 +48,7 @@ class TestSetupTicketPolicy(object):
         policy = auth._setup_ticket_policy(
             config=config, params={'secret': 'my_secret'})
         config.add_request_method.assert_called_once_with(
-            config.registry.auth_model.authuser_by_userid,
+            config.registry.auth_model.get_authuser_by_userid,
             'user', reify=True)
         assert policy == mock_policy()
 
@@ -98,8 +98,8 @@ class TestSetupApiKeyPolicy(object):
         config.registry.auth_model = auth_model
         policy = auth._setup_apikey_policy(config, {'foo': 'bar'})
         mock_policy.assert_called_once_with(
-            foo='bar', check=auth_model.groups_by_token,
-            credentials_callback=auth_model.token_credentials,
+            foo='bar', check=auth_model.get_groups_by_token,
+            credentials_callback=auth_model.get_token_credentials,
             user_model=auth_model,
         )
         assert policy == mock_policy()
@@ -112,8 +112,8 @@ class TestSetupApiKeyPolicy(object):
         config.registry.auth_model = auth_model
         policy = auth._setup_apikey_policy(config, {'foo': 'bar'})
         mock_policy.assert_called_once_with(
-            foo='bar', check=auth_model.groups_by_token,
-            credentials_callback=auth_model.token_credentials,
+            foo='bar', check=auth_model.get_groups_by_token,
+            credentials_callback=auth_model.get_token_credentials,
             user_model=auth_model,
         )
         assert policy == mock_policy()
@@ -127,11 +127,11 @@ class TestSetupApiKeyPolicy(object):
         auth._setup_apikey_policy(config, {})
         config.add_route.assert_has_calls([
             call('token', '/auth/token'),
-            call('token_reset', '/auth/token_reset'),
+            call('reset_token', '/auth/reset_token'),
             call('register', '/auth/register'),
         ])
 
-        token, token_reset, register = config.add_view.call_args_list
+        token, reset_token, register = config.add_view.call_args_list
         token_kwargs = token[1]
         assert token_kwargs.keys() == [
             'request_method', 'view', 'route_name', 'attr']
@@ -139,12 +139,12 @@ class TestSetupApiKeyPolicy(object):
         assert token_kwargs['attr'] == 'claim_token'
         assert token_kwargs['request_method'] == 'POST'
 
-        token_reset_kwargs = token_reset[1]
-        assert token_reset_kwargs.keys() == [
+        reset_token_kwargs = reset_token[1]
+        assert reset_token_kwargs.keys() == [
             'request_method', 'view', 'route_name', 'attr']
-        assert token_reset_kwargs['route_name'] == 'token_reset'
-        assert token_reset_kwargs['attr'] == 'token_reset'
-        assert token_reset_kwargs['request_method'] == 'POST'
+        assert reset_token_kwargs['route_name'] == 'reset_token'
+        assert reset_token_kwargs['attr'] == 'reset_token'
+        assert reset_token_kwargs['request_method'] == 'POST'
 
         register_kwargs = register[1]
         assert register_kwargs.keys() == [
