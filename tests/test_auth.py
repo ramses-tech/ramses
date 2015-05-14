@@ -1,15 +1,15 @@
 import pytest
 from mock import Mock, patch, call
-from pyramid.config import Configurator
 
 from nefertari.utils import dictset
 
 from .fixtures import engine_mock
 
 
+@pytest.mark.usefixtures('engine_mock')
 class TestSetupTicketPolicy(object):
 
-    def test_no_secret(self, engine_mock):
+    def test_no_secret(self):
         from ramses import auth
         with pytest.raises(ValueError) as ex:
             auth._setup_ticket_policy(config='', params={})
@@ -17,7 +17,7 @@ class TestSetupTicketPolicy(object):
         assert expected == str(ex.value)
 
     @patch('ramses.auth.AuthTktAuthenticationPolicy')
-    def test_params_converted(self, mock_policy, engine_mock):
+    def test_params_converted(self, mock_policy):
         from ramses import auth
         params = dictset(
             secure='true',
@@ -40,7 +40,7 @@ class TestSetupTicketPolicy(object):
         )
 
     @patch('ramses.auth.AuthTktAuthenticationPolicy')
-    def test_request_method_added(self, mock_policy, engine_mock):
+    def test_request_method_added(self, mock_policy):
         from ramses import auth
         config = Mock()
         config.registry.settings = {'my_secret': 12345}
@@ -53,7 +53,7 @@ class TestSetupTicketPolicy(object):
         assert policy == mock_policy()
 
     @patch('ramses.auth.AuthTktAuthenticationPolicy')
-    def test_routes_views_added(self, mock_policy, engine_mock):
+    def test_routes_views_added(self, mock_policy):
         from ramses import auth
         config = Mock()
         config.registry.settings = {'my_secret': 12345}
@@ -87,10 +87,11 @@ class TestSetupTicketPolicy(object):
         assert register_kwargs['request_method'] == 'POST'
 
 
+@pytest.mark.usefixtures('engine_mock')
 class TestSetupApiKeyPolicy(object):
 
     @patch('ramses.auth.ApiKeyAuthenticationPolicy')
-    def test_policy_params(self, mock_policy, engine_mock):
+    def test_policy_params(self, mock_policy):
         from ramses import auth
         auth_model = Mock()
         config = Mock()
@@ -104,7 +105,7 @@ class TestSetupApiKeyPolicy(object):
         assert policy == mock_policy()
 
     @patch('ramses.auth.ApiKeyAuthenticationPolicy')
-    def test_policy_params(self, mock_policy, engine_mock):
+    def test_policy_params(self, mock_policy):
         from ramses import auth
         auth_model = Mock()
         config = Mock()
@@ -118,7 +119,7 @@ class TestSetupApiKeyPolicy(object):
         assert policy == mock_policy()
 
     @patch('ramses.auth.ApiKeyAuthenticationPolicy')
-    def test_routes_views_added(self, mock_policy, engine_mock):
+    def test_routes_views_added(self, mock_policy):
         from ramses import auth
         auth_model = Mock()
         config = Mock()
@@ -153,9 +154,10 @@ class TestSetupApiKeyPolicy(object):
         assert register_kwargs['request_method'] == 'POST'
 
 
+@pytest.mark.usefixtures('engine_mock')
 class TestSetupAuthPolicies(object):
 
-    def test_not_secured(self, engine_mock):
+    def test_not_secured(self):
         from ramses import auth
         raml_data = Mock(securedBy=[None])
         config = Mock()
@@ -163,7 +165,7 @@ class TestSetupAuthPolicies(object):
         assert not config.set_authentication_policy.called
         assert not config.set_authorization_policy.called
 
-    def test_not_defined_security_scheme(self, engine_mock):
+    def test_not_defined_security_scheme(self):
         from ramses import auth
         raml_data = Mock(securedBy=['zoo'], securitySchemes={'foo': 'bar'})
         with pytest.raises(ValueError) as ex:
@@ -171,7 +173,7 @@ class TestSetupAuthPolicies(object):
         expected = 'Not defined security scheme used in `securedBy`: zoo'
         assert expected == str(ex.value)
 
-    def test_not_supported_scheme_type(self, engine_mock):
+    def test_not_supported_scheme_type(self):
         from ramses import auth
         raml_data = Mock(
             securedBy=['foo'],
@@ -183,7 +185,7 @@ class TestSetupAuthPolicies(object):
         assert expected == str(ex.value)
 
     @patch('ramses.auth.ACLAuthorizationPolicy')
-    def test_policies_calls(self, mock_acl, engine_mock):
+    def test_policies_calls(self, mock_acl):
         from ramses import auth
         scheme = Mock(type='mytype', settings={'name': 'user1'})
         raml_data = Mock(
@@ -202,9 +204,10 @@ class TestSetupAuthPolicies(object):
             mock_acl())
 
 
+@pytest.mark.usefixtures('engine_mock')
 class TestHelperFunctions(object):
 
-    def test_create_admin_user_key_error(self, engine_mock):
+    def test_create_admin_user_key_error(self):
         from ramses import auth
         config = Mock()
         config.registry.settings = {}
@@ -212,7 +215,7 @@ class TestHelperFunctions(object):
         assert not config.registry.auth_model.get_or_create.called
 
     @patch('ramses.auth.transaction')
-    def test_create_admin_user_exists(self, mock_trans, engine_mock):
+    def test_create_admin_user_exists(self, mock_trans):
         from ramses import auth
         config = Mock()
         config.registry.settings = {
@@ -233,7 +236,7 @@ class TestHelperFunctions(object):
         )
 
     @patch('ramses.auth.transaction')
-    def test_create_admin_user_created(self, mock_trans, engine_mock):
+    def test_create_admin_user_created(self, mock_trans):
         from ramses import auth
         config = Mock()
         config.registry.settings = {
@@ -254,7 +257,7 @@ class TestHelperFunctions(object):
         )
 
     @patch('ramses.auth.create_admin_user')
-    def test_includeme(self, mock_create, engine_mock):
+    def test_includeme(self, mock_create):
         from ramses import auth
         auth.includeme(config=1)
         mock_create.assert_called_once_with(1)
