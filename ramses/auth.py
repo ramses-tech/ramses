@@ -31,7 +31,7 @@ def _setup_ticket_policy(config, params):
     Notes:
       * Initial `secret` params value is considered to be a name of config
         param that represents a cookie name.
-      * `auth_model.groups_by_userid` is used as a `callback`.
+      * `auth_model.get_groups_by_userid` is used as a `callback`.
       * Special processing is applied to boolean params to convert string
         values like 'True', 'true' to booleans. This is done because pyraml
         parser currently does not support setting value being a boolean.
@@ -54,10 +54,10 @@ def _setup_ticket_policy(config, params):
     params['secret'] = config.registry.settings[params['secret']]
 
     auth_model = config.registry.auth_model
-    params['callback'] = auth_model.groups_by_userid
+    params['callback'] = auth_model.get_groups_by_userid
 
     config.add_request_method(
-        auth_model.authuser_by_userid, 'user', reify=True)
+        auth_model.get_authuser_by_userid, 'user', reify=True)
 
     policy = AuthTktAuthenticationPolicy(**params)
 
@@ -88,9 +88,10 @@ def _setup_apikey_policy(config, params):
     Notes:
       * User may provide model name in :params['user_model']: do define
         the name of the user model.
-      * `auth_model.groups_by_token` is used to perform username & token check
-      * `auth_model.token_credentials` is used to get username and token from
-        userid
+      * `auth_model.get_groups_by_token` is used to perform username & token
+        check
+      * `auth_model.get_token_credentials` is used to get username and token
+        from userid
       * Also connects basic routes to perform authn actions.
 
     Arguments:
@@ -100,11 +101,11 @@ def _setup_apikey_policy(config, params):
     log.info('Configuring ApiKey Authn policy')
 
     auth_model = config.registry.auth_model
-    params['check'] = auth_model.groups_by_token
-    params['credentials_callback'] = auth_model.token_credentials
+    params['check'] = auth_model.get_groups_by_token
+    params['credentials_callback'] = auth_model.get_token_credentials
     params['user_model'] = auth_model
     config.add_request_method(
-        auth_model.authuser_by_name, 'user', reify=True)
+        auth_model.get_authuser_by_name, 'user', reify=True)
 
     policy = ApiKeyAuthenticationPolicy(**params)
 
@@ -116,10 +117,10 @@ def _setup_apikey_policy(config, params):
         view=RamsesTokenAuthenticationView,
         route_name='token', attr='claim_token', request_method='POST')
 
-    config.add_route('token_reset', '/auth/token_reset')
+    config.add_route('reset_token', '/auth/reset_token')
     config.add_view(
         view=RamsesTokenAuthenticationView,
-        route_name='token_reset', attr='token_reset', request_method='POST')
+        route_name='reset_token', attr='reset_token', request_method='POST')
 
     config.add_route('register', '/auth/register')
     config.add_view(
