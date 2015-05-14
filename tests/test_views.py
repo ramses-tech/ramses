@@ -188,6 +188,9 @@ class TestCollectionView(ViewTestBase):
 
     def test_create(self):
         view = self._test_view()
+        view.request.registry._root_resources = {
+            'foo': Mock(auth=False)
+        }
         view._model_class = Mock()
         obj = Mock()
         obj.to_dict.return_value = {'id': 1}
@@ -531,6 +534,9 @@ class TestItemSingularView(ViewTestBase):
 
     def test_create(self):
         view = self._test_view()
+        view.request.registry._root_resources = {
+            'foo': Mock(auth=False)
+        }
         view.get_item = Mock()
         view._singular_model = Mock()
         resp = view.create(foo=1)
