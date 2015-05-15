@@ -26,8 +26,8 @@ ALLOW_ALL = (Allow, Everyone, ALL_PERMISSIONS)
 
 
 def methods_to_perms(perms, methods_map):
-    """ Convert permissions (perms) which are either HTTP methods or
-    keyword 'all' to a set of valid Pyramid permissions.
+    """ Convert permissions ("perms") which are either HTTP methods or
+    the keyword 'all' into a set of valid Pyramid permissions.
 
     Arguments:
         :perms: List or comma-separated string of HTTP methods, or 'all'
@@ -55,14 +55,14 @@ def parse_acl(acl_string, methods_map):
     Values of ACL action and principal are parsed using `actions` and
     `special_principals` maps and are looked up after `strip()` and `lower()`.
 
-    ACEs in :acl_string: may be separated by newline or semicolon.
-    Action, principal and permission list must be separated with space.
-    Permissions must be separated with comma.
+    ACEs in :acl_string: may be separated by newlines or semicolons.
+    Action, principal and permission lists must be separated by spaces.
+    Permissions must be comma-separated.
     E.g. 'allow everyone get,post,patch' and 'deny authenticated delete'
 
     Arguments:
         :acl_string: Raw RAML string containing defined ACEs.
-        :methods_map: Map of HTTP methods to nefertari method handlers' names.
+        :methods_map: Map of HTTP methods to nefertari method handler names.
     """
     if not acl_string:
         return [ALLOW_ALL]
@@ -115,14 +115,14 @@ class BaseACL(SelfParamMixin):
             :ace: Single ACE object that looks like (action, callable,
                 permission or [permission])
             :request: Current request object
-            :obj: Object for which is being accessed though the ACL
-        Principal must return single ACE or a list of ACEs.
+            :obj: Object instance to be accessed via the ACL
+        Principals must return a single ACE or a list of ACEs.
 
         Arguments:
             :acl: Sequence of valid Pyramid ACEs which will be processed
             :methods_map: Map of HTTP methods to nefertari view method names
                 (permissions)
-            :obj: Object for which is being accessed though the ACL
+            :obj: Object to be accessed via the ACL
         """
         new_acl = []
         for i, ace in enumerate(acl):
@@ -191,12 +191,13 @@ class BaseACL(SelfParamMixin):
 def generate_acl(context_cls, raml_resource, parsed_raml, es_based=True):
     """ Generate an ACL.
 
-    Generated ACL class has `__context_class__` attribute set to :context_cls:.
+    Generated ACL class has a `__context_class__` attribute set to :context_cls:.
 
     ACLs used for collection and item access control are generated from a
     security scheme which has a name of :raml_resource.securedBy[0]:.
-    If :raml_resource: has no `securedBy` schemes defined ALLOW_ALL ACL is used.
-    If `collection` or `item` setting is empty, it is assigned ALLOW_ALL ACL.
+    If :raml_resource: has no `securedBy` schemes defined then ALLOW_ALL ACL is
+    used.
+    If the `collection` or `item` settings are empty, then ALLOW_ALL ACL is used.
 
     Arguments:
         :context_cls: Generated model class

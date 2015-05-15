@@ -54,13 +54,13 @@ def get_existing_model(model_name):
 
 
 def prepare_relationship(field_name, raml_resource):
-    """ Create referenced model if not exists.
+    """ Create referenced model if it doesn't exist.
 
-    When preparing relationship, we check to see if model that will be
-    referenced already exists. If not, it is created so it would be possible
-    to use it in relationship. Thus first usage of this model in RAML file
+    When preparing a relationship, we check to see if the model that will be
+    referenced already exists. If not, it is created so that it will be possible
+    to use it in a relationship. Thus the first usage of this model in RAML file
     must provide its schema in one of http methods that are assumed to contain
-    full body schema.
+    a full body schema.
 
     Arguments:
         :field_name: Name of the field that should become a `Relationship`.

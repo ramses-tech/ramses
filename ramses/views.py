@@ -92,9 +92,9 @@ class BaseView(NefertariBaseView):
         """ Get objects collection taking into account generated queryset
         of parent view.
 
-        This method allows to work with nested resources properly. Thus queryset
-        returned by this method will be a subset of parent view's queryset, thus
-        filtering out objects that don't belong to parent object.
+        This method allows working with nested resources properly. Thus a queryset
+        returned by this method will be a subset of its parent view's queryset, thus
+        filtering out objects that don't belong to the parent object.
         """
         self._query_params.update(kwargs)
         objects = self._parent_queryset()
@@ -107,11 +107,11 @@ class BaseView(NefertariBaseView):
         """ Get collection item taking into account generated queryset
         of parent view.
 
-        This method allows to work with nested resources properly. Thus item
-        returned by this method will belong to parent view's queryset, thus
-        filtering out objects that don't belong to parent object.
+        This method allows working with nested resources properly. Thus an item
+        returned by this method will belong to its parent view's queryset, thus
+        filtering out objects that don't belong to the parent object.
 
-        Returns an object got from applied ACL. If ACL wasn't applied, it is
+        Returns an object from the applicable ACL. If ACL wasn't applied, it is
         applied explicitly.
         """
         if callable(self.context):
@@ -132,9 +132,9 @@ class BaseView(NefertariBaseView):
     def reload_context(self, es_based, **kwargs):
         """ Reload `self.context` object into a DB or ES object.
 
-        Reload is performed by getting object ID from :kwargs: and performing
-        key item get from new instance of `self._factory` which is an ACL
-        class used for current view.
+        A reload is performed by getting the object ID from :kwargs: and then
+        getting a context key item from the new instance of `self._factory`
+        which is an ACL class used by the current view.
 
         Arguments:
             :es_based: Boolean. Whether to init ACL ac es-based or not. This
@@ -209,7 +209,8 @@ class ESBaseView(BaseView):
     fetching data from ES instead of database.
 
     Use `self.get_collection_es` and `self.get_item_es` to get access
-    to set of objects and object respectively which are valid at current level.
+    to the set of objects and individual object respectively which are
+    valid at the current level.
     """
     def _get_raw_terms(self):
         search_params = []
@@ -221,7 +222,7 @@ class ESBaseView(BaseView):
     def _parent_queryset_es(self):
         """ Get queryset (list of object IDs) of parent view.
 
-        Generated queryset is used to run queries in the current level
+        The generated queryset is used to run queries in the current level's
         view.
         """
         parent = self._resource.parent
@@ -243,12 +244,12 @@ class ESBaseView(BaseView):
         return list(set(str(id_) for id_ in ids))
 
     def get_collection_es(self, **kwargs):
-        """ Get ES objects collection taking into account generated queryset
+        """ Get ES objects collection taking into account the generated queryset
         of parent view.
 
-        This method allows to work with nested resources properly. Thus queryset
-        returned by this method will be a subset of parent view's queryset, thus
-        filtering out objects that don't belong to parent object.
+        This method allows working with nested resources properly. Thus a queryset
+        returned by this method will be a subset of its parent view's queryset, thus
+        filtering out objects that don't belong to the parent object.
         """
         from nefertari.elasticsearch import ES
         es = ES(self._model_class.__name__)
@@ -268,12 +269,12 @@ class ESBaseView(BaseView):
         """ Get ES collection item taking into account generated queryset
         of parent view.
 
-        This method allows to work with nested resources properly. Thus item
-        returned by this method will belong to parent view's queryset, thus
-        filtering out objects that don't belong to parent object.
+        This method allows working with nested resources properly. Thus an item
+        returned by this method will belong to its parent view's queryset, thus
+        filtering out objects that don't belong to the parent object.
 
-        Returns an object got from applied ACL. If ACL wasn't applied, it is
-        applied explicitly.
+        Returns an object retrieved from the applicable ACL. If an ACL wasn't applied,
+        it is applied explicitly.
         """
         item_id = self._get_context_key(**kwargs)
         objects_ids = self._parent_queryset_es()
@@ -318,9 +319,9 @@ class ESCollectionView(ESBaseView, CollectionView):
     def delete_many(self, **kwargs):
         """ Delete multiple objects from collection.
 
-        First ES is queried, then results are used to query DB.
+        First ES is queried, then the results are used to query the DB.
         This is done to make sure deleted objects are those filtered
-        by ES in 'index' method (so user deletes what he saw).
+        by ES in the 'index' method (so user deletes what he saw).
         """
         db_objects = self.get_dbcollection_with_es(**kwargs)
         count = self._model_class.count(db_objects)
@@ -335,9 +336,9 @@ class ESCollectionView(ESBaseView, CollectionView):
     def update_many(self, **kwargs):
         """ Update multiple objects from collection.
 
-        First ES is queried, then results are used to query DB.
+        First ES is queried, then the results are used to query DB.
         This is done to make sure updated objects are those filtered
-        by ES in 'index' method (so user updates what he saw).
+        by ES in the 'index' method (so user updates what he saw).
         """
         db_objects = self.get_dbcollection_with_es(**kwargs)
         count = self._model_class.count(db_objects)
@@ -348,13 +349,14 @@ class ESCollectionView(ESBaseView, CollectionView):
 
 
 class ItemSubresourceBaseView(BaseView):
-    """ Base class for all subresources of collection item resource, that
-    don't represent a collection. E.g. /users/{id}/profile, where 'profile'
-    is a singular resource or /users/{id}/some_action, where 'some_action'
-    action may be performed when requesting this route.
+    """ Base class for all subresources of collection item resources which
+    don't represent a collection of their own.
+    E.g. /users/{id}/profile, where 'profile' is a singular resource or 
+    /users/{id}/some_action, where the 'some_action' action may be performed 
+    when requesting this route.
 
     Subclass ItemSubresourceBaseView in your project when you want to define
-    subroute and view of a item route defined in RAML and generated by ramses.
+    a subroute and view of an item route defined in RAML and generated by ramses.
     Use `self.get_item` to get an object on which actions are being performed.
 
     Moved into a separate class so all item subresources have a common
@@ -406,13 +408,13 @@ class ItemAttributeView(ItemSubresourceBaseView):
 class ItemSingularView(ItemSubresourceBaseView):
     """ View used to work with singular resources.
 
-    Singular resources represent one-to-one relationship. E.g. users/1/profile.
+    Singular resources represent a one-to-one relationship. E.g. users/1/profile.
 
     You may subclass ItemSingularView in your project when you want to define
-    custom singular subroute and view of a item route defined in RAML and
+    a custom singular subroute and view of an item route defined in RAML and
     generated by ramses.
-    If you decide fo do so, make sure to set `self._singular_model` to a model
-    class instances of which will be processed by this view.
+    If you decide to do so, make sure to set `self._singular_model` to a model
+    class, instances of which will be processed by this view.
     """
     def __init__(self, *args, **kw):
         super(ItemSingularView, self).__init__(*args, **kw)
@@ -445,7 +447,7 @@ class ItemSingularView(ItemSubresourceBaseView):
 
 def generate_rest_view(model_cls, attrs=None, es_based=True,
                        attr_view=False, singular=False):
-    """ Generate REST view for model class.
+    """ Generate REST view for a model class.
 
     Arguments:
         :model_cls: Generated DB model class.

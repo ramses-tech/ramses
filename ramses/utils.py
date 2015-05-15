@@ -20,7 +20,7 @@ def convert_schema(raml_schema, schema_ct):
     """ Restructure `raml_schema` to a dictionary that has 'properties'
     as well as other schema keys/values.
 
-    Result dict looks like
+    The resulting dictionary looks like this::
 
     {
         "properties": {
@@ -36,13 +36,10 @@ def convert_schema(raml_schema, schema_ct):
         ...more schema options
     }
 
-    Operations performer depend on a Content Type of `schema` which
-    is passed as `schema_ct` argument. Returns JSON schema as is, because
-    it is the sample of what output dict looks like.
-
     Arguments:
         :raml_schema: pyraml.entities.RamlBody.schema.
-        :schema_ct: ContentType of the schema as a string from RAML file.
+        :schema_ct: ContentType of the schema as a string from RAML file. Only
+            JSON is currently supported.
     """
     if schema_ct == ContentTypes.JSON:
         if not isinstance(raml_schema, dict):
@@ -59,7 +56,7 @@ def is_restful_uri(uri):
     """ Check whether `uri` is a RESTful uri.
 
     Uri is assumed to be restful if it only contains a single token.
-    E.g. 'stories', 'users' but NOT 'stories/comments', 'users/{id}'
+    E.g. 'stories' and 'users' but NOT 'stories/comments' and 'users/{id}'
 
     Arguments:
         :uri: URI as a string
@@ -71,7 +68,7 @@ def is_restful_uri(uri):
 def is_dynamic_uri(uri):
     """ Determine whether `uri` is a dynamic uri or not.
 
-    Assumes dynamic uri is a uri that ends with '}' which is a Pyramid
+    Assumes a dynamic uri is one that ends with '}' which is a Pyramid
     way to define dynamic parts in uri.
 
     Arguments:
@@ -93,7 +90,7 @@ def generate_model_name(name):
     """ Generate model name.
 
     Arguments:
-        :name: String representing field or route name.
+        :name: String representing a field or route name.
     """
     model_name = inflection.camelize(name.strip('/'))
     return inflection.singularize(model_name)
@@ -112,13 +109,13 @@ def find_dynamic_resource(raml_resource):
 
 
 def dynamic_part_name(raml_resource, clean_uri, pk_field):
-    """ Generate dynamic part for resource :raml_resource:.
+    """ Generate a dynamic part for a resource :raml_resource:.
 
-    Dynamic part is generated using 2 parts: :clean_uri: of the resource and
-    dynamic part of dymanic subresource. If :raml_resource: has no dynamic
+    A dynamic part is generated using 2 parts: :clean_uri: of the resource and
+    the dynamic part of any dymanic subresources. If :raml_resource: has no dynamic
     subresources, 'id' is used as the 2nd part.
     E.g. if your dynamic part on route 'stories' is named 'superId' then dynamic
-    part will be 'storied_superId'.
+    part will be 'stories_superId'.
 
     Arguments:
         :raml_resource: Instance of pyraml.entities.RamlResource for which
@@ -135,12 +132,12 @@ def dynamic_part_name(raml_resource, clean_uri, pk_field):
 
 
 def resource_view_attrs(raml_resource, singular=False):
-    """ Generate view methods names needed for `raml_resource` view.
+    """ Generate view method names needed for `raml_resource` view.
 
     Collects HTTP method names from `raml_resource.methods` and
-    dynamic child `methods` if child exists. Collected methods are
-    then translated  to `nefertari.view.BaseView` methods' names
-    each of which if used to process a particular HTTP method request.
+    dynamic child `methods` if a child exists. Collected methods are
+    then translated  to `nefertari.view.BaseView` method names,
+    each of which is used to process a particular HTTP method request.
 
     Maps of {HTTP_method: view_method} `collection_methods` and
     `item_methods` are used to convert collection and item methods
@@ -176,10 +173,10 @@ def resource_view_attrs(raml_resource, singular=False):
 def resource_schema(raml_resource):
     """ Get schema properties of RAML resource :raml_resource:.
 
-    Process follows these steps:
-      * :raml_resource: post, put, patch methods body chemas are checked
-        to see if any defines schema.
-      * Found schema is restructured into dict of form
+    The process follows these steps:
+      * :raml_resource: post, put, patch methods body schemas are checked
+        to see if a schema is defined.
+      * If found, the schema is restructured into a dictionary of form
         {field_name: {required: boolean, type: type_name}} and returned.
 
     Arguments:

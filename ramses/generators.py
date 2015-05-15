@@ -46,7 +46,7 @@ def setup_data_model(raml_resource, model_name):
 
 def handle_model_generation(raml_resource, route_name):
     """ Generates model name and runs `setup_data_model` to get
-    or generate ectual model class.
+    or generate actual model class.
 
     Arguments:
         :raml_resource: Instance of pyraml.entities.RamlResource.
@@ -61,31 +61,31 @@ def handle_model_generation(raml_resource, route_name):
 
 def configure_resources(config, raml_resources, parsed_raml,
                         parent_resource=None):
-    """ Perform complete resources' configuration process
+    """ Perform complete resource configuration process
 
-    Resources RAML data from `raml_resources` is used. Created resources
-    are attached to `parent_resource` class which is an instance if
+    RAML data from `raml_resources` is used. Created resources
+    are attached to `parent_resource` class which is an instance of
     `nefertari.resource.Resource`.
 
-    Function iterates through resources data from `raml_resources` and
-    generates full set of objects required: ACL, view, route, resource,
-    database model. Is called recursively for configuring child resources.
+    This function iterates through resources data from `raml_resources` and
+    generates the full set of objects required: ACL, view, route, resource,
+    database model. It is called recursively for configuring child resources.
 
     Things to consider:
       * Top-level resources must be collection names.
-      * Resources nesting must look like collection/id/collection/id/...
+      * Resource nesting must look like collection/id/collection/id/...
       * No resources are explicitly created for dynamic (ending with '}')
         RAML resources as they are implicitly processed by parent collection
-        resource.
-      * DB model name is generated using parent routes' uid and current
-        resource name. E.g. parent uid is 'users:stories' and current resource
-        is '/comments'. DB model name will be 'UsersStoriesComment'.
+        resources.
+      * The DB model name is generated using the parent route's uid and current
+        resource name. E.g. if the parent uid is 'users:stories' and the current
+        resource is '/comments'. DB model name will be 'UsersStoriesComment'.
       * Dynamic resource uri is added to parent resource as 'id_name' attr.
         You are encouraged to name dynamic route using field 'id', as it is
         assumed to be a primary_key=True field when generating DB model.
-        E.g. if you have stories/{id}, 'stories' resource will be init
+        E.g. if you have stories/{id}, the 'stories' resource will be initiated
         with id_name='id'.
-      * Collection resource may only have 1 dynamic child resource.
+      * Collection resources may only have 1 dynamic child resource.
 
     Arguments:
         :config: Pyramid Configurator instance

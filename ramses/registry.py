@@ -1,16 +1,16 @@
 """
-Naive registry that is just a subclass of python dict.
-Is meant to be used to store object and retrieve when needed.
-Registry is recreated on each app launch and best fits to store some
+Naive registry that is just a subclass of a python dictionary.
+It is meant to be used to store objects and retrieve them when needed.
+The registry is recreated on each app launch and is best suited to store some
 dynamic or short-term data.
 
-Storing should be performed using `add` function and retrieving using
-`get` function.
+Storing an object should be performed by using the `add` function, and
+retrieving it by using the `get` function.
 
 
 Examples:
 
-Register a function under function name::
+Register a function under a function name::
 
     from ramses import registry
 
@@ -21,7 +21,7 @@ Register a function under function name::
     assert registry.get('foo') is foo
 
 
-Register a function under different name::
+Register a function under a different name::
 
     from ramses import registry
 
@@ -32,7 +32,7 @@ Register a function under different name::
     assert registry.get('bar') is foo
 
 
-Register arbitrary object::
+Register an arbitrary object::
 
     from ramses import registry
 
@@ -41,7 +41,7 @@ Register arbitrary object::
     assert registry.get('my_stored_var') == myvar
 
 
-Register and get object by namespace::
+Register and get an object by namespace::
 
     from ramses import registry
 

@@ -35,7 +35,7 @@ def _setup_ticket_policy(config, params):
       * Special processing is applied to boolean params to convert string
         values like 'True', 'true' to booleans. This is done because pyraml
         parser currently does not support setting value being a boolean.
-      * Also connects basic routes to perform authn actions.
+      * Also connects basic routes to perform authentication actions.
 
     Arguments:
         :config: Pyramid Configurator instance.
@@ -92,7 +92,7 @@ def _setup_apikey_policy(config, params):
         check
       * `auth_model.get_token_credentials` is used to get username and token
         from userid
-      * Also connects basic routes to perform authn actions.
+      * Also connects basic routes to perform authentication actions.
 
     Arguments:
         :config: Pyramid Configurator instance.
