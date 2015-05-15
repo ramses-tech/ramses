@@ -68,7 +68,7 @@ def configure_resources(config, raml_resources, parsed_raml,
     `nefertari.resource.Resource`.
 
     This function iterates through resources data from `raml_resources` and
-    generates the full set of objects required: ACL, view, route, resource,
+    generates: ACL, view, route, resource,
     database model. It is called recursively for configuring child resources.
 
     Things to consider:
@@ -77,15 +77,7 @@ def configure_resources(config, raml_resources, parsed_raml,
       * No resources are explicitly created for dynamic (ending with '}')
         RAML resources as they are implicitly processed by parent collection
         resources.
-      * The DB model name is generated using the parent route's uid and current
-        resource name. E.g. if the parent uid is 'users:stories' and the current
-        resource is '/comments'. DB model name will be 'UsersStoriesComment'.
-      * Dynamic resource uri is added to parent resource as 'id_name' attr.
-        You are encouraged to name dynamic route using field 'id', as it is
-        assumed to be a primary_key=True field when generating DB model.
-        E.g. if you have stories/{id}, the 'stories' resource will be initiated
-        with id_name='id'.
-      * Collection resources may only have 1 dynamic child resource.
+      * Collection resources can only have 1 dynamic child resource.
 
     Arguments:
         :config: Pyramid Configurator instance
@@ -201,6 +193,11 @@ def generate_server(parsed_raml, config):
 
 def generate_models(config, raml_resources):
     """ Generate model for each resource in :raml_resources:
+
+    Notes:
+      * The DB model name is generated using singular titled version of current
+        resource's url. E.g. for resource under url '/stories', model with
+        name 'Story' will be generated.
 
     Arguments:
         :config: Pyramid Configurator instance
