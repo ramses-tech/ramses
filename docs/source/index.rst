@@ -1,28 +1,21 @@
 Ramses
 ======
 
-To start using Ramses on a project, see the readme of the `example project <https://github.com/brandicted/ramses-example>`_.
+Ramses is a library that generates a RESTful API using RAML. It uses Pyramid and `Nefertari <https://nefertari.readthedocs.org/en/master/>`_ which provides ElasticSearch-powered views.
 
-RAML documentation is here: http://raml.org/docs.html
-
-.. image:: ramses.jpg
-
-Image credit: Wikipedia
-
-Ramses has a partner named `Nefertari <https://nefertari.readthedocs.org/en/master/>`_.
-
-
-Contents
-========
+Table of Content
+================
 
 .. toctree::
    :maxdepth: 2
 
+   getting_started
+   raml
+   schemas
+   fields
+   example_project
    changelog
 
+.. image:: ramses.jpg
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`search`
+Image credit: Wikipedia
