@@ -32,6 +32,7 @@ A few convenience routes will be automatically added:
 * POST ``/auth/register``: register a new user
 * POST ``/auth/login``: login an existing user
 * GET ``/auth/logout``: logout currently logged-in user
+* GET ``/users/self``: returns currently logged-in user
 
 ACLs
 ----

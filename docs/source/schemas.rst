@@ -30,10 +30,23 @@ If you've enabled authentication, you can list which fields to return to authent
         (...)
     }
 
+Nested Documents
+----------------
+
+If you use ``Relationship`` fields in your schemas, you can list those fields in ``_nested_relationships``. Your fields will then become nested documents instead of just the ``id``.
+
+.. code-block:: json
+
+    {
+        (...)
+        "_nested_relationships": ["relationship_field_name"]
+        (...)
+    }
+
 Custom "user" Model
 -------------------
 
-When authentication is enabled, a "user" model will be created automatically with the fields: "username", "email" and "password". You can extend that model by defining your own "user" schema and set ``auth_model`` to ``true`` on that schema.
+When authentication is enabled, a "user" model will be created automatically with 4 fields: "username", "email", "groups" and "password". You can extend that model by defining your own "user" schema and set ``auth_model`` to ``true`` on that schema.
 
 .. code-block:: json
 
@@ -43,4 +56,4 @@ When authentication is enabled, a "user" model will be created automatically wit
         (...)
     }
 
-You can define any additional fields you'd like but you'll need to preserve the 3 fields required for authentication: "username", "email" and "password".
+You can define any additional fields you'd like but you'll need to preserve the 4 required fields above.

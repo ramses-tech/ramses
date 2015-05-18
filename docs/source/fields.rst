@@ -94,13 +94,7 @@ You can then define each custom processor in a function in your ``__init__.py`` 
 Relationship Fields
 -------------------
 
-You can define engine-specific arguments for your relationship fields
-
-* document:
-* ondelete:
-* backref_name:
-* backref_ondelete:
-* uselist:
+For relationship fields, you can define the name of your 'relation' model by setting the ``document`` property under ``args``. You can also set the ``backref_name`` which will automatically add a field of that name to your schema. Note that for SQLA, you must add a ``foreign_key`` field to your 'relation' model.
 
 .. code-block:: json
 
@@ -108,11 +102,8 @@ You can define engine-specific arguments for your relationship fields
         (...)
         "type": "relationship",
         "args": {
-            "document": "Item",
-            "ondelete": "NULLIFY",
-            "backref_name": "owner",
-            "backref_ondelete": "NULLIFY",
-            "uselist": false
+            "document": "Name_of_relation_model",
+            "backref_name": "backref_field_name"
         }
     }
 
@@ -159,3 +150,8 @@ For ``list`` fields, you can also provide the choice items' ``type``.
             "item_type": "string"
         }
     }
+
+Other ``args``
+--------------
+
+Note that you can pass any engine-specific arguments to your fields by defining such arguments in ``args``.

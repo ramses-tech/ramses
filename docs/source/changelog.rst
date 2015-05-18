@@ -1,5 +1,14 @@
 Changelog
 =========
 
-* :release:`0.1.0 <2015-04-08`
-* :support:`0` Initial release!
+* :release:`0.2.0 <2015-05-18>`
+* :feature:`-` Added support for securitySchemes, authentication (Pyramid "auth ticket") and ACLs
+* :support:`-` Added several display options to schemas
+* :support:`-` Added unit tests
+* :support:`-` Improved docs
+
+* :release:`0.1.1 <2015-04-21>`
+* :bug:`-` Ramses could not be used in an existing Pyramid project
+
+* :release:`0.1.0 <2015-04-08>`
+* :support:`-` Initial release!
