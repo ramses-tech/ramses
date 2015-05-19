@@ -3,8 +3,8 @@ Ramses
 
 Ramses is a library that generates a RESTful API using RAML. It uses Pyramid and `Nefertari <https://nefertari.readthedocs.org/en/master/>`_ which provides ElasticSearch-powered views.
 
-Table of Content
-================
+Table of Contents
+=================
 
 .. toctree::
    :maxdepth: 2
