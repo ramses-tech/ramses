@@ -59,6 +59,9 @@ def includeme(config):
     from nefertari.engine import setup_database
     setup_database(config)
 
+    from nefertari.elasticsearch import ES
+    ES.setup_mappings()
+
     if ramses_auth:
         config.include('ramses.auth')
 
