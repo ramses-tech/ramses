@@ -2,7 +2,7 @@ import logging
 
 from nefertari import engine
 from nefertari.authentication.models import AuthModelDefaultMixin
-from .utils import generate_model_name, find_dynamic_resource
+from .utils import find_dynamic_resource
 from . import registry
 
 
@@ -53,7 +53,7 @@ def get_existing_model(model_name):
         log.debug('Model `{}` does not exist'.format(model_name))
 
 
-def prepare_relationship(field_name, raml_resource):
+def prepare_relationship(field_name, model_name, raml_resource):
     """ Create referenced model if it doesn't exist.
 
     When preparing a relationship, we check to see if the model that will be
@@ -68,15 +68,14 @@ def prepare_relationship(field_name, raml_resource):
             for which :model_name: will is being defined.
     """
     from .generators import setup_data_model
-    rel_model_name = generate_model_name(field_name)
-    if get_existing_model(rel_model_name) is None:
+    if get_existing_model(model_name) is None:
         dynamic_res = find_dynamic_resource(raml_resource)
         subresources = getattr(dynamic_res, 'resources', {}) or {}
         subresources = {k.strip('/'): v for k, v in subresources.items()}
         if field_name not in subresources:
             raise ValueError('Model `{}` used in relationship `{}` is not '
-                             'defined'.format(rel_model_name, field_name))
-        setup_data_model(subresources[field_name], rel_model_name)
+                             'defined'.format(model_name, field_name))
+        setup_data_model(subresources[field_name], model_name)
 
 
 def generate_model_cls(schema, model_name, raml_resource, es_based=True):
@@ -133,7 +132,8 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         field_cls = type_fields[raml_type]
 
         if field_cls is engine.Relationship:
-            prepare_relationship(field_name, raml_resource)
+            prepare_relationship(
+                field_name, field_kwargs['document'], raml_resource)
         if field_cls is engine.ForeignKeyField:
             key = 'ref_column_type'
             field_kwargs[key] = type_fields[field_kwargs[key]]

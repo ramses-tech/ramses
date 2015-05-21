@@ -1,7 +1,5 @@
 import pytest
-from mock import Mock, patch, call
-
-from nefertari.utils import dictset
+from mock import Mock, patch
 
 from .fixtures import engine_mock
 
@@ -28,7 +26,7 @@ class TestHelperFunctions(object):
     @patch('ramses.models.get_existing_model')
     def test_prepare_relationship_model_exists(self, mock_get, mock_find):
         from ramses import models
-        models.prepare_relationship('stories', 'raml_resource')
+        models.prepare_relationship('foobar', 'Story', 'raml_resource')
         mock_get.assert_called_once_with('Story')
         assert not mock_find.called
 
@@ -39,8 +37,8 @@ class TestHelperFunctions(object):
         mock_get.return_value = None
         mock_find.return_value = Mock(resources={'/foo': 'bar'})
         with pytest.raises(ValueError) as ex:
-            models.prepare_relationship('stories', 'raml_resource')
-        expected = ('Model `Story` used in relationship `stories` '
+            models.prepare_relationship('foobar', 'Story', 'raml_resource')
+        expected = ('Model `Story` used in relationship `foobar` '
                     'is not defined')
         assert str(ex.value) == expected
         mock_get.assert_called_once_with('Story')
@@ -53,8 +51,8 @@ class TestHelperFunctions(object):
         from ramses import models
         mock_get.return_value = None
         mock_find.return_value = Mock(
-            resources={'/stories': 'stories_resource'})
-        models.prepare_relationship('stories', 'raml_resource')
+            resources={'/foobar': 'stories_resource'})
+        models.prepare_relationship('foobar', 'Story', 'raml_resource')
         mock_get.assert_called_once_with('Story')
         mock_find.assert_called_once_with('raml_resource')
         mock_setup.assert_called_once_with('stories_resource', 'Story')
@@ -143,11 +141,14 @@ class TestGenerateModelCls(object):
     def test_relationship_field(self, mock_prep, mock_reg):
         from ramses import models
         schema = self._test_schema()
-        schema['properties']['progress'] = {'type': 'relationship'}
+        schema['properties']['progress'] = {
+            'type': 'relationship',
+            'args': {'document': 'FooBar'}
+        }
         mock_reg.mget.return_value = {'foo': 'bar'}
         models.generate_model_cls(
             schema=schema, model_name='Story', raml_resource=1)
-        mock_prep.assert_called_once_with('progress', 1)
+        mock_prep.assert_called_once_with('progress', 'FooBar', 1)
 
     def test_foreignkey_field(self, mock_reg):
         from ramses import models
