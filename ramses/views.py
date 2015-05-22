@@ -421,6 +421,8 @@ class ItemSingularView(ItemSubresourceBaseView):
     If you decide to do so, make sure to set `self._singular_model` to a model
     class, instances of which will be processed by this view.
     """
+    _singular_model = None
+
     def __init__(self, *args, **kw):
         super(ItemSingularView, self).__init__(*args, **kw)
         self.attr = self.request.path.split('/')[-1]
