@@ -92,9 +92,10 @@ class BaseView(NefertariBaseView):
         """ Get objects collection taking into account generated queryset
         of parent view.
 
-        This method allows working with nested resources properly. Thus a queryset
-        returned by this method will be a subset of its parent view's queryset, thus
-        filtering out objects that don't belong to the parent object.
+        This method allows working with nested resources properly. Thus a
+        queryset returned by this method will be a subset of its parent
+        view's queryset, thus filtering out objects that don't belong to
+        the parent object.
         """
         self._query_params.update(kwargs)
         objects = self._parent_queryset()
@@ -178,6 +179,9 @@ class CollectionView(BaseView):
         obj = self.get_item(**kwargs)
         obj.update(self._json_params)
         return JHTTPOk('Updated', location=self._location(obj))
+
+    def replace(self, **kwargs):
+        return self.update(**kwargs)
 
     def delete(self, **kwargs):
         self._model_class._delete(**self.resolve_kw(kwargs))
@@ -351,8 +355,8 @@ class ESCollectionView(ESBaseView, CollectionView):
 class ItemSubresourceBaseView(BaseView):
     """ Base class for all subresources of collection item resources which
     don't represent a collection of their own.
-    E.g. /users/{id}/profile, where 'profile' is a singular resource or 
-    /users/{id}/some_action, where the 'some_action' action may be performed 
+    E.g. /users/{id}/profile, where 'profile' is a singular resource or
+    /users/{id}/some_action, where the 'some_action' action may be performed
     when requesting this route.
 
     Subclass ItemSubresourceBaseView in your project when you want to define
@@ -408,7 +412,8 @@ class ItemAttributeView(ItemSubresourceBaseView):
 class ItemSingularView(ItemSubresourceBaseView):
     """ View used to work with singular resources.
 
-    Singular resources represent a one-to-one relationship. E.g. users/1/profile.
+    Singular resources represent a one-to-one relationship.
+    E.g. users/1/profile.
 
     You may subclass ItemSingularView in your project when you want to define
     a custom singular subroute and view of an item route defined in RAML and
@@ -419,6 +424,14 @@ class ItemSingularView(ItemSubresourceBaseView):
     def __init__(self, *args, **kw):
         super(ItemSingularView, self).__init__(*args, **kw)
         self.attr = self.request.path.split('/')[-1]
+
+    def fill_null_values(self, model_cls=None):
+        return super(ItemSingularView, self).fill_null_values(
+            model_cls=self._singular_model)
+
+    def convert_ids2objects(self, model_cls=None):
+        return super(ItemSingularView, self).convert_ids2objects(
+            model_cls=self._singular_model)
 
     def show(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
@@ -438,6 +451,9 @@ class ItemSingularView(ItemSubresourceBaseView):
         obj = getattr(parent_obj, self.attr)
         obj.update(self._json_params)
         return JHTTPOk('Updated', location=self.request.url)
+
+    def replace(self, **kwargs):
+        return self.update(**kwargs)
 
     def delete(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
