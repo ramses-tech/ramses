@@ -211,6 +211,12 @@ class TestCollectionView(ViewTestBase):
         view.get_item().update.assert_called_once_with({'foo2': 'bar2'})
         assert isinstance(resp, JHTTPOk)
 
+    def test_replace(self):
+        view = self._test_view()
+        view.update = Mock()
+        view.replace(foo=1)
+        view.update.assert_called_once_with(foo=1)
+
     def test_delete(self):
         view = self._test_view()
         view._model_class = Mock()
@@ -408,6 +414,12 @@ class TestESCollectionView(ViewTestBase):
         view.get_item.assert_called_once_with(foo=1)
         view.get_item().update.assert_called_once_with({'foo2': 'bar2'})
 
+    def test_replace(self):
+        view = self._test_view()
+        view.update = Mock()
+        view.replace(foo=1)
+        view.update.assert_called_once_with(foo=1)
+
     def test_get_dbcollection_with_es(self):
         view = self._test_view()
         view._query_params['_limit'] = 50
@@ -556,6 +568,12 @@ class TestItemSingularView(ViewTestBase):
         view.get_item.assert_called_once_with(foo=1)
         child = view.get_item().profile
         child.update.assert_called_once_with({'foo2': 'bar2'})
+
+    def test_replace(self):
+        view = self._test_view()
+        view.update = Mock()
+        view.replace(foo=1)
+        view.update.assert_called_once_with(foo=1)
 
     def test_delete(self):
         view = self._test_view()
