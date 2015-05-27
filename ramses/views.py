@@ -184,7 +184,8 @@ class CollectionView(BaseView):
         return self.update(**kwargs)
 
     def delete(self, **kwargs):
-        self._model_class._delete(**self.resolve_kw(kwargs))
+        obj = self.get_item(**kwargs)
+        obj.delete()
         return JHTTPOk('Deleted')
 
     def delete_many(self, **kwargs):
@@ -312,6 +313,13 @@ class ESCollectionView(ESBaseView, CollectionView):
         """
         self.reload_context(es_based=False, **kwargs)
         return super(ESCollectionView, self).update(**kwargs)
+
+    def delete(self, **kwargs):
+        """ Explicitly reload context with DB usage to get access
+        to complete DB object.
+        """
+        self.reload_context(es_based=False, **kwargs)
+        return super(ESCollectionView, self).delete(**kwargs)
 
     def get_dbcollection_with_es(self, **kwargs):
         """ Get DB objects collection by first querying ES. """
@@ -459,7 +467,8 @@ class ItemSingularView(ItemSubresourceBaseView):
 
     def delete(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
-        parent_obj.update({self.attr: None})
+        obj = getattr(parent_obj, self.attr)
+        obj.delete()
         return JHTTPOk('Deleted')
 
 

@@ -219,9 +219,10 @@ class TestCollectionView(ViewTestBase):
 
     def test_delete(self):
         view = self._test_view()
-        view._model_class = Mock()
+        view.get_item = Mock()
         resp = view.delete(foo=1)
-        view._model_class._delete.assert_called_once_with(foo=1)
+        view.get_item.assert_called_once_with(foo=1)
+        view.get_item().delete.assert_called_once_with()
         assert isinstance(resp, JHTTPOk)
 
     def test_delete_many_needs_confirm(self):
@@ -577,12 +578,13 @@ class TestItemSingularView(ViewTestBase):
 
     def test_delete(self):
         view = self._test_view()
+        view.attr = 'profile'
         view.get_item = Mock()
         resp = view.delete(foo=1)
         assert isinstance(resp, JHTTPOk)
         view.get_item.assert_called_once_with(foo=1)
         parent = view.get_item()
-        parent.update.assert_called_once_with({'profile': None})
+        parent.profile.delete.assert_called_once_with()
 
 
 @patch('ramses.views.engine')
