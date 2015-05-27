@@ -244,7 +244,8 @@ class TestHelperFunctions(object):
             'system.password': '123456',
             'system.email': 'user12@example.com',
         }
-        config.registry.auth_model.get_or_create.return_value = (1, True)
+        config.registry.auth_model.get_or_create.return_value = (
+            Mock(), True)
         auth.create_admin_user(config)
         mock_trans.commit.assert_called_once_with()
         config.registry.auth_model.get_or_create.assert_called_once_with(
