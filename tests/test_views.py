@@ -198,7 +198,8 @@ class TestCollectionView(ViewTestBase):
         view._location = Mock(return_value='/sadasd')
         resp = view.create(foo='bar')
         view._model_class.assert_called_with(foo2='bar2')
-        view._model_class().save.assert_called_with()
+        view._model_class().save.assert_called_with(
+            refresh_index=None)
         assert isinstance(resp, JHTTPCreated)
         assert resp.location == '/sadasd'
 
@@ -208,7 +209,8 @@ class TestCollectionView(ViewTestBase):
         view._location = Mock(return_value='/sadasd')
         resp = view.update(foo=1)
         view.get_item.assert_called_once_with(foo=1)
-        view.get_item().update.assert_called_once_with({'foo2': 'bar2'})
+        view.get_item().update.assert_called_once_with(
+            {'foo2': 'bar2'}, refresh_index=None)
         assert isinstance(resp, JHTTPOk)
 
     def test_replace(self):
@@ -222,7 +224,8 @@ class TestCollectionView(ViewTestBase):
         view.get_item = Mock()
         resp = view.delete(foo=1)
         view.get_item.assert_called_once_with(foo=1)
-        view.get_item().delete.assert_called_once_with()
+        view.get_item().delete.assert_called_once_with(
+            refresh_index=None)
         assert isinstance(resp, JHTTPOk)
 
     def test_delete_many_needs_confirm(self):
@@ -244,7 +247,7 @@ class TestCollectionView(ViewTestBase):
         view.get_collection.assert_called_once_with()
         view._model_class.count.assert_called_once_with(view.get_collection())
         view._model_class._delete_many.assert_called_once_with(
-            view.get_collection())
+            view.get_collection(), refresh_index=None)
         assert isinstance(resp, JHTTPOk)
 
     def test_update_many(self):
@@ -254,7 +257,8 @@ class TestCollectionView(ViewTestBase):
         resp = view.update_many(qoo=1)
         view.get_collection.assert_called_once_with(_limit=20, foo='bar')
         view._model_class._update_many.assert_called_once_with(
-            view.get_collection(), foo2='bar2')
+            view.get_collection(), foo2='bar2',
+            refresh_index=None)
         assert isinstance(resp, JHTTPOk)
 
 
@@ -413,7 +417,8 @@ class TestESCollectionView(ViewTestBase):
         view.update(foo=1)
         view.reload_context.assert_called_once_with(es_based=False, foo=1)
         view.get_item.assert_called_once_with(foo=1)
-        view.get_item().update.assert_called_once_with({'foo2': 'bar2'})
+        view.get_item().update.assert_called_once_with(
+            {'foo2': 'bar2'}, refresh_index=None)
 
     def test_replace(self):
         view = self._test_view()
@@ -454,7 +459,7 @@ class TestESCollectionView(ViewTestBase):
         view._model_class.count.assert_called_once_with(
             view.get_dbcollection_with_es())
         view._model_class._delete_many.assert_called_once_with(
-            view.get_dbcollection_with_es())
+            view.get_dbcollection_with_es(), refresh_index=None)
         assert isinstance(result, JHTTPOk)
 
     def test_update_many(self):
@@ -467,7 +472,8 @@ class TestESCollectionView(ViewTestBase):
         view._model_class.count.assert_called_once_with(
             view.get_dbcollection_with_es())
         view._model_class._update_many.assert_called_once_with(
-            view.get_dbcollection_with_es(), foo2='bar2')
+            view.get_dbcollection_with_es(), foo2='bar2',
+            refresh_index=None)
         assert isinstance(result, JHTTPOk)
 
 
@@ -521,7 +527,8 @@ class TestItemAttributeView(ViewTestBase):
         obj = view.get_item()
         obj.update_iterables.assert_called_once_with(
             {'foo2': 'bar2'}, 'settings',
-            unique=True, value_type=None)
+            unique=True, value_type=None,
+            refresh_index=None)
         assert isinstance(resp, JHTTPCreated)
 
 
@@ -557,9 +564,10 @@ class TestItemSingularView(ViewTestBase):
         view.get_item.assert_called_once_with(foo=1)
         view._singular_model.assert_called_once_with(foo2='bar2')
         child = view._singular_model()
-        child.save.assert_called_once_with()
+        child.save.assert_called_once_with(refresh_index=None)
         parent = view.get_item()
-        parent.update.assert_called_once_with({'profile': child.save()})
+        parent.update.assert_called_once_with(
+            {'profile': child.save()}, refresh_index=None)
 
     def test_update(self):
         view = self._test_view()
@@ -568,7 +576,8 @@ class TestItemSingularView(ViewTestBase):
         assert isinstance(resp, JHTTPOk)
         view.get_item.assert_called_once_with(foo=1)
         child = view.get_item().profile
-        child.update.assert_called_once_with({'foo2': 'bar2'})
+        child.update.assert_called_once_with(
+            {'foo2': 'bar2'}, refresh_index=None)
 
     def test_replace(self):
         view = self._test_view()
@@ -584,7 +593,8 @@ class TestItemSingularView(ViewTestBase):
         assert isinstance(resp, JHTTPOk)
         view.get_item.assert_called_once_with(foo=1)
         parent = view.get_item()
-        parent.profile.delete.assert_called_once_with()
+        parent.profile.delete.assert_called_once_with(
+            refresh_index=None)
 
 
 @patch('ramses.views.engine')

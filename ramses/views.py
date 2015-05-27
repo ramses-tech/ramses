@@ -38,6 +38,11 @@ class BaseView(NefertariBaseView):
         super(BaseView, self).__init__(*args, **kwargs)
         if self.request.method == 'GET':
             self._query_params.process_int_param('_limit', 20)
+        if 'refresh_index' in self._query_params:
+            self.refresh_index = self._query_params.asbool(
+                'refresh_index', pop=True)
+        else:
+            self.refresh_index = None
 
     @property
     def clean_id_name(self):
@@ -168,7 +173,8 @@ class CollectionView(BaseView):
         return self.get_item(**kwargs)
 
     def create(self, **kwargs):
-        obj = self._model_class(**self._json_params).save()
+        obj = self._model_class(**self._json_params)
+        obj = obj.save(refresh_index=self.refresh_index)
         return JHTTPCreated(
             location=self._location(obj),
             resource=obj.to_dict(),
@@ -177,7 +183,7 @@ class CollectionView(BaseView):
 
     def update(self, **kwargs):
         obj = self.get_item(**kwargs)
-        obj.update(self._json_params)
+        obj.update(self._json_params, refresh_index=self.refresh_index)
         return JHTTPOk('Updated', location=self._location(obj))
 
     def replace(self, **kwargs):
@@ -185,7 +191,7 @@ class CollectionView(BaseView):
 
     def delete(self, **kwargs):
         obj = self.get_item(**kwargs)
-        obj.delete()
+        obj.delete(refresh_index=self.refresh_index)
         return JHTTPOk('Deleted')
 
     def delete_many(self, **kwargs):
@@ -195,14 +201,16 @@ class CollectionView(BaseView):
         if self.needs_confirmation():
             return objects
 
-        self._model_class._delete_many(objects)
+        self._model_class._delete_many(
+            objects, refresh_index=self.refresh_index)
         return JHTTPOk('Deleted %s %s(s) objects' % (
             count, self._model_class.__name__))
 
     def update_many(self, **kwargs):
         objects = self.get_collection(**self._query_params)
         count = self._model_class.count(objects)
-        self._model_class._update_many(objects, **self._json_params)
+        self._model_class._update_many(
+            objects, refresh_index=self.refresh_index, **self._json_params)
         return JHTTPOk('Updated %s %s(s) objects' % (
             count, self._model_class.__name__))
 
@@ -249,12 +257,13 @@ class ESBaseView(BaseView):
         return list(set(str(id_) for id_ in ids))
 
     def get_collection_es(self, **kwargs):
-        """ Get ES objects collection taking into account the generated queryset
-        of parent view.
+        """ Get ES objects collection taking into account the generated
+        queryset of parent view.
 
-        This method allows working with nested resources properly. Thus a queryset
-        returned by this method will be a subset of its parent view's queryset, thus
-        filtering out objects that don't belong to the parent object.
+        This method allows working with nested resources properly. Thus a
+        queryset returned by this method will be a subset of its parent view's
+        queryset, thus filtering out objects that don't belong to the parent
+        object.
         """
         from nefertari.elasticsearch import ES
         es = ES(self._model_class.__name__)
@@ -278,8 +287,8 @@ class ESBaseView(BaseView):
         returned by this method will belong to its parent view's queryset, thus
         filtering out objects that don't belong to the parent object.
 
-        Returns an object retrieved from the applicable ACL. If an ACL wasn't applied,
-        it is applied explicitly.
+        Returns an object retrieved from the applicable ACL. If an ACL wasn't
+        applied, it is applied explicitly.
         """
         item_id = self._get_context_key(**kwargs)
         objects_ids = self._parent_queryset_es()
@@ -341,7 +350,8 @@ class ESCollectionView(ESBaseView, CollectionView):
         if self.needs_confirmation():
             return db_objects
 
-        self._model_class._delete_many(db_objects)
+        self._model_class._delete_many(
+            db_objects, refresh_index=self.refresh_index)
         return JHTTPOk('Deleted %s %s(s) objects' % (
             count, self._model_class.__name__))
 
@@ -355,7 +365,8 @@ class ESCollectionView(ESBaseView, CollectionView):
         db_objects = self.get_dbcollection_with_es(**kwargs)
         count = self._model_class.count(db_objects)
 
-        self._model_class._update_many(db_objects, **self._json_params)
+        self._model_class._update_many(
+            db_objects, refresh_index=self.refresh_index, **self._json_params)
         return JHTTPOk('Updated %s %s(s) objects' % (
             count, self._model_class.__name__))
 
@@ -411,7 +422,8 @@ class ItemAttributeView(ItemSubresourceBaseView):
         obj.update_iterables(
             self._json_params, self.attr,
             unique=self.unique,
-            value_type=self.value_type)
+            value_type=self.value_type,
+            refresh_index=self.refresh_index)
         return JHTTPCreated(
             resource=getattr(obj, self.attr, None),
             encoder=self._json_encoder)
@@ -449,8 +461,9 @@ class ItemSingularView(ItemSubresourceBaseView):
 
     def create(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
-        obj = self._singular_model(**self._json_params).save()
-        parent_obj.update({self.attr: obj})
+        obj = self._singular_model(**self._json_params)
+        obj = obj.save(refresh_index=self.refresh_index)
+        parent_obj.update({self.attr: obj}, refresh_index=self.refresh_index)
         return JHTTPCreated(
             resource=getattr(parent_obj, self.attr),
             encoder=self._json_encoder,
@@ -459,7 +472,7 @@ class ItemSingularView(ItemSubresourceBaseView):
     def update(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
         obj = getattr(parent_obj, self.attr)
-        obj.update(self._json_params)
+        obj.update(self._json_params, refresh_index=self.refresh_index)
         return JHTTPOk('Updated', location=self.request.url)
 
     def replace(self, **kwargs):
@@ -468,7 +481,7 @@ class ItemSingularView(ItemSubresourceBaseView):
     def delete(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
         obj = getattr(parent_obj, self.attr)
-        obj.delete()
+        obj.delete(refresh_index=self.refresh_index)
         return JHTTPOk('Deleted')
 
 
