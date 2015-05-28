@@ -121,9 +121,10 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         }
         field_kwargs.update(props.get('args', {}) or {})
 
-        processors = field_kwargs.get('processors', [])
-        field_kwargs['processors'] = [
-            registry.get(name) for name in processors]
+        for proc_key in ('pre_processors', 'post_processors'):
+            processors = field_kwargs.get(proc_key, [])
+            field_kwargs[proc_key] = [
+                registry.get(name) for name in processors]
 
         raml_type = (props.get('type', 'string') or 'string').lower()
         if raml_type not in type_fields:

@@ -1,5 +1,5 @@
 import pytest
-from mock import Mock, patch
+from mock import Mock, patch, call
 
 from .fixtures import engine_mock
 
@@ -79,7 +79,8 @@ class TestGenerateModelCls(object):
             "type": "float",
             "args": {
                 "default": 0,
-                "processors": ["zoo"]
+                "pre_processors": ["zoo"],
+                "post_processors": ["foo"]
             }
         }
         mock_reg.get.return_value = 1
@@ -97,8 +98,9 @@ class TestGenerateModelCls(object):
         assert issubclass(model_cls, models.engine.ESBaseDocument)
         assert not issubclass(model_cls, models.AuthModelDefaultMixin)
         models.engine.FloatField.assert_called_once_with(
-            default=0, required=True, processors=[1])
-        mock_reg.get.assert_called_once_with('zoo')
+            default=0, required=True, pre_processors=[1],
+            post_processors=[1])
+        mock_reg.get.assert_has_calls([call('zoo'), call('foo')])
         mock_reg.mget.assert_called_once_with('Story')
 
     def test_auth_model(self, mock_reg):
@@ -164,7 +166,7 @@ class TestGenerateModelCls(object):
             schema=schema, model_name='Story', raml_resource=1)
         models.engine.ForeignKeyField.assert_called_once_with(
             required=False, ref_column_type=models.engine.StringField,
-            processors=[])
+            pre_processors=[], post_processors=[])
 
     def test_list_field(self, mock_reg):
         from ramses import models
@@ -180,7 +182,7 @@ class TestGenerateModelCls(object):
             schema=schema, model_name='Story', raml_resource=1)
         models.engine.ListField.assert_called_once_with(
             required=False, item_type=models.engine.IntegerField,
-            processors=[])
+            pre_processors=[], post_processors=[])
 
     def test_duplicate_field_name(self, mock_reg):
         from ramses import models
