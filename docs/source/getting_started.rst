@@ -29,7 +29,7 @@ Install the database backend of your choice, e.g. sqla or mongodb
     elasticsearch.index.disable = false
 
     # path to your RAML file
-    ramses.raml_schema = example.raml
+    ramses.raml_schema = api.raml
 
     # disable authentication
     ramses.auth = false
@@ -107,7 +107,6 @@ Install the database backend of your choice, e.g. sqla or mongodb
         "type": "object",
         "title": "Item schema",
         "$schema": "http://json-schema.org/draft-03/schema",
-        "required": true,
         "properties": {
             "id": {
                 "required": true,
