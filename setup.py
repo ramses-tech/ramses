@@ -33,4 +33,8 @@ setup(name='ramses',
       zip_safe=False,
       install_requires=requires,
       tests_require=requires,
-      test_suite="ramses")
+      test_suite="ramses",
+      entry_points = """\
+        [pyramid.scaffold]
+        ramses_starter=ramses.scaffolds:RamsesStarterTemplate
+      """)
