@@ -10,9 +10,10 @@ class RamsesStarterTemplate(PyramidTemplate):
     summary = 'Ramses starter'
 
     def pre(self, command, output_dir, vars):
-        vars['engine'] = raw_input("""
-        Which DB backend would you like to use (either 'sqla' or 'mongodb')?:
-        """)
+        dbengine_choices = {'1':'sqla', '2':'mongodb'}
+        vars['engine'] = dbengine_choices[raw_input("""
+        Which DB backend would you like to use: 1)'sqla' or 2)'mongodb'?:
+        """)]
         vars['random_string'] = binascii.hexlify(os.urandom(20))
         if vars['package'] == 'site':
             raise ValueError("""
@@ -21,7 +22,8 @@ class RamsesStarterTemplate(PyramidTemplate):
 
     def post(self, command, output_dir, vars):
         os.chdir(str(output_dir))
-        subprocess.call("pip install -r requirements.txt", shell=True)
+        subprocess.call('pip install -r requirements.txt', shell=True)
+        subprocess.call('pip install nefertari-{}'.format(vars['engine']), shell=True)
         msg = """Goodbye boilerplate! Welcome to Ramses."""
         self.out(msg)
 

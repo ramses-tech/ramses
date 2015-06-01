@@ -1,7 +1,5 @@
-nefertari==0.3.1
-nefertari-mongodb==0.2.1
-nefertari-sqla==0.2.2
-ramses==0.2.1
+nefertari
+ramses
 Paste==1.7.5.1
 pyramid==1.5.7
 waitress==0.8.9
