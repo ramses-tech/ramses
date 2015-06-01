@@ -38,11 +38,6 @@ class BaseView(NefertariBaseView):
         super(BaseView, self).__init__(*args, **kwargs)
         if self.request.method == 'GET':
             self._query_params.process_int_param('_limit', 20)
-        if 'refresh_index' in self._query_params:
-            self.refresh_index = self._query_params.asbool(
-                'refresh_index', pop=True)
-        else:
-            self.refresh_index = None
 
     @property
     def clean_id_name(self):
