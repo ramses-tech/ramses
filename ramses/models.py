@@ -121,7 +121,7 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         }
         field_kwargs.update(props.get('args', {}) or {})
 
-        for proc_key in ('pre_processors', 'post_processors'):
+        for proc_key in ('before_validation', 'after_validation'):
             processors = field_kwargs.get(proc_key, [])
             field_kwargs[proc_key] = [
                 registry.get(name) for name in processors]
