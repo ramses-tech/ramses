@@ -1,6 +1,11 @@
 Changelog
 =========
 
+* :release:`0.2.1 <2015-05-27>`
+* :bug:`-` fixes limiting fields to be searched
+* :bug:`-` fixes login issue
+* :bug:`-` fixes custom processors
+
 * :release:`0.2.0 <2015-05-18>`
 * :feature:`-` Added support for securitySchemes, authentication (Pyramid "auth ticket") and ACLs
 * :support:`-` Added several display options to schemas

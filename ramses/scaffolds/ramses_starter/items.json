@@ -1,0 +1,22 @@
+{
+    "type": "object",
+    "title": "Item schema",
+    "$schema": "http://json-schema.org/draft-03/schema",
+    "properties": {
+        "id": {
+            "required": true,
+            "type": "id_field",
+            "args": {
+                "primary_key": true
+            }
+        },
+        "name": {
+            "required": true,
+            "type": "string"
+        },
+        "description": {
+            "required": false,
+            "type": "text"
+        }
+    }
+}
