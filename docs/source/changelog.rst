@@ -1,6 +1,10 @@
 Changelog
 =========
 
+* :release:`0.2.2 <2015-06-03>`
+* :bug:`-` Fixed password minimum length support by adding before and after validation processors
+* :bug:`-` Fixed race condition in Elasticsearch indexing
+
 * :release:`0.2.1 <2015-05-27>`
 * :bug:`-` fixes limiting fields to be searched
 * :bug:`-` fixes login issue

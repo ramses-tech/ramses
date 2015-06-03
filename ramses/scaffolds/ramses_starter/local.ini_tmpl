@@ -4,7 +4,7 @@ ramses.raml_schema = api.raml
 
 nefertari.engine = nefertari_{{engine}}
 
-ramses.auth = false
+ramses.auth = true
 auth_tkt_secret = {{random_string}}
 debug = true
 public_max_limit = 100
@@ -26,6 +26,7 @@ elasticsearch.hosts = localhost:9200
 elasticsearch.sniff = false
 elasticsearch.index_name = {{package}}
 elasticsearch.index.disable = false
+elasticsearch.enable_refresh_query = false
 
 # {{package}}
 host = localhost
