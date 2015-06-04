@@ -200,7 +200,6 @@ def create_admin_user(config):
                 groups=['admin']
             ))
         if created:
-            user.clean(force_all=True)
             transaction.commit()
     except KeyError as e:
         log.error('Failed to create system user. Missing config: %s' % e)

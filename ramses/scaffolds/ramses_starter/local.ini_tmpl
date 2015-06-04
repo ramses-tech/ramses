@@ -1,0 +1,87 @@
+[app:{{package}}]
+use = egg:{{package}}
+ramses.raml_schema = api.raml
+
+nefertari.engine = nefertari_{{engine}}
+
+ramses.auth = true
+auth_tkt_secret = {{random_string}}
+debug = true
+public_max_limit = 100
+
+system.user = system
+system.password = 123456
+system.email = user@domain.com
+
+# SQLA
+sqlalchemy.url = postgresql://localhost:5432/{{package}}
+
+# MongoDB settings
+mongodb.host = localhost
+mongodb.port = 27017
+mongodb.db = {{package}}
+
+# ElasticSearch
+elasticsearch.hosts = localhost:9200
+elasticsearch.sniff = false
+elasticsearch.index_name = {{package}}
+elasticsearch.index.disable = false
+elasticsearch.enable_refresh_query = false
+
+# {{package}}
+host = localhost
+base_url = http://%(host)s
+
+# CORS
+cors.enable = false
+cors.allow_origins = %(base_url)s
+cors.allow_credentials = true
+
+request_timing.enable = true
+
+[composite:main]
+use = egg:Paste#urlmap
+/api/ = {{package}}
+
+[server:main]
+use = egg:waitress#main
+host = 0.0.0.0
+port = 6543
+threads = 3
+
+[loggers]
+keys = root, {{package}}, nefertari, ramses
+
+[handlers]
+keys = console
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = INFO
+handlers = console
+
+[logger_{{package}}]
+level = INFO
+handlers =
+qualname = {{package}}
+
+[logger_nefertari]
+level = DEBUG
+handlers =
+qualname = nefertari
+
+[logger_ramses]
+level = DEBUG
+handlers =
+qualname = ramses
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(module)s.%(funcName)s: %(message)s

@@ -1,0 +1,30 @@
+#%RAML 0.8
+---
+title: {{package}} API
+documentation:
+    - title: {{package}} REST API
+      content: |
+        Welcome to the {{package}} API.
+baseUri: http://{host}:{port}/{version}
+version: v1
+mediaType: application/json
+protocols: [HTTP]
+
+/items:
+    displayName: Collection of items
+    get:
+        description: Get all item
+    post:
+        description: Create a new item
+        body:
+            application/json:
+                schema: !include items.json
+
+    /{id}:
+        displayName: Collection-item
+        get:
+            description: Get a particular item
+        delete:
+            description: Delete a particular item
+        patch:
+            description: Update a particular item

@@ -94,7 +94,7 @@ You can then define each custom processor in a function in your ``__init__.py`` 
 Relationship Fields
 -------------------
 
-For relationship fields, you can define the name of your 'relation' model by setting the ``document`` property under ``args``. You can also set the ``backref_name`` which will automatically add a field of that name to your schema. Note that for SQLA, you must add a ``foreign_key`` field to your 'relation' model.
+For relationship fields, you can define the name of your 'relation' model by setting the ``document`` property under ``args``. You can also set the ``backref_name`` which will automatically add a field of that name to your schema. Note that for SQLA, you must add a ``foreign_keys`` arg to your 'relation' model if you want to use multiple foreign keys pointing to the same model (see nefertari-example).
 
 .. code-block:: json
 
