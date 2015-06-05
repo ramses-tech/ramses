@@ -12,8 +12,12 @@ class RamsesStarterTemplate(PyramidTemplate):
     def pre(self, command, output_dir, vars):
         dbengine_choices = {'1':'sqla', '2':'mongodb'}
         vars['engine'] = dbengine_choices[raw_input("""
-        Which DB backend would you like to use: 1)'sqla' or 2)'mongodb'?:
-        """)]
+        Which database backend would you like to use:
+        
+        (1) for SQLAlchemy/PostgreSQL, or
+        (2) for MongoEngine/MongoDB?
+
+        [default is '1']: """) or '1']
         vars['random_string'] = binascii.hexlify(os.urandom(20))
         if vars['package'] == 'site':
             raise ValueError("""
