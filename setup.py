@@ -10,7 +10,7 @@ requires = [
     'cryptacular',
     'pyraml-parser',
     'inflection',
-    'nefertari==0.3.2',
+    'nefertari>=0.3.3',
     'transaction',
 ]
 
