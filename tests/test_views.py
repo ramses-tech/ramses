@@ -397,6 +397,7 @@ class TestESCollectionView(ViewTestBase):
 
     def test_index(self):
         view = self._test_view()
+        view.aggregate = Mock(side_effect=KeyError)
         view.get_collection_es = Mock()
         resp = view.index(foo=1)
         view.get_collection_es.assert_called_once_with(foo=1)
