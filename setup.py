@@ -12,6 +12,7 @@ requires = [
     'inflection',
     'nefertari>=0.3.3',
     'transaction',
+    'six',
 ]
 
 setup(name='ramses',
@@ -38,7 +39,7 @@ setup(name='ramses',
       install_requires=requires,
       tests_require=requires,
       test_suite="ramses",
-      entry_points = """\
+      entry_points="""\
         [pyramid.scaffold]
         ramses_starter=ramses.scaffolds:RamsesStarterTemplate
       """)
