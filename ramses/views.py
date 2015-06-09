@@ -1,6 +1,6 @@
 import logging
 
-from nefertari.view import BaseView as NefertariBaseView
+from nefertari.view import BaseView as NefertariBaseView, ESAggregationMixin
 from nefertari.json_httpexceptions import (
     JHTTPCreated, JHTTPOk, JHTTPNotFound)
 from nefertari import engine
@@ -300,13 +300,16 @@ class ESBaseView(BaseView):
         return self.context
 
 
-class ESCollectionView(ESBaseView, CollectionView):
+class ESCollectionView(ESAggregationMixin, ESBaseView, CollectionView):
     """ View that reads data from ES.
 
     Write operations are inherited from :CollectionView:
     """
     def index(self, **kwargs):
-        return self.get_collection_es(**kwargs)
+        try:
+            return self.aggregate()
+        except KeyError:
+            return self.get_collection_es(**kwargs)
 
     def show(self, **kwargs):
         return self.get_item_es(**kwargs)
