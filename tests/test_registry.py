@@ -13,7 +13,7 @@ class TestRegistry(object):
             return args, kwargs
 
         assert registry.registry['foo'] is foo
-        assert registry.registry.keys() == ['foo']
+        assert list(registry.registry.keys()) == ['foo']
 
     def test_add_decorator_with_name(self):
         @registry.add('bar')
@@ -21,7 +21,7 @@ class TestRegistry(object):
             return args, kwargs
 
         assert registry.registry['bar'] is foo
-        assert registry.registry.keys() == ['bar']
+        assert list(registry.registry.keys()) == ['bar']
 
     def test_add_arbitrary_object(self):
         registry.add('foo', 1)
@@ -29,14 +29,14 @@ class TestRegistry(object):
 
         assert registry.registry['foo'] == 1
         assert registry.registry['bar'] == 2
-        assert registry.registry.keys() == ['foo', 'bar']
+        assert sorted(registry.registry.keys()) == ['bar', 'foo']
 
     def test_get(self):
         registry.registry['foo'] = 1
         assert registry.get('foo') == 1
 
     def test_get_error(self):
-        assert not registry.registry.keys()
+        assert not list(registry.registry.keys())
         with pytest.raises(KeyError) as ex:
             registry.get('foo')
         assert 'is not registered in ramses registry' in str(ex.value)
