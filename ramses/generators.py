@@ -121,7 +121,7 @@ def configure_resources(config, raml_resources, parsed_raml,
         is_singular = singular_subresource(raml_resource, route_name)
         is_attr_res = attr_subresource(raml_resource, route_name)
         if parent_arg is not None and (is_attr_res or is_singular):
-            model_cls = parent_resource.view._model_class
+            model_cls = parent_resource.view.Model
         else:
             model_name = generate_model_name(route_name)
             model_cls = get_existing_model(model_name)

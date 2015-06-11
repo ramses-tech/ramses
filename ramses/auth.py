@@ -62,7 +62,7 @@ def _setup_ticket_policy(config, params):
     policy = AuthTktAuthenticationPolicy(**params)
 
     class RamsesTicketAuthenticationView(TicketAuthenticationView):
-        _model_class = config.registry.auth_model
+        Model = config.registry.auth_model
 
     config.add_route('login', '/auth/login')
     config.add_view(
@@ -110,7 +110,7 @@ def _setup_apikey_policy(config, params):
     policy = ApiKeyAuthenticationPolicy(**params)
 
     class RamsesTokenAuthenticationView(TokenAuthenticationView):
-        _model_class = auth_model
+        Model = auth_model
 
     config.add_route('token', '/auth/token')
     config.add_view(

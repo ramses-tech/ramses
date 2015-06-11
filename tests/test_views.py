@@ -60,29 +60,29 @@ class TestBaseView(ViewTestBase):
     def test_get_collection_has_parent(self):
         view = self._test_view()
         view._parent_queryset = Mock(return_value=[1, 2, 3])
-        view._model_class = Mock()
+        view.Model = Mock()
         view.get_collection(name='ok')
         view._parent_queryset.assert_called_once_with()
-        view._model_class.filter_objects.assert_called_once_with(
+        view.Model.filter_objects.assert_called_once_with(
             [1, 2, 3], _limit=20, foo='bar', name='ok')
 
     def test_get_collection_has_parent_empty_queryset(self):
         view = self._test_view()
         view._parent_queryset = Mock(return_value=[])
-        view._model_class = Mock()
+        view.Model = Mock()
         view.get_collection(name='ok')
         view._parent_queryset.assert_called_once_with()
-        view._model_class.filter_objects.assert_called_once_with(
+        view.Model.filter_objects.assert_called_once_with(
             [], _limit=20, foo='bar', name='ok')
 
     def test_get_collection_no_parent(self):
         view = self._test_view()
         view._parent_queryset = Mock(return_value=None)
-        view._model_class = Mock()
+        view.Model = Mock()
         view.get_collection(name='ok')
         view._parent_queryset.assert_called_once_with()
-        assert not view._model_class.filter_objects.called
-        view._model_class.get_collection.assert_called_once_with(
+        assert not view.Model.filter_objects.called
+        view.Model.get_collection.assert_called_once_with(
             _limit=20, foo='bar', name='ok')
 
     def test_get_item_no_parent(self):
@@ -93,7 +93,7 @@ class TestBaseView(ViewTestBase):
 
     def test_get_item_not_found_in_parent(self):
         view = self._test_view()
-        view._model_class = Mock(__name__='foo')
+        view.Model = Mock(__name__='foo')
         view._get_context_key = Mock(return_value='123123')
         view._parent_queryset = Mock(return_value=[2, 3])
         view.context = 1
@@ -191,14 +191,14 @@ class TestCollectionView(ViewTestBase):
         view.request.registry._root_resources = {
             'foo': Mock(auth=False)
         }
-        view._model_class = Mock()
+        view.Model = Mock()
         obj = Mock()
         obj.to_dict.return_value = {'id': 1}
-        view._model_class().save.return_value = obj
+        view.Model().save.return_value = obj
         view._location = Mock(return_value='/sadasd')
         resp = view.create(foo='bar')
-        view._model_class.assert_called_with(foo2='bar2')
-        view._model_class().save.assert_called_with(
+        view.Model.assert_called_with(foo2='bar2')
+        view.Model().save.assert_called_with(
             refresh_index=None)
         assert isinstance(resp, JHTTPCreated)
         assert resp.location == '/sadasd'
@@ -230,33 +230,33 @@ class TestCollectionView(ViewTestBase):
 
     def test_delete_many_needs_confirm(self):
         view = self._test_view()
-        view._model_class = Mock()
+        view.Model = Mock()
         view.get_collection = Mock()
         view.needs_confirmation = Mock(return_value=True)
         resp = view.delete_many(foo=1)
         view.get_collection.assert_called_once_with()
-        view._model_class.count.assert_called_once_with(view.get_collection())
+        view.Model.count.assert_called_once_with(view.get_collection())
         assert resp == view.get_collection()
 
     def test_delete_many(self):
         view = self._test_view()
-        view._model_class = Mock(__name__='Mock')
+        view.Model = Mock(__name__='Mock')
         view.get_collection = Mock()
         view.needs_confirmation = Mock(return_value=False)
         resp = view.delete_many(foo=1)
         view.get_collection.assert_called_once_with()
-        view._model_class.count.assert_called_once_with(view.get_collection())
-        view._model_class._delete_many.assert_called_once_with(
+        view.Model.count.assert_called_once_with(view.get_collection())
+        view.Model._delete_many.assert_called_once_with(
             view.get_collection(), refresh_index=None)
         assert isinstance(resp, JHTTPOk)
 
     def test_update_many(self):
         view = self._test_view()
-        view._model_class = Mock(__name__='Mock')
+        view.Model = Mock(__name__='Mock')
         view.get_collection = Mock()
         resp = view.update_many(qoo=1)
         view.get_collection.assert_called_once_with(_limit=20, foo='bar')
-        view._model_class._update_many.assert_called_once_with(
+        view.Model._update_many.assert_called_once_with(
             view.get_collection(), foo2='bar2',
             refresh_index=None)
         assert isinstance(resp, JHTTPOk)
@@ -315,7 +315,7 @@ class TestESBaseView(ViewTestBase):
     def test_get_collection_es_no_parent(self, mock_es):
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=None)
-        view._model_class = Mock(__name__='Foo')
+        view.Model = Mock(__name__='Foo')
         view.get_collection_es(arg=1)
         mock_es.assert_called_once_with('Foo')
         mock_es().get_collection.assert_called_once_with(
@@ -325,7 +325,7 @@ class TestESBaseView(ViewTestBase):
     def test_get_collection_es_parent_no_obj_ids(self, mock_es):
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=[1, 2])
-        view._model_class = Mock(__name__='Foo')
+        view.Model = Mock(__name__='Foo')
         view.get_es_object_ids = Mock(return_value=None)
         result = view.get_collection_es(arg=1)
         assert not mock_es().get_collection.called
@@ -335,7 +335,7 @@ class TestESBaseView(ViewTestBase):
     def test_get_collection_es_parent_with_ids(self, mock_es):
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=['obj1', 'obj2'])
-        view._model_class = Mock(__name__='Foo')
+        view.Model = Mock(__name__='Foo')
         view.get_es_object_ids = Mock(return_value=[1, 2])
         view.get_collection_es(arg=7)
         view.get_es_object_ids.assert_called_once_with(['obj1', 'obj2'])
@@ -374,7 +374,7 @@ class TestESBaseView(ViewTestBase):
         view._parent_queryset_es = Mock(return_value=['obj1', 'obj2'])
         view.get_es_object_ids = Mock(return_value=[2, 3])
         view.reload_context = Mock()
-        view._model_class = Mock(__name__='Foo')
+        view.Model = Mock(__name__='Foo')
         view.context = 'foo'
         with pytest.raises(JHTTPNotFound) as ex:
             view.get_item_es(a=4)
@@ -431,48 +431,48 @@ class TestESCollectionView(ViewTestBase):
         view = self._test_view()
         view._query_params['_limit'] = 50
         view.get_collection_es = Mock(return_value=[1, 2])
-        view._model_class = Mock()
+        view.Model = Mock()
         result = view.get_dbcollection_with_es(foo='bar')
         view.get_collection_es.assert_called_once_with(foo='bar')
-        view._model_class.filter_objects.assert_called_once_with(
+        view.Model.filter_objects.assert_called_once_with(
             [1, 2], _limit=50)
-        assert result == view._model_class.filter_objects()
+        assert result == view.Model.filter_objects()
 
     def test_delete_many_need_confirmation(self):
         view = self._test_view()
         view.needs_confirmation = Mock(return_value=True)
-        view._model_class = Mock()
+        view.Model = Mock()
         view.get_dbcollection_with_es = Mock()
         result = view.delete_many(foo=1)
         view.get_dbcollection_with_es.assert_called_once_with(foo=1)
-        view._model_class.count.assert_called_once_with(
+        view.Model.count.assert_called_once_with(
             view.get_dbcollection_with_es())
         assert result == view.get_dbcollection_with_es()
-        assert not view._model_class._delete_many.called
+        assert not view.Model._delete_many.called
 
     def test_delete_many(self):
         view = self._test_view()
         view.needs_confirmation = Mock(return_value=False)
-        view._model_class = Mock(__name__='Foo')
+        view.Model = Mock(__name__='Foo')
         view.get_dbcollection_with_es = Mock()
         result = view.delete_many(foo=1)
         view.get_dbcollection_with_es.assert_called_once_with(foo=1)
-        view._model_class.count.assert_called_once_with(
+        view.Model.count.assert_called_once_with(
             view.get_dbcollection_with_es())
-        view._model_class._delete_many.assert_called_once_with(
+        view.Model._delete_many.assert_called_once_with(
             view.get_dbcollection_with_es(), refresh_index=None)
         assert isinstance(result, JHTTPOk)
 
     def test_update_many(self):
         view = self._test_view()
         view.needs_confirmation = Mock(return_value=False)
-        view._model_class = Mock(__name__='Foo')
+        view.Model = Mock(__name__='Foo')
         view.get_dbcollection_with_es = Mock()
         result = view.update_many(foo=1)
         view.get_dbcollection_with_es.assert_called_once_with(foo=1)
-        view._model_class.count.assert_called_once_with(
+        view.Model.count.assert_called_once_with(
             view.get_dbcollection_with_es())
-        view._model_class._update_many.assert_called_once_with(
+        view.Model._update_many.assert_called_once_with(
             view.get_dbcollection_with_es(), foo2='bar2',
             refresh_index=None)
         assert isinstance(result, JHTTPOk)
@@ -659,5 +659,5 @@ class TestRestViewGeneration(object):
             model_cls='foo', attrs=['show'])
         assert issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)
-        assert view_cls._model_class == 'foo'
+        assert view_cls.Model == 'foo'
         assert view_cls._json_encoder == mock_eng.JSONEncoder
