@@ -309,7 +309,7 @@ class TestESBaseView(ViewTestBase):
         view = self._test_view()
         view._resource = Mock(id_name='foobar')
         objects = [Mock(foobar=4), Mock(foobar=7)]
-        assert view.get_es_object_ids(objects) == ['4', '7']
+        assert sorted(view.get_es_object_ids(objects)) == ['4', '7']
 
     @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_no_parent(self, mock_es):

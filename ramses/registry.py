@@ -50,6 +50,7 @@ Register and get an object by namespace::
     assert registry.mget('Foo') == {'my_stored_var': myvar}
 
 """
+import six
 
 
 class Registry(dict):
@@ -64,9 +65,9 @@ def add(*args):
         registry[name] = function
         return function
 
-    if len(args) == 1 and callable(args[0]):
+    if len(args) == 1 and six.callable(args[0]):
         function = args[0]
-        name = function.func_name
+        name = function.__name__
         return decorator(function)
     elif len(args) == 2:
         registry[args[0]] = args[1]

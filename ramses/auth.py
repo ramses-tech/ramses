@@ -157,7 +157,8 @@ def setup_auth_policies(config, raml_data):
         :raml_data: Instance of pyraml.parser.entities.RamlRoot.
     """
     log.info('Configuring auth policies')
-    secured_by = filter(bool, (raml_data.securedBy or []))
+    secured_by_all = raml_data.securedBy or []
+    secured_by = [item for item in secured_by_all if item]
     if not secured_by:
         log.info('API is not secured. `securedBy` attribute value missing.')
         return

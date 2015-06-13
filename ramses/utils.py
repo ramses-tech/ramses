@@ -111,11 +111,11 @@ def find_dynamic_resource(raml_resource):
 def dynamic_part_name(raml_resource, clean_uri, pk_field):
     """ Generate a dynamic part for a resource :raml_resource:.
 
-    A dynamic part is generated using 2 parts: :clean_uri: of the resource and
-    the dynamic part of any dymanic subresources. If :raml_resource: has no dynamic
-    subresources, 'id' is used as the 2nd part.
-    E.g. if your dynamic part on route 'stories' is named 'superId' then dynamic
-    part will be 'stories_superId'.
+    A dynamic part is generated using 2 parts: :clean_uri: of the resource
+    and the dynamic part of any dymanic subresources. If :raml_resource:
+    has no dynamic subresources, 'id' is used as the 2nd part.
+    E.g. if your dynamic part on route 'stories' is named 'superId' then
+    dynamic part will be 'stories_superId'.
 
     Arguments:
         :raml_resource: Instance of pyraml.entities.RamlResource for which
@@ -123,7 +123,8 @@ def dynamic_part_name(raml_resource, clean_uri, pk_field):
         :clean_uri: Cleaned URI of :raml_resource:
     """
     subresources = raml_resource.resources or {}
-    dynamic_uris = [uri for uri in subresources.keys() if is_dynamic_uri(uri)]
+    dynamic_uris = [uri for uri in subresources.keys()
+                    if is_dynamic_uri(uri)]
     if dynamic_uris:
         dynamic_part = clean_dynamic_uri(dynamic_uris[0])
     else:
@@ -153,7 +154,7 @@ def resource_view_attrs(raml_resource, singular=False):
     if singular:
         collection_methods = item_methods
 
-    http_methods = (raml_resource.methods or {}).keys()
+    http_methods = list((raml_resource.methods or {}).keys())
     attrs = [collection_methods.get(m.lower()) for m in http_methods]
 
     # Check if resource has dynamic subresource like collection/{id}
@@ -164,7 +165,7 @@ def resource_view_attrs(raml_resource, singular=False):
     # If dynamic subresource exists, add its methods to attrs, as both
     # resources are handled by a single view
     if dynamic_res and dynamic_res[0].methods:
-        http_submethods = (dynamic_res[0].methods or {}).keys()
+        http_submethods = list((dynamic_res[0].methods or {}).keys())
         attrs += [item_methods.get(m.lower()) for m in http_submethods]
 
     return set(filter(bool, attrs))

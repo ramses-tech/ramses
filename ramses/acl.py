@@ -1,11 +1,11 @@
 import logging
 
+import six
 from pyramid.security import (
     Allow, Deny,
     Everyone, Authenticated,
     ALL_PERMISSIONS)
 from nefertari.acl import SelfParamMixin
-
 
 from .views import collection_methods, item_methods
 from . import registry
@@ -34,7 +34,7 @@ def methods_to_perms(perms, methods_map):
         :methods_map: Map of HTTP methods to permission names (nefertari view
             methods)
     """
-    if isinstance(perms, basestring):
+    if isinstance(perms, six.string_types):
         perms = perms.split(',')
     perms = [perm.strip().lower() for perm in perms]
     if 'all' in perms:
@@ -45,7 +45,7 @@ def methods_to_perms(perms, methods_map):
         except KeyError:
             raise ValueError(
                 'Unknown method name in permissions: {}. Valid methods: '
-                '{}'.format(perms, methods_map.keys()))
+                '{}'.format(perms, list(methods_map.keys())))
 
 
 def parse_acl(acl_string, methods_map):
@@ -78,7 +78,7 @@ def parse_acl(acl_string, methods_map):
         action = actions.get(action_str)
         if action is None:
             raise ValueError('Unknown ACL action: {}. Valid actions: {}'.format(
-                action_str, actions.keys()))
+                action_str, list(actions.keys())))
 
         # Process principal
         princ_str = princ_str.strip().lower()
@@ -127,7 +127,7 @@ class BaseACL(SelfParamMixin):
         new_acl = []
         for i, ace in enumerate(acl):
             principal = ace[1]
-            if callable(principal):
+            if six.callable(principal):
                 ace = principal(ace=ace, request=self.request, obj=obj)
                 if not ace:
                     continue
