@@ -10,14 +10,14 @@ requires = [
     'cryptacular',
     'pyraml-parser',
     'inflection',
-    'nefertari>=0.3.3',
+    'nefertari>=0.4.0',
     'transaction',
     'six',
 ]
 
 setup(name='ramses',
       version=VERSION,
-      description='ramses',
+      description='Generate a RESTful API for Pyramid using RAML',
       long_description=README,
       classifiers=[
           "Programming Language :: Python",
