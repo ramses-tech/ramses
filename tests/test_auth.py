@@ -67,21 +67,21 @@ class TestSetupTicketPolicy(object):
         ])
         login, logout, register = config.add_view.call_args_list
         login_kwargs = login[1]
-        assert login_kwargs.keys() == [
-            'request_method', 'view', 'route_name', 'attr']
+        assert sorted(login_kwargs.keys()) == sorted([
+            'request_method', 'view', 'route_name', 'attr'])
         assert login_kwargs['route_name'] == 'login'
         assert login_kwargs['attr'] == 'login'
         assert login_kwargs['request_method'] == 'POST'
 
         logout_kwargs = logout[1]
-        assert logout_kwargs.keys() == [
-            'view', 'route_name', 'attr']
+        assert sorted(logout_kwargs.keys()) == sorted([
+            'view', 'route_name', 'attr'])
         assert logout_kwargs['route_name'] == 'logout'
         assert logout_kwargs['attr'] == 'logout'
 
         register_kwargs = register[1]
-        assert register_kwargs.keys() == [
-            'request_method', 'view', 'route_name', 'attr']
+        assert sorted(register_kwargs.keys()) == sorted([
+            'request_method', 'view', 'route_name', 'attr'])
         assert register_kwargs['route_name'] == 'register'
         assert register_kwargs['attr'] == 'register'
         assert register_kwargs['request_method'] == 'POST'
@@ -133,22 +133,22 @@ class TestSetupApiKeyPolicy(object):
 
         token, reset_token, register = config.add_view.call_args_list
         token_kwargs = token[1]
-        assert token_kwargs.keys() == [
-            'request_method', 'view', 'route_name', 'attr']
+        assert sorted(token_kwargs.keys()) == sorted([
+            'request_method', 'view', 'route_name', 'attr'])
         assert token_kwargs['route_name'] == 'token'
         assert token_kwargs['attr'] == 'claim_token'
         assert token_kwargs['request_method'] == 'POST'
 
         reset_token_kwargs = reset_token[1]
-        assert reset_token_kwargs.keys() == [
-            'request_method', 'view', 'route_name', 'attr']
+        assert sorted(reset_token_kwargs.keys()) == sorted([
+            'request_method', 'view', 'route_name', 'attr'])
         assert reset_token_kwargs['route_name'] == 'reset_token'
         assert reset_token_kwargs['attr'] == 'reset_token'
         assert reset_token_kwargs['request_method'] == 'POST'
 
         register_kwargs = register[1]
-        assert register_kwargs.keys() == [
-            'request_method', 'view', 'route_name', 'attr']
+        assert sorted(register_kwargs.keys()) == sorted([
+            'request_method', 'view', 'route_name', 'attr'])
         assert register_kwargs['route_name'] == 'register'
         assert register_kwargs['attr'] == 'register'
         assert register_kwargs['request_method'] == 'POST'

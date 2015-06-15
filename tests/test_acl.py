@@ -26,7 +26,7 @@ class TestACLHelpers(object):
         perms = acl.methods_to_perms('get', self.methods_map)
         assert perms == ['index']
         perms = acl.methods_to_perms('get,post', self.methods_map)
-        assert perms == ['index', 'create']
+        assert sorted(perms) == ['create', 'index']
 
     def test_parse_acl_no_string(self):
         perms = acl.parse_acl('', self.methods_map)
@@ -47,10 +47,10 @@ class TestACLHelpers(object):
             call(['read', 'write'], self.methods_map),
             call(['all'], self.methods_map),
         ])
-        assert perms == [
+        assert sorted(perms) == sorted([
             (Allow, Everyone, 'Foo'),
             (Allow, Authenticated, 'Foo'),
-        ]
+        ])
 
     @patch.object(acl, 'methods_to_perms')
     def test_parse_acl_special_principal(self, mock_perms):
