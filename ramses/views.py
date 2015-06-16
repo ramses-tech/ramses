@@ -1,9 +1,8 @@
 import logging
 
 import six
-from nefertari.view import BaseView as NefertariBaseView, ESAggregationMixin
-from nefertari.json_httpexceptions import (
-    JHTTPCreated, JHTTPOk, JHTTPNotFound)
+from nefertari.view import BaseView as NefertariBaseView
+from nefertari.json_httpexceptions import JHTTPNotFound
 from nefertari import engine
 
 
@@ -170,17 +169,12 @@ class CollectionView(BaseView):
 
     def create(self, **kwargs):
         obj = self.Model(**self._json_params)
-        obj = obj.save(refresh_index=self.refresh_index)
-        return JHTTPCreated(
-            location=self._location(obj),
-            resource=obj.to_dict(),
-            encoder=self._json_encoder,
-            request=self.request)
+        return obj.save(refresh_index=self.refresh_index)
 
     def update(self, **kwargs):
         obj = self.get_item(**kwargs)
-        obj.update(self._json_params, refresh_index=self.refresh_index)
-        return JHTTPOk('Updated', location=self._location(obj))
+        return obj.update(
+            self._json_params, refresh_index=self.refresh_index)
 
     def replace(self, **kwargs):
         return self.update(**kwargs)
@@ -188,27 +182,20 @@ class CollectionView(BaseView):
     def delete(self, **kwargs):
         obj = self.get_item(**kwargs)
         obj.delete(refresh_index=self.refresh_index)
-        return JHTTPOk('Deleted')
 
     def delete_many(self, **kwargs):
         objects = self.get_collection()
-        count = self.Model.count(objects)
 
         if self.needs_confirmation():
             return objects
 
-        self.Model._delete_many(
+        return self.Model._delete_many(
             objects, refresh_index=self.refresh_index)
-        return JHTTPOk('Deleted %s %s(s) objects' % (
-            count, self.Model.__name__))
 
     def update_many(self, **kwargs):
         objects = self.get_collection(**self._query_params)
-        count = self.Model.count(objects)
-        self.Model._update_many(
+        return self.Model._update_many(
             objects, refresh_index=self.refresh_index, **self._json_params)
-        return JHTTPOk('Updated %s %s(s) objects' % (
-            count, self.Model.__name__))
 
 
 class ESBaseView(BaseView):
@@ -301,16 +288,13 @@ class ESBaseView(BaseView):
         return self.context
 
 
-class ESCollectionView(ESAggregationMixin, ESBaseView, CollectionView):
+class ESCollectionView(ESBaseView, CollectionView):
     """ View that reads data from ES.
 
     Write operations are inherited from :CollectionView:
     """
     def index(self, **kwargs):
-        try:
-            return self.aggregate()
-        except KeyError:
-            return self.get_collection_es(**kwargs)
+        return self.get_collection_es(**kwargs)
 
     def show(self, **kwargs):
         return self.get_item_es(**kwargs)
@@ -344,15 +328,12 @@ class ESCollectionView(ESAggregationMixin, ESBaseView, CollectionView):
         by ES in the 'index' method (so user deletes what he saw).
         """
         db_objects = self.get_dbcollection_with_es(**kwargs)
-        count = self.Model.count(db_objects)
 
         if self.needs_confirmation():
             return db_objects
 
-        self.Model._delete_many(
+        return self.Model._delete_many(
             db_objects, refresh_index=self.refresh_index)
-        return JHTTPOk('Deleted %s %s(s) objects' % (
-            count, self.Model.__name__))
 
     def update_many(self, **kwargs):
         """ Update multiple objects from collection.
@@ -362,12 +343,9 @@ class ESCollectionView(ESAggregationMixin, ESBaseView, CollectionView):
         by ES in the 'index' method (so user updates what he saw).
         """
         db_objects = self.get_dbcollection_with_es(**kwargs)
-        count = self.Model.count(db_objects)
-
-        self.Model._update_many(
-            db_objects, refresh_index=self.refresh_index, **self._json_params)
-        return JHTTPOk('Updated %s %s(s) objects' % (
-            count, self.Model.__name__))
+        return self.Model._update_many(
+            db_objects, refresh_index=self.refresh_index,
+            **self._json_params)
 
 
 class ItemSubresourceBaseView(BaseView):
@@ -425,9 +403,7 @@ class ItemAttributeView(ItemSubresourceBaseView):
             unique=self.unique,
             value_type=self.value_type,
             refresh_index=self.refresh_index)
-        return JHTTPCreated(
-            resource=getattr(obj, self.attr, None),
-            encoder=self._json_encoder)
+        return getattr(obj, self.attr, None)
 
 
 class ItemSingularView(ItemSubresourceBaseView):
@@ -465,16 +441,13 @@ class ItemSingularView(ItemSubresourceBaseView):
         obj = self._singular_model(**self._json_params)
         obj = obj.save(refresh_index=self.refresh_index)
         parent_obj.update({self.attr: obj}, refresh_index=self.refresh_index)
-        return JHTTPCreated(
-            resource=getattr(parent_obj, self.attr),
-            encoder=self._json_encoder,
-            request=self.request)
+        return obj
 
     def update(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
         obj = getattr(parent_obj, self.attr)
         obj.update(self._json_params, refresh_index=self.refresh_index)
-        return JHTTPOk('Updated', location=self.request.url)
+        return obj
 
     def replace(self, **kwargs):
         return self.update(**kwargs)
@@ -483,7 +456,6 @@ class ItemSingularView(ItemSubresourceBaseView):
         parent_obj = self.get_item(**kwargs)
         obj = getattr(parent_obj, self.attr)
         obj.delete(refresh_index=self.refresh_index)
-        return JHTTPOk('Deleted')
 
 
 def generate_rest_view(model_cls, attrs=None, es_based=True,

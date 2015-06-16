@@ -177,14 +177,16 @@ class TestCollectionView(ViewTestBase):
     def test_index(self):
         view = self._test_view()
         view.get_collection = Mock()
-        view.index(foo='bar')
+        resp = view.index(foo='bar')
         view.get_collection.assert_called_once_with()
+        assert resp == view.get_collection()
 
     def test_show(self):
         view = self._test_view()
         view.get_item = Mock()
-        view.show(foo='bar')
+        resp = view.show(foo='bar')
         view.get_item.assert_called_once_with(foo='bar')
+        assert resp == view.get_item()
 
     def test_create(self):
         view = self._test_view()
@@ -200,8 +202,7 @@ class TestCollectionView(ViewTestBase):
         view.Model.assert_called_with(foo2='bar2')
         view.Model().save.assert_called_with(
             refresh_index=None)
-        assert isinstance(resp, JHTTPCreated)
-        assert resp.location == '/sadasd'
+        assert resp == view.Model().save()
 
     def test_update(self):
         view = self._test_view()
@@ -211,13 +212,14 @@ class TestCollectionView(ViewTestBase):
         view.get_item.assert_called_once_with(foo=1)
         view.get_item().update.assert_called_once_with(
             {'foo2': 'bar2'}, refresh_index=None)
-        assert isinstance(resp, JHTTPOk)
+        assert resp == view.get_item().update()
 
     def test_replace(self):
         view = self._test_view()
         view.update = Mock()
-        view.replace(foo=1)
+        resp = view.replace(foo=1)
         view.update.assert_called_once_with(foo=1)
+        assert resp == view.update()
 
     def test_delete(self):
         view = self._test_view()
@@ -226,7 +228,7 @@ class TestCollectionView(ViewTestBase):
         view.get_item.assert_called_once_with(foo=1)
         view.get_item().delete.assert_called_once_with(
             refresh_index=None)
-        assert isinstance(resp, JHTTPOk)
+        assert resp is None
 
     def test_delete_many_needs_confirm(self):
         view = self._test_view()
@@ -235,31 +237,31 @@ class TestCollectionView(ViewTestBase):
         view.needs_confirmation = Mock(return_value=True)
         resp = view.delete_many(foo=1)
         view.get_collection.assert_called_once_with()
-        view.Model.count.assert_called_once_with(view.get_collection())
         assert resp == view.get_collection()
 
     def test_delete_many(self):
         view = self._test_view()
         view.Model = Mock(__name__='Mock')
+        view.Model._delete_many.return_value = 123
         view.get_collection = Mock()
         view.needs_confirmation = Mock(return_value=False)
         resp = view.delete_many(foo=1)
         view.get_collection.assert_called_once_with()
-        view.Model.count.assert_called_once_with(view.get_collection())
         view.Model._delete_many.assert_called_once_with(
             view.get_collection(), refresh_index=None)
-        assert isinstance(resp, JHTTPOk)
+        assert resp == 123
 
     def test_update_many(self):
         view = self._test_view()
         view.Model = Mock(__name__='Mock')
+        view.Model._update_many.return_value = 123
         view.get_collection = Mock()
         resp = view.update_many(qoo=1)
         view.get_collection.assert_called_once_with(_limit=20, foo='bar')
         view.Model._update_many.assert_called_once_with(
             view.get_collection(), foo2='bar2',
             refresh_index=None)
-        assert isinstance(resp, JHTTPOk)
+        assert resp == 123
 
 
 class TestESBaseView(ViewTestBase):
@@ -415,17 +417,19 @@ class TestESCollectionView(ViewTestBase):
         view.get_item = Mock()
         view.reload_context = Mock()
         view._location = Mock(return_value='/sadasd')
-        view.update(foo=1)
+        resp = view.update(foo=1)
         view.reload_context.assert_called_once_with(es_based=False, foo=1)
         view.get_item.assert_called_once_with(foo=1)
         view.get_item().update.assert_called_once_with(
             {'foo2': 'bar2'}, refresh_index=None)
+        assert resp == view.get_item().update()
 
     def test_replace(self):
         view = self._test_view()
         view.update = Mock()
-        view.replace(foo=1)
+        resp = view.replace(foo=1)
         view.update.assert_called_once_with(foo=1)
+        assert resp == view.update()
 
     def test_get_dbcollection_with_es(self):
         view = self._test_view()
@@ -445,8 +449,6 @@ class TestESCollectionView(ViewTestBase):
         view.get_dbcollection_with_es = Mock()
         result = view.delete_many(foo=1)
         view.get_dbcollection_with_es.assert_called_once_with(foo=1)
-        view.Model.count.assert_called_once_with(
-            view.get_dbcollection_with_es())
         assert result == view.get_dbcollection_with_es()
         assert not view.Model._delete_many.called
 
@@ -454,28 +456,26 @@ class TestESCollectionView(ViewTestBase):
         view = self._test_view()
         view.needs_confirmation = Mock(return_value=False)
         view.Model = Mock(__name__='Foo')
+        view.Model._delete_many.return_value = 123
         view.get_dbcollection_with_es = Mock()
         result = view.delete_many(foo=1)
         view.get_dbcollection_with_es.assert_called_once_with(foo=1)
-        view.Model.count.assert_called_once_with(
-            view.get_dbcollection_with_es())
         view.Model._delete_many.assert_called_once_with(
             view.get_dbcollection_with_es(), refresh_index=None)
-        assert isinstance(result, JHTTPOk)
+        assert result == 123
 
     def test_update_many(self):
         view = self._test_view()
         view.needs_confirmation = Mock(return_value=False)
         view.Model = Mock(__name__='Foo')
+        view.Model._update_many.return_value = 123
         view.get_dbcollection_with_es = Mock()
         result = view.update_many(foo=1)
         view.get_dbcollection_with_es.assert_called_once_with(foo=1)
-        view.Model.count.assert_called_once_with(
-            view.get_dbcollection_with_es())
         view.Model._update_many.assert_called_once_with(
             view.get_dbcollection_with_es(), foo2='bar2',
             refresh_index=None)
-        assert isinstance(result, JHTTPOk)
+        assert result == 123
 
 
 class TestItemSubresourceBaseView(ViewTestBase):
@@ -530,7 +530,7 @@ class TestItemAttributeView(ViewTestBase):
             {'foo2': 'bar2'}, 'settings',
             unique=True, value_type=None,
             refresh_index=None)
-        assert isinstance(resp, JHTTPCreated)
+        assert resp == obj.settings
 
 
 class TestItemSingularView(ViewTestBase):
@@ -561,7 +561,6 @@ class TestItemSingularView(ViewTestBase):
         view.get_item = Mock()
         view._singular_model = Mock()
         resp = view.create(foo=1)
-        assert isinstance(resp, JHTTPCreated)
         view.get_item.assert_called_once_with(foo=1)
         view._singular_model.assert_called_once_with(foo2='bar2')
         child = view._singular_model()
@@ -569,29 +568,31 @@ class TestItemSingularView(ViewTestBase):
         parent = view.get_item()
         parent.update.assert_called_once_with(
             {'profile': child.save()}, refresh_index=None)
+        assert resp == child.save()
 
     def test_update(self):
         view = self._test_view()
         view.get_item = Mock()
         resp = view.update(foo=1)
-        assert isinstance(resp, JHTTPOk)
         view.get_item.assert_called_once_with(foo=1)
         child = view.get_item().profile
         child.update.assert_called_once_with(
             {'foo2': 'bar2'}, refresh_index=None)
+        assert resp == child
 
     def test_replace(self):
         view = self._test_view()
         view.update = Mock()
-        view.replace(foo=1)
+        resp = view.replace(foo=1)
         view.update.assert_called_once_with(foo=1)
+        assert resp == view.update()
 
     def test_delete(self):
         view = self._test_view()
         view.attr = 'profile'
         view.get_item = Mock()
         resp = view.delete(foo=1)
-        assert isinstance(resp, JHTTPOk)
+        assert resp is None
         view.get_item.assert_called_once_with(foo=1)
         parent = view.get_item()
         parent.profile.delete.assert_called_once_with(
