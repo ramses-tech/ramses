@@ -1,9 +1,8 @@
 import logging
 
 import six
-from nefertari.view import BaseView as NefertariBaseView, ESAggregationMixin
-from nefertari.json_httpexceptions import (
-    JHTTPCreated, JHTTPOk, JHTTPNotFound)
+from nefertari.view import BaseView as NefertariBaseView
+from nefertari.json_httpexceptions import JHTTPNotFound
 from nefertari import engine
 
 
@@ -64,7 +63,7 @@ class BaseView(NefertariBaseView):
         """ Get location of the `obj`
 
         Arguments:
-            :obj: self._model_class instance.
+            :obj: self.Model instance.
         """
         field_name = self.clean_id_name
         return self.request.route_url(
@@ -101,9 +100,9 @@ class BaseView(NefertariBaseView):
         self._query_params.update(kwargs)
         objects = self._parent_queryset()
         if objects is not None:
-            return self._model_class.filter_objects(
+            return self.Model.filter_objects(
                 objects, **self._query_params)
-        return self._model_class.get_collection(**self._query_params)
+        return self.Model.get_collection(**self._query_params)
 
     def get_item(self, **kwargs):
         """ Get collection item taking into account generated queryset
@@ -122,7 +121,7 @@ class BaseView(NefertariBaseView):
         objects = self._parent_queryset()
         if objects is not None and self.context not in objects:
             raise JHTTPNotFound('{}({}) not found'.format(
-                self._model_class.__name__,
+                self.Model.__name__,
                 self._get_context_key(**kwargs)))
 
         return self.context
@@ -152,7 +151,7 @@ class BaseView(NefertariBaseView):
 
         acl = self._factory(**kwargs)
         if acl.__context_class__ is None:
-            acl.__context_class__ = self._model_class
+            acl.__context_class__ = self.Model
 
         self.context = acl[key]
 
@@ -169,18 +168,13 @@ class CollectionView(BaseView):
         return self.get_item(**kwargs)
 
     def create(self, **kwargs):
-        obj = self._model_class(**self._json_params)
-        obj = obj.save(refresh_index=self.refresh_index)
-        return JHTTPCreated(
-            location=self._location(obj),
-            resource=obj.to_dict(),
-            encoder=self._json_encoder,
-            request=self.request)
+        obj = self.Model(**self._json_params)
+        return obj.save(refresh_index=self.refresh_index)
 
     def update(self, **kwargs):
         obj = self.get_item(**kwargs)
-        obj.update(self._json_params, refresh_index=self.refresh_index)
-        return JHTTPOk('Updated', location=self._location(obj))
+        return obj.update(
+            self._json_params, refresh_index=self.refresh_index)
 
     def replace(self, **kwargs):
         return self.update(**kwargs)
@@ -188,27 +182,20 @@ class CollectionView(BaseView):
     def delete(self, **kwargs):
         obj = self.get_item(**kwargs)
         obj.delete(refresh_index=self.refresh_index)
-        return JHTTPOk('Deleted')
 
     def delete_many(self, **kwargs):
         objects = self.get_collection()
-        count = self._model_class.count(objects)
 
         if self.needs_confirmation():
             return objects
 
-        self._model_class._delete_many(
+        return self.Model._delete_many(
             objects, refresh_index=self.refresh_index)
-        return JHTTPOk('Deleted %s %s(s) objects' % (
-            count, self._model_class.__name__))
 
     def update_many(self, **kwargs):
         objects = self.get_collection(**self._query_params)
-        count = self._model_class.count(objects)
-        self._model_class._update_many(
+        return self.Model._update_many(
             objects, refresh_index=self.refresh_index, **self._json_params)
-        return JHTTPOk('Updated %s %s(s) objects' % (
-            count, self._model_class.__name__))
 
 
 class ESBaseView(BaseView):
@@ -262,7 +249,7 @@ class ESBaseView(BaseView):
         object.
         """
         from nefertari.elasticsearch import ES
-        es = ES(self._model_class.__name__)
+        es = ES(self.Model.__name__)
         objects_ids = self._parent_queryset_es()
 
         if objects_ids is not None:
@@ -296,21 +283,18 @@ class ESBaseView(BaseView):
 
         if (objects_ids is not None) and (item_id not in objects_ids):
             raise JHTTPNotFound('{}(id={}) resource not found'.format(
-                self._model_class.__name__, item_id))
+                self.Model.__name__, item_id))
 
         return self.context
 
 
-class ESCollectionView(ESAggregationMixin, ESBaseView, CollectionView):
+class ESCollectionView(ESBaseView, CollectionView):
     """ View that reads data from ES.
 
     Write operations are inherited from :CollectionView:
     """
     def index(self, **kwargs):
-        try:
-            return self.aggregate()
-        except KeyError:
-            return self.get_collection_es(**kwargs)
+        return self.get_collection_es(**kwargs)
 
     def show(self, **kwargs):
         return self.get_item_es(**kwargs)
@@ -332,7 +316,7 @@ class ESCollectionView(ESAggregationMixin, ESBaseView, CollectionView):
     def get_dbcollection_with_es(self, **kwargs):
         """ Get DB objects collection by first querying ES. """
         es_objects = self.get_collection_es(**kwargs)
-        db_objects = self._model_class.filter_objects(
+        db_objects = self.Model.filter_objects(
             es_objects, _limit=self._query_params.get('_limit'))
         return db_objects
 
@@ -344,15 +328,12 @@ class ESCollectionView(ESAggregationMixin, ESBaseView, CollectionView):
         by ES in the 'index' method (so user deletes what he saw).
         """
         db_objects = self.get_dbcollection_with_es(**kwargs)
-        count = self._model_class.count(db_objects)
 
         if self.needs_confirmation():
             return db_objects
 
-        self._model_class._delete_many(
+        return self.Model._delete_many(
             db_objects, refresh_index=self.refresh_index)
-        return JHTTPOk('Deleted %s %s(s) objects' % (
-            count, self._model_class.__name__))
 
     def update_many(self, **kwargs):
         """ Update multiple objects from collection.
@@ -362,12 +343,9 @@ class ESCollectionView(ESAggregationMixin, ESBaseView, CollectionView):
         by ES in the 'index' method (so user updates what he saw).
         """
         db_objects = self.get_dbcollection_with_es(**kwargs)
-        count = self._model_class.count(db_objects)
-
-        self._model_class._update_many(
-            db_objects, refresh_index=self.refresh_index, **self._json_params)
-        return JHTTPOk('Updated %s %s(s) objects' % (
-            count, self._model_class.__name__))
+        return self.Model._update_many(
+            db_objects, refresh_index=self.refresh_index,
+            **self._json_params)
 
 
 class ItemSubresourceBaseView(BaseView):
@@ -425,9 +403,7 @@ class ItemAttributeView(ItemSubresourceBaseView):
             unique=self.unique,
             value_type=self.value_type,
             refresh_index=self.refresh_index)
-        return JHTTPCreated(
-            resource=getattr(obj, self.attr, None),
-            encoder=self._json_encoder)
+        return getattr(obj, self.attr, None)
 
 
 class ItemSingularView(ItemSubresourceBaseView):
@@ -465,16 +441,13 @@ class ItemSingularView(ItemSubresourceBaseView):
         obj = self._singular_model(**self._json_params)
         obj = obj.save(refresh_index=self.refresh_index)
         parent_obj.update({self.attr: obj}, refresh_index=self.refresh_index)
-        return JHTTPCreated(
-            resource=getattr(parent_obj, self.attr),
-            encoder=self._json_encoder,
-            request=self.request)
+        return obj
 
     def update(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
         obj = getattr(parent_obj, self.attr)
         obj.update(self._json_params, refresh_index=self.refresh_index)
-        return JHTTPOk('Updated', location=self.request.url)
+        return obj
 
     def replace(self, **kwargs):
         return self.update(**kwargs)
@@ -483,7 +456,6 @@ class ItemSingularView(ItemSubresourceBaseView):
         parent_obj = self.get_item(**kwargs)
         obj = getattr(parent_obj, self.attr)
         obj.delete(refresh_index=self.refresh_index)
-        return JHTTPOk('Deleted')
 
 
 def generate_rest_view(model_cls, attrs=None, es_based=True,
@@ -522,7 +494,7 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
 
     class RESTView(base_view_cls):
         _json_encoder = engine.JSONEncoder
-        _model_class = model_cls
+        Model = model_cls
 
     for attr in missing_attrs:
         setattr(RESTView, attr, property(_attr_error))

@@ -231,7 +231,7 @@ class TestConfigureResources(object):
         config = Mock()
         resource = Mock(resources={})
         parent_resource = Mock(uid=1)
-        parent_resource.view._model_class.pk_field.return_value = 'other_id'
+        parent_resource.view.Model.pk_field.return_value = 'other_id'
 
         generators.configure_resources(
             config, raml_resources={'/stories': resource},
@@ -241,13 +241,13 @@ class TestConfigureResources(object):
         attr_res.assert_called_once_with(resource, 'stories')
         get_model.assert_called_once_with('Story')
         generate_acl.assert_called_once_with(
-            context_cls=parent_resource.view._model_class,
+            context_cls=parent_resource.view.Model,
             raml_resource=resource,
             parsed_raml='foo'
         )
         view_attrs.assert_called_once_with(resource, True)
         generate_view.assert_called_once_with(
-            model_cls=parent_resource.view._model_class,
+            model_cls=parent_resource.view.Model,
             attrs=view_attrs(),
             attr_view=False,
             singular=True
