@@ -23,7 +23,7 @@ collection_methods = {
 item_methods = {
     'get':      'show',
     'post':     'create',
-    'put':      'update',
+    'put':      'replace',
     'patch':    'update',
     'delete':   'delete',
 }

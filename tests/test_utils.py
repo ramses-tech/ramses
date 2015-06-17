@@ -100,7 +100,7 @@ class TestUtils(object):
         attrs = utils.resource_view_attrs(resource, singular=False)
         assert attrs == set([
             'create', 'delete_many', 'index', 'update_many',
-            'show', 'update', 'delete'
+            'show', 'update', 'delete', 'replace'
         ])
 
     def test_resource_view_attrs_singular(self):
@@ -113,7 +113,7 @@ class TestUtils(object):
                 'patch': '', 'delete': ''}
         )
         attrs = utils.resource_view_attrs(resource, singular=True)
-        assert attrs == set(['create', 'delete', 'show', 'update'])
+        assert attrs == set(['create', 'delete', 'show', 'update', 'replace'])
 
     def test_resource_view_attrs_no_subresources(self):
         resource = Mock(
