@@ -14,17 +14,21 @@ Maps of {HTTP_method: neferteri view method name}
 """
 collection_methods = {
     'get':      'index',
+    'head':     'index',
     'post':     'create',
     'put':      'update_many',
     'patch':    'update_many',
     'delete':   'delete_many',
+    'options':  'collection_options',
 }
 item_methods = {
     'get':      'show',
+    'head':     'show',
     'post':     'create',
-    'put':      'update',
+    'put':      'replace',
     'patch':    'update',
     'delete':   'delete',
+    'options':  'item_options',
 }
 
 
