@@ -36,7 +36,7 @@ class BaseView(NefertariBaseView):
     """
     def __init__(self, *args, **kwargs):
         super(BaseView, self).__init__(*args, **kwargs)
-        if self.request.method == 'GET':
+        if self.request.method.upper() in ['GET', 'HEAD']:
             self._query_params.process_int_param('_limit', 20)
 
     @property
