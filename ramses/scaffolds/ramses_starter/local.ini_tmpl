@@ -4,7 +4,7 @@ ramses.raml_schema = api.raml
 
 nefertari.engine = nefertari_{{engine}}
 
-ramses.auth = true
+ramses.auth = false
 auth_tkt_secret = {{random_string}}
 debug = true
 public_max_limit = 100
