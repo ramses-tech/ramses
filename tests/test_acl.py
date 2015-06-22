@@ -66,14 +66,14 @@ class TestACLHelpers(object):
         mock_perms.assert_called_once_with(['all'], self.methods_map)
         assert perms == [(Allow, 'g:admin', 'Foo')]
 
-    @patch.object(acl, 'registry')
+    @patch.object(acl, 'resolve_to_callable')
     @patch.object(acl, 'methods_to_perms')
-    def test_parse_acl_callable_principal(self, mock_perms, mock_registry):
+    def test_parse_acl_callable_principal(self, mock_perms, mock_res):
         mock_perms.return_value = 'Foo'
-        mock_registry.get.return_value = 'registry callable'
+        mock_res.return_value = 'registry callable'
         perms = acl.parse_acl('allow {{my_user}} all', self.methods_map)
         mock_perms.assert_called_once_with(['all'], self.methods_map)
-        mock_registry.get.assert_called_once_with('my_user')
+        mock_res.assert_called_once_with('{{my_user}}')
         assert perms == [(Allow, 'registry callable', 'Foo')]
 
 

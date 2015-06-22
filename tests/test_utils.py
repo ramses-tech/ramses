@@ -368,3 +368,37 @@ class TestUtils(object):
         parent = Mock(securedBy=None, parentResource=None)
         resource = Mock(securedBy=None, parentResource=parent)
         assert utils.closest_secured_by(resource) == []
+
+    def test_is_callable_tag_not_str(self):
+        assert not utils.is_callable_tag(1)
+        assert not utils.is_callable_tag(None)
+
+    def test_is_callable_tag_not_tag(self):
+        assert not utils.is_callable_tag('foobar')
+
+    def test_is_callable_tag(self):
+        assert utils.is_callable_tag('{{foobar}}')
+
+    def test_resolve_to_callable_not_found(self):
+        with pytest.raises(ImportError) as ex:
+            utils.resolve_to_callable('{{foobar}}')
+        assert str(ex.value) == 'Failed to load callable `foobar`'
+
+    def test_resolve_to_callable_registry(self):
+        from ramses import registry
+
+        @registry.add
+        def foo():
+            pass
+
+        func = utils.resolve_to_callable('{{foo}}')
+        assert func is foo
+        func = utils.resolve_to_callable('foo')
+        assert func is foo
+
+    def test_resolve_to_callable_dotted_path(self):
+        from datetime import datetime
+        func = utils.resolve_to_callable('{{datetime.datetime}}')
+        assert func is datetime
+        func = utils.resolve_to_callable('datetime.datetime')
+        assert func is datetime

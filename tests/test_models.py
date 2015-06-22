@@ -71,7 +71,8 @@ class TestGenerateModelCls(object):
             'nested_relationships': ['nested_field1']
         }
 
-    def test_simple_case(self, mock_reg):
+    @patch('ramses.models.resolve_to_callable')
+    def test_simple_case(self, mock_res, mock_reg):
         from ramses import models
         schema = self._test_schema()
         schema['properties']['progress'] = {
@@ -83,7 +84,7 @@ class TestGenerateModelCls(object):
                 "after_validation": ["foo"]
             }
         }
-        mock_reg.get.return_value = 1
+        mock_res.return_value = 1
         mock_reg.mget.return_value = {'foo': 'bar'}
         model_cls, auth_model = models.generate_model_cls(
             schema=schema, model_name='Story', raml_resource=None)
@@ -100,7 +101,7 @@ class TestGenerateModelCls(object):
         models.engine.FloatField.assert_called_once_with(
             default=0, required=True, before_validation=[1],
             after_validation=[1])
-        mock_reg.get.assert_has_calls([call('zoo'), call('foo')])
+        mock_res.assert_has_calls([call('zoo'), call('foo')])
         mock_reg.mget.assert_called_once_with('Story')
 
     def test_auth_model(self, mock_reg):
