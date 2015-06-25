@@ -71,8 +71,10 @@ class TestGenerateModelCls(object):
             'nested_relationships': ['nested_field1']
         }
 
-    def test_simple_case(self, mock_reg):
+    @patch('ramses.models.resolve_to_callable')
+    def test_simple_case(self, mock_res, mock_reg):
         from ramses import models
+        models.engine.FloatField.reset_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {
             "required": True,
@@ -83,7 +85,7 @@ class TestGenerateModelCls(object):
                 "after_validation": ["foo"]
             }
         }
-        mock_reg.get.return_value = 1
+        mock_res.return_value = 1
         mock_reg.mget.return_value = {'foo': 'bar'}
         model_cls, auth_model = models.generate_model_cls(
             schema=schema, model_name='Story', raml_resource=None)
@@ -100,8 +102,25 @@ class TestGenerateModelCls(object):
         models.engine.FloatField.assert_called_once_with(
             default=0, required=True, before_validation=[1],
             after_validation=[1])
-        mock_reg.get.assert_has_calls([call('zoo'), call('foo')])
+        mock_res.assert_has_calls([call('zoo'), call('foo')])
         mock_reg.mget.assert_called_once_with('Story')
+
+    @patch('ramses.models.resolve_to_callable')
+    def test_callable_default(self, mock_res, mock_reg):
+        from ramses import models
+        models.engine.FloatField.reset_mock()
+        schema = self._test_schema()
+        schema['properties']['progress'] = {
+            "type": "float",
+            "args": {"default": "{{foobar}}"}
+        }
+        mock_res.return_value = 1
+        model_cls, auth_model = models.generate_model_cls(
+            schema=schema, model_name='Story', raml_resource=None)
+        models.engine.FloatField.assert_called_with(
+            default=1, after_validation=[], required=False,
+            before_validation=[])
+        mock_res.assert_called_once_with('{{foobar}}')
 
     def test_auth_model(self, mock_reg):
         from ramses import models

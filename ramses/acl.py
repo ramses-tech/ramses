@@ -8,7 +8,7 @@ from pyramid.security import (
 from nefertari.acl import SelfParamMixin
 
 from .views import collection_methods, item_methods
-from . import registry
+from .utils import resolve_to_callable, is_callable_tag
 
 
 log = logging.getLogger(__name__)
@@ -84,9 +84,8 @@ def parse_acl(acl_string, methods_map):
         princ_str = princ_str.strip().lower()
         if princ_str in special_principals:
             principal = special_principals[princ_str]
-        elif princ_str.startswith('{{'):
-            princ_str = princ_str.strip('{{').strip('}}').strip()
-            principal = registry.get(princ_str)
+        elif is_callable_tag(princ_str):
+            principal = resolve_to_callable(princ_str)
         else:
             principal = 'g:' + princ_str
 
