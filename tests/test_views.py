@@ -259,7 +259,7 @@ class TestCollectionView(ViewTestBase):
         resp = view.update_many(qoo=1)
         view.get_collection.assert_called_once_with(_limit=20, foo='bar')
         view.Model._update_many.assert_called_once_with(
-            view.get_collection(), foo2='bar2',
+            view.get_collection(), {'foo2': 'bar2'},
             refresh_index=None)
         assert resp == 123
 
@@ -473,7 +473,7 @@ class TestESCollectionView(ViewTestBase):
         result = view.update_many(foo=1)
         view.get_dbcollection_with_es.assert_called_once_with(foo=1)
         view.Model._update_many.assert_called_once_with(
-            view.get_dbcollection_with_es(), foo2='bar2',
+            view.get_dbcollection_with_es(), {'foo2': 'bar2'},
             refresh_index=None)
         assert result == 123
 
