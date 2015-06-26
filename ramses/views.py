@@ -199,7 +199,8 @@ class CollectionView(BaseView):
     def update_many(self, **kwargs):
         objects = self.get_collection(**self._query_params)
         return self.Model._update_many(
-            objects, refresh_index=self.refresh_index, **self._json_params)
+            objects, self._json_params,
+            refresh_index=self.refresh_index)
 
 
 class ESBaseView(BaseView):
@@ -348,8 +349,8 @@ class ESCollectionView(ESBaseView, CollectionView):
         """
         db_objects = self.get_dbcollection_with_es(**kwargs)
         return self.Model._update_many(
-            db_objects, refresh_index=self.refresh_index,
-            **self._json_params)
+            db_objects, self._json_params,
+            refresh_index=self.refresh_index)
 
 
 class ItemSubresourceBaseView(BaseView):
