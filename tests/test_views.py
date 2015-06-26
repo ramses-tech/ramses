@@ -201,7 +201,7 @@ class TestCollectionView(ViewTestBase):
         resp = view.create(foo='bar')
         view.Model.assert_called_with(foo2='bar2')
         view.Model().save.assert_called_with(
-            refresh_index=None)
+            {'_limit': 20, 'foo': 'bar'})
         assert resp == view.Model().save()
 
     def test_update(self):
@@ -211,7 +211,7 @@ class TestCollectionView(ViewTestBase):
         resp = view.update(foo=1)
         view.get_item.assert_called_once_with(foo=1)
         view.get_item().update.assert_called_once_with(
-            {'foo2': 'bar2'}, refresh_index=None)
+            {'foo2': 'bar2'}, {'_limit': 20, 'foo': 'bar'})
         assert resp == view.get_item().update()
 
     def test_replace(self):
@@ -227,7 +227,7 @@ class TestCollectionView(ViewTestBase):
         resp = view.delete(foo=1)
         view.get_item.assert_called_once_with(foo=1)
         view.get_item().delete.assert_called_once_with(
-            refresh_index=None)
+            {'_limit': 20, 'foo': 'bar'})
         assert resp is None
 
     def test_delete_many_needs_confirm(self):
@@ -248,7 +248,7 @@ class TestCollectionView(ViewTestBase):
         resp = view.delete_many(foo=1)
         view.get_collection.assert_called_once_with()
         view.Model._delete_many.assert_called_once_with(
-            view.get_collection(), refresh_index=None)
+            view.get_collection(), {'_limit': 20, 'foo': 'bar'})
         assert resp == 123
 
     def test_update_many(self):
@@ -259,8 +259,8 @@ class TestCollectionView(ViewTestBase):
         resp = view.update_many(qoo=1)
         view.get_collection.assert_called_once_with(_limit=20, foo='bar')
         view.Model._update_many.assert_called_once_with(
-            view.get_collection(), foo2='bar2',
-            refresh_index=None)
+            view.get_collection(), {'foo2': 'bar2'},
+            {'_limit': 20, 'foo': 'bar'})
         assert resp == 123
 
 
@@ -421,7 +421,7 @@ class TestESCollectionView(ViewTestBase):
         view.reload_context.assert_called_once_with(es_based=False, foo=1)
         view.get_item.assert_called_once_with(foo=1)
         view.get_item().update.assert_called_once_with(
-            {'foo2': 'bar2'}, refresh_index=None)
+            {'foo2': 'bar2'}, {'_limit': 20, 'foo': 'bar'})
         assert resp == view.get_item().update()
 
     def test_replace(self):
@@ -461,7 +461,7 @@ class TestESCollectionView(ViewTestBase):
         result = view.delete_many(foo=1)
         view.get_dbcollection_with_es.assert_called_once_with(foo=1)
         view.Model._delete_many.assert_called_once_with(
-            view.get_dbcollection_with_es(), refresh_index=None)
+            view.get_dbcollection_with_es(), {'_limit': 20, 'foo': 'bar'})
         assert result == 123
 
     def test_update_many(self):
@@ -473,8 +473,8 @@ class TestESCollectionView(ViewTestBase):
         result = view.update_many(foo=1)
         view.get_dbcollection_with_es.assert_called_once_with(foo=1)
         view.Model._update_many.assert_called_once_with(
-            view.get_dbcollection_with_es(), foo2='bar2',
-            refresh_index=None)
+            view.get_dbcollection_with_es(), {'foo2': 'bar2'},
+            {'_limit': 20, 'foo': 'bar'})
         assert result == 123
 
 
@@ -529,7 +529,7 @@ class TestItemAttributeView(ViewTestBase):
         obj.update_iterables.assert_called_once_with(
             {'foo2': 'bar2'}, 'settings',
             unique=True, value_type=None,
-            refresh_index=None)
+            request_params={'_limit': 20, 'foo': 'bar'})
         assert resp == obj.settings
 
 
@@ -564,10 +564,10 @@ class TestItemSingularView(ViewTestBase):
         view.get_item.assert_called_once_with(foo=1)
         view._singular_model.assert_called_once_with(foo2='bar2')
         child = view._singular_model()
-        child.save.assert_called_once_with(refresh_index=None)
+        child.save.assert_called_once_with({'_limit': 20, 'foo': 'bar'})
         parent = view.get_item()
         parent.update.assert_called_once_with(
-            {'profile': child.save()}, refresh_index=None)
+            {'profile': child.save()}, {'_limit': 20, 'foo': 'bar'})
         assert resp == child.save()
 
     def test_update(self):
@@ -577,7 +577,7 @@ class TestItemSingularView(ViewTestBase):
         view.get_item.assert_called_once_with(foo=1)
         child = view.get_item().profile
         child.update.assert_called_once_with(
-            {'foo2': 'bar2'}, refresh_index=None)
+            {'foo2': 'bar2'}, {'_limit': 20, 'foo': 'bar'})
         assert resp == child
 
     def test_replace(self):
@@ -596,7 +596,7 @@ class TestItemSingularView(ViewTestBase):
         view.get_item.assert_called_once_with(foo=1)
         parent = view.get_item()
         parent.profile.delete.assert_called_once_with(
-            refresh_index=None)
+            {'_limit': 20, 'foo': 'bar'})
 
 
 @patch('ramses.views.engine')
