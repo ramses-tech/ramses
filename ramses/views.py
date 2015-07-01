@@ -425,6 +425,11 @@ class ItemSingularView(ItemSubresourceBaseView):
         super(ItemSingularView, self).__init__(*args, **kw)
         self.attr = self.request.path.split('/')[-1]
 
+    @property
+    def _affected_model(self):
+        """ Override model that is actually represendet by this view. """
+        return self._singular_model
+
     def fill_null_values(self, model_cls=None):
         return super(ItemSingularView, self).fill_null_values(
             model_cls=self._singular_model)
