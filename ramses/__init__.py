@@ -15,7 +15,6 @@ def includeme(config):
     config.include('nefertari.engine')
     config.include('nefertari')
     config.include('nefertari.view')
-    config.include('nefertari.elasticsearch')
 
     # Process nefertari settings
     if Settings.asbool('debug'):
@@ -51,6 +50,8 @@ def includeme(config):
             config.registry.auth_model = get_authuser_model()
         from .auth import setup_auth_policies
         setup_auth_policies(config, parsed_raml)
+
+    config.include('nefertari.elasticsearch')
 
     log.info('Starting server generation')
     generate_server(parsed_raml, config)
