@@ -110,7 +110,7 @@ For relationship fields, you can define the name of your 'relation' model by set
 Default Value
 -------------
 
-You can set a default value to any of your field by setting the ``default`` property under ``args``.
+You can set a default value for you field by setting the ``default`` property under ``args``.
 
 .. code-block:: json
 
@@ -118,6 +118,31 @@ You can set a default value to any of your field by setting the ``default`` prop
         (...)
         "args": {
             "default": "default value"
+        }
+    },
+
+The ``default`` value can also be set to a Python callable, e.g.
+
+.. code-block:: json
+
+    "datetime_field": {
+        (...)
+        "args": {
+            "default": "{{datetime.datetime.utcnow}}"
+        }
+    },
+
+Update Default Value
+--------------------
+
+You can set an update default value for your field by setting the ``onupdate`` property under ``args``. This is particularly useful to update datetime fields on every updates, e.g.
+
+.. code-block:: json
+
+    "datetime_field": {
+        (...)
+        "args": {
+            "onupdate": "{{datetime.datetime.utcnow}}"
         }
     },
 
