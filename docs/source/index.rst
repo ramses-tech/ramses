@@ -1,9 +1,9 @@
 Ramses
 ======
 
-Github: `<http://github.com/brandicted/ramses>`_
+Source code: `<http://github.com/brandicted/ramses>`_
 
-Ramses is a library that generates a RESTful API using RAML. It uses Pyramid and `Nefertari <https://nefertari.readthedocs.org/>`_ which provides ElasticSearch-powered views.
+Ramses is a library that generates a RESTful API using RAML. It uses Pyramid and `Nefertari <https://nefertari.readthedocs.org/>`_ which provides `ElasticSearch-powered requests <http://nefertari.readthedocs.org/en/stable/making_requests.html>`_.
 
 Table of Contents
 =================
@@ -15,6 +15,7 @@ Table of Contents
    raml
    schemas
    fields
+   processors
    changelog
 
 .. image:: ramses.jpg

@@ -2,8 +2,8 @@ Changelog
 =========
 
 * :release:`0.3.1 <2015-07-06>`
-* :support:`- backported` Added support for callables in "default" field argument
-* :support:`- backported` Added support for "onupdate" field argument
+* :support:`- backported` Added support for callables in 'default' field argument
+* :support:`- backported` Added support for 'onupdate' field argument
 
 * :release:`0.3.0 <2015-06-14>`
 * :support:`-` Added python3 support
@@ -21,7 +21,7 @@ Changelog
 * :bug:`-` Fixed custom processors
 
 * :release:`0.2.0 <2015-05-18>`
-* :feature:`-` Added support for securitySchemes, authentication (Pyramid "auth ticket") and ACLs
+* :feature:`-` Added support for securitySchemes, authentication (Pyramid 'auth ticket') and ACLs
 * :support:`-` Added several display options to schemas
 * :support:`-` Added unit tests
 * :support:`-` Improved docs

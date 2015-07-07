@@ -1,14 +1,15 @@
 [app:{{package}}]
 use = egg:{{package}}
+
+# Ramses
 ramses.raml_schema = api.raml
-
-nefertari.engine = nefertari_{{engine}}
-
 ramses.auth = false
+
+# Nefertari
+nefertari.engine = nefertari_{{engine}}
 auth_tkt_secret = {{random_string}}
 debug = true
 public_max_limit = 100
-
 system.user = system
 system.password = 123456
 system.email = user@domain.com
@@ -27,17 +28,17 @@ elasticsearch.sniff = false
 elasticsearch.index_name = {{package}}
 elasticsearch.index.disable = false
 elasticsearch.enable_refresh_query = false
+elasticsearch.enable_aggregations = false
+elasticsearch.enable_polymorphic_query = false
 
 # {{package}}
 host = localhost
-base_url = http://%(host)s
+base_url = http://%(host)s:6543
 
 # CORS
 cors.enable = false
 cors.allow_origins = %(base_url)s
 cors.allow_credentials = true
-
-request_timing.enable = true
 
 [composite:main]
 use = egg:Paste#urlmap
@@ -68,12 +69,12 @@ handlers =
 qualname = {{package}}
 
 [logger_nefertari]
-level = DEBUG
+level = INFO
 handlers =
 qualname = nefertari
 
 [logger_ramses]
-level = DEBUG
+level = INFO
 handlers =
 qualname = ramses
 

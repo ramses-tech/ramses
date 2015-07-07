@@ -26,6 +26,7 @@ Available Types
 * list
 * dict
 
+
 Required Fields
 ---------------
 
@@ -37,6 +38,7 @@ You can set a field as required by setting the ``required`` property.
         "required": true,
         (...)
     }
+
 
 Primary Key
 -----------
@@ -51,6 +53,7 @@ You can set a field as the primary key by setting the ``primary_key`` property u
             "primary_key": true
         }
     }
+
 
 Constraints
 -----------
@@ -68,28 +71,24 @@ You can set a minimum and/or maximum length of your field by setting the ``min_l
         }
     }
 
-Custom Field Processors
------------------------
 
-You can set custom field processors by referencing the names of such processors in the ``processors`` property under ``args``.
+Field Processors
+----------------
+
+You can define field processors by referencing their names in the ``before_validation`` and ``after_validation`` properties under ``args``. `before_` and `after_` prefixes refer when those processors are executed, either before or after database validation.
 
 .. code-block:: json
 
     "field": {
         (...)
         "args": {
-            "processors": ["custom_processor"]
+            "before_validation": ["custom_processor"],
+            "after_validation": ["other_custom_processor"]
         }
     }
 
-You can then define each custom processor in a function in your ``__init__.py`` file.
+You can read more about field processors :doc:`here <processors>`.
 
-.. code-block:: python
-
-    @registry.add
-    def custom_processor(value):
-        """ This is a field processor """
-        return (value or '').lower().strip()
 
 Relationship Fields
 -------------------
@@ -106,6 +105,7 @@ For relationship fields, you can define the name of your 'relation' model by set
             "backref_name": "backref_field_name"
         }
     }
+
 
 Default Value
 -------------
@@ -132,6 +132,7 @@ The ``default`` value can also be set to a Python callable, e.g.
         }
     },
 
+
 Update Default Value
 --------------------
 
@@ -145,6 +146,7 @@ You can set an update default value for your field by setting the ``onupdate`` p
             "onupdate": "{{datetime.datetime.utcnow}}"
         }
     },
+
 
 List Fields
 -----------

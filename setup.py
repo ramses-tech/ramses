@@ -32,7 +32,7 @@ setup(name='ramses',
       author='Brandicted',
       author_email='hello@brandicted.com',
       url='https://github.com/brandicted/ramses',
-      keywords='web pyramid pylons',
+      keywords='web pyramid pylons nefertari raml',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
@@ -41,5 +41,5 @@ setup(name='ramses',
       test_suite="ramses",
       entry_points="""\
         [pyramid.scaffold]
-        ramses_starter=ramses.scaffolds:RamsesStarterTemplate
+        ramses_starter = ramses.scaffolds:RamsesStarterTemplate
       """)
