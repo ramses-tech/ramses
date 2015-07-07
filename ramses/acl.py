@@ -5,7 +5,7 @@ from pyramid.security import (
     Allow, Deny,
     Everyone, Authenticated,
     ALL_PERMISSIONS)
-from nefertari.acl import SelfParamMixin
+from nefertari.acl import SelfParamMixin, CopyACLMixin
 
 from .views import collection_methods, item_methods
 from .utils import resolve_to_callable, is_callable_tag
@@ -87,7 +87,7 @@ def parse_acl(acl_string, methods_map):
         elif is_callable_tag(princ_str):
             principal = resolve_to_callable(princ_str)
         else:
-            principal = 'g:' + princ_str
+            principal = princ_str
 
         # Process permissions
         permissions = methods_to_perms(perms, methods_map)
@@ -163,8 +163,7 @@ class BaseACL(SelfParamMixin):
     def getitem_db(self, key):
         """ Get item with ID of :key: from database """
         pk_field = self.__context_class__.pk_field()
-        obj = self.__context_class__.get_resource(
-            **{pk_field: key})
+        obj = self.__context_class__.get_resource(**{pk_field: key})
         obj.__acl__ = self.context_acl(obj)
         obj.__parent__ = self
         obj.__name__ = key

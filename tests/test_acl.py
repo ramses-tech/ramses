@@ -62,7 +62,7 @@ class TestACLHelpers(object):
     @patch.object(acl, 'methods_to_perms')
     def test_parse_acl_group_principal(self, mock_perms):
         mock_perms.return_value = 'Foo'
-        perms = acl.parse_acl('allow admin all', self.methods_map)
+        perms = acl.parse_acl('allow g:admin all', self.methods_map)
         mock_perms.assert_called_once_with(['all'], self.methods_map)
         assert perms == [(Allow, 'g:admin', 'Foo')]
 
