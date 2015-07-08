@@ -60,11 +60,11 @@ You can update other collections or other filtered collections whenever the fiel
 
         return new_value
 
-.. code-block:: python
-
 and you can perform more complex queries using ElasticSearch.
 
-@registry.add
+.. code-block:: python
+
+    @registry.add
     def processor(instance, new_value):
         """ Update 5 latest OtherModel that have foo=bar or bar=foo and created since 2015 """
         from nefertari import engine
