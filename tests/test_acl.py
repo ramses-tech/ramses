@@ -251,7 +251,7 @@ class TestBaseACL(object):
     @patch('nefertari.engine')
     @patch('nefertari.elasticsearch.ES')
     def test_getitem_es(self, mock_es, mock_eng):
-        found_obj = Mock()
+        found_obj = Mock(_acl=[Mock()])
         es_obj = Mock()
         es_obj.get_collection.return_value = [found_obj]
         mock_es.return_value = es_obj
@@ -262,7 +262,7 @@ class TestBaseACL(object):
         mock_es.assert_called_with('Foo')
         es_obj.get_collection.assert_called_once_with(
             myname='varvar', _limit=1, __raise_on_empty=True)
-        mock_eng.objectify_acl.assert_called_once_with(value._acl)
+        mock_eng.objectify_acl.assert_called_once_with([value._acl[0]._data])
         assert value.__acl__ == mock_eng.objectify_acl()
         assert value.__parent__ is obj
         assert value.__name__ == 'varvar'
