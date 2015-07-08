@@ -2,10 +2,8 @@ import logging
 
 import six
 from pyramid.security import (
-    Allow, Deny,
-    Everyone, Authenticated,
-    ALL_PERMISSIONS)
-from nefertari.acl import SelfParamMixin, CopyACLMixin
+    Allow, Deny, Everyone, Authenticated, ALL_PERMISSIONS)
+from nefertari.acl import SelfParamMixin
 
 from .views import collection_methods, item_methods
 from .utils import resolve_to_callable, is_callable_tag
@@ -31,8 +29,8 @@ def methods_to_perms(perms, methods_map):
 
     Arguments:
         :perms: List or comma-separated string of HTTP methods, or 'all'
-        :methods_map: Map of HTTP methods to permission names (nefertari view
-            methods)
+        :methods_map: Map of HTTP methods to permission names (nefertari
+            view methods)
     """
     if isinstance(perms, six.string_types):
         perms = perms.split(',')
@@ -53,7 +51,8 @@ def parse_acl(acl_string, methods_map):
 
     If :acl_string: is blank or None, all permissions are given.
     Values of ACL action and principal are parsed using `actions` and
-    `special_principals` maps and are looked up after `strip()` and `lower()`.
+    `special_principals` maps and are looked up after `strip()` and
+    `lower()`.
 
     ACEs in :acl_string: may be separated by newlines or semicolons.
     Action, principal and permission lists must be separated by spaces.
@@ -62,7 +61,8 @@ def parse_acl(acl_string, methods_map):
 
     Arguments:
         :acl_string: Raw RAML string containing defined ACEs.
-        :methods_map: Map of HTTP methods to nefertari method handler names.
+        :methods_map: Map of HTTP methods to nefertari method handler
+            names.
     """
     if not acl_string:
         return [ALLOW_ALL]
@@ -77,8 +77,9 @@ def parse_acl(acl_string, methods_map):
         action_str = action_str.strip().lower()
         action = actions.get(action_str)
         if action is None:
-            raise ValueError('Unknown ACL action: {}. Valid actions: {}'.format(
-                action_str, list(actions.keys())))
+            raise ValueError(
+                'Unknown ACL action: {}. Valid actions: {}'.format(
+                    action_str, list(actions.keys())))
 
         # Process principal
         princ_str = princ_str.strip().lower()
@@ -108,7 +109,8 @@ class BaseACL(SelfParamMixin):
         self.request = request
 
     def _apply_callables(self, acl, methods_map, obj=None):
-        """ Iterate over ACEs from :acl: and apply callable principals if any.
+        """ Iterate over ACEs from :acl: and apply callable principals
+        if any.
 
         Principals are passed 3 arguments on call:
             :ace: Single ACE object that looks like (action, callable,
@@ -119,8 +121,8 @@ class BaseACL(SelfParamMixin):
 
         Arguments:
             :acl: Sequence of valid Pyramid ACEs which will be processed
-            :methods_map: Map of HTTP methods to nefertari view method names
-                (permissions)
+            :methods_map: Map of HTTP methods to nefertari view method
+                names (permissions)
             :obj: Object to be accessed via the ACL
         """
         new_acl = []
@@ -164,7 +166,6 @@ class BaseACL(SelfParamMixin):
         """ Get item with ID of :key: from database """
         pk_field = self.__context_class__.pk_field()
         obj = self.__context_class__.get_resource(**{pk_field: key})
-        obj.__acl__ = self.context_acl(obj)
         obj.__parent__ = self
         obj.__name__ = key
         return obj
@@ -172,6 +173,7 @@ class BaseACL(SelfParamMixin):
     def getitem_es(self, key):
         """ Get item with ID of :key: from elasticsearch """
         from nefertari.elasticsearch import ES
+        from nefertari import engine
         es = ES(self.__context_class__.__name__)
         pk_field = self.__context_class__.pk_field()
         kwargs = {
@@ -180,7 +182,7 @@ class BaseACL(SelfParamMixin):
             '__raise_on_empty': True,
         }
         obj = es.get_collection(**kwargs)[0]
-        obj.__acl__ = self.context_acl(obj)
+        obj.__acl__ = engine.objectify_acl(obj._acl)
         obj.__parent__ = self
         obj.__name__ = key
         return obj
@@ -189,13 +191,15 @@ class BaseACL(SelfParamMixin):
 def generate_acl(context_cls, raml_resource, parsed_raml, es_based=True):
     """ Generate an ACL.
 
-    Generated ACL class has a `__context_class__` attribute set to :context_cls:.
+    Generated ACL class has a `__context_class__` attribute set to
+    :context_cls:.
 
     ACLs used for collection and item access control are generated from a
     security scheme which has a name of :raml_resource.securedBy[0]:.
-    If :raml_resource: has no `securedBy` schemes defined then ALLOW_ALL ACL is
-    used.
-    If the `collection` or `item` settings are empty, then ALLOW_ALL ACL is used.
+    If :raml_resource: has no `securedBy` schemes defined then ALLOW_ALL
+    ACL is used.
+    If the `collection` or `item` settings are empty, then ALLOW_ALL ACL
+    is used.
 
     Arguments:
         :context_cls: Generated model class

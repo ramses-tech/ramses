@@ -242,18 +242,15 @@ class TestBaseACL(object):
         obj = acl.BaseACL('req')
         obj.__context_class__ = Mock()
         obj.__context_class__.pk_field.return_value = 'myname'
-        obj.context_acl = Mock()
         value = obj.getitem_db(key='varvar')
         obj.__context_class__.get_resource.assert_called_once_with(
             myname='varvar')
-        obj.context_acl.assert_called_once_with(
-            obj.__context_class__.get_resource())
-        assert value.__acl__ == obj.context_acl()
         assert value.__parent__ is obj
         assert value.__name__ == 'varvar'
 
+    @patch('nefertari.engine')
     @patch('nefertari.elasticsearch.ES')
-    def test_getitem_es(self, mock_es):
+    def test_getitem_es(self, mock_es, mock_eng):
         found_obj = Mock()
         es_obj = Mock()
         es_obj.get_collection.return_value = [found_obj]
@@ -261,12 +258,11 @@ class TestBaseACL(object):
         obj = acl.BaseACL('req')
         obj.__context_class__ = Mock(__name__='Foo')
         obj.__context_class__.pk_field.return_value = 'myname'
-        obj.context_acl = Mock()
         value = obj.getitem_es(key='varvar')
         mock_es.assert_called_with('Foo')
         es_obj.get_collection.assert_called_once_with(
             myname='varvar', _limit=1, __raise_on_empty=True)
-        obj.context_acl.assert_called_once_with(found_obj)
-        assert value.__acl__ == obj.context_acl()
+        mock_eng.objectify_acl.assert_called_once_with(value._acl)
+        assert value.__acl__ == mock_eng.objectify_acl()
         assert value.__parent__ is obj
         assert value.__name__ == 'varvar'

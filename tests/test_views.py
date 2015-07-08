@@ -38,6 +38,15 @@ class TestBaseView(ViewTestBase):
         view._resource = Mock(id_name='foo_bar')
         assert view.clean_id_name == 'bar'
 
+    def test_set_object_acl(self):
+        view = self._test_view()
+        view._factory = Mock()
+        obj = Mock(_acl=None)
+        view.set_object_acl(obj)
+        view._factory.assert_called_once_with(view.request)
+        view._factory().context_acl.assert_called_once_with(obj)
+        assert obj._acl == view._factory().context_acl()
+
     def test_resolve_kw(self):
         view = self._test_view()
         kwargs = {'foo_bar_qoo': 1, 'arg_val': 4, 'q': 3}
@@ -190,6 +199,7 @@ class TestCollectionView(ViewTestBase):
 
     def test_create(self):
         view = self._test_view()
+        view.set_object_acl = Mock()
         view.request.registry._root_resources = {
             'foo': Mock(auth=False)
         }
@@ -202,6 +212,7 @@ class TestCollectionView(ViewTestBase):
         view.Model.assert_called_with(foo2='bar2')
         view.Model().save.assert_called_with(
             {'_limit': 20, 'foo': 'bar'})
+        assert view.set_object_acl.call_count == 1
         assert resp == view.Model().save()
 
     def test_update(self):
@@ -555,6 +566,7 @@ class TestItemSingularView(ViewTestBase):
 
     def test_create(self):
         view = self._test_view()
+        view.set_object_acl = Mock()
         view.request.registry._root_resources = {
             'foo': Mock(auth=False)
         }
@@ -568,6 +580,7 @@ class TestItemSingularView(ViewTestBase):
         parent = view.get_item()
         parent.update.assert_called_once_with(
             {'profile': child.save()}, {'_limit': 20, 'foo': 'bar'})
+        assert view.set_object_acl.call_count == 1
         assert resp == child.save()
 
     def test_update(self):

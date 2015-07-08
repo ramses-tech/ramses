@@ -51,6 +51,11 @@ class BaseView(NefertariBaseView):
         else:
             return id_name
 
+    def set_object_acl(self, obj):
+        """ Set object ACL on creation if not already present. """
+        if not obj._acl:
+            obj._acl = self._factory(self.request).context_acl(obj)
+
     def resolve_kw(self, kwargs):
         """ Resolve :kwargs: like `story_id: 1` to the form of `id: 1`.
 
@@ -173,6 +178,7 @@ class CollectionView(BaseView):
 
     def create(self, **kwargs):
         obj = self.Model(**self._json_params)
+        self.set_object_acl(obj)
         return obj.save(self._query_params)
 
     def update(self, **kwargs):
@@ -440,6 +446,7 @@ class ItemSingularView(ItemSubresourceBaseView):
     def create(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
         obj = self._singular_model(**self._json_params)
+        self.set_object_acl(obj)
         obj = obj.save(self._query_params)
         parent_obj.update({self.attr: obj}, self._query_params)
         return obj
