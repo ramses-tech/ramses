@@ -75,7 +75,7 @@ You can set a minimum and/or maximum length of your field by setting the ``min_l
 Field Processors
 ----------------
 
-You can define field processors by referencing their names in the ``before_validation`` and ``after_validation`` properties under ``args``. `before_` and `after_` prefixes refer when those processors are executed, either before or after database validation.
+You can define field processors by referencing their names in the ``before_validation`` and ``after_validation`` properties under ``args``. The `before_` and `after_` prefixes refer to when those processors are executed, either before or after database validation. You can define more than one processor in each of those arguments in a comma-separated list.
 
 .. code-block:: json
 
@@ -87,7 +87,7 @@ You can define field processors by referencing their names in the ``before_valid
         }
     }
 
-You can read more about field processors :doc:`here <processors>`.
+You can read more about writing custom field processors :doc:`here <processors>`.
 
 
 Relationship Fields
