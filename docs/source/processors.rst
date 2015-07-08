@@ -45,7 +45,7 @@ You can transform the value of a field, for example crypt a password before savi
         return new_value
 
 
-You can update other collections or other filtered collections whenever the field is being updated to a certain value.
+You can update other collections or other filtered collections whenever the field is being updated to a certain value,
 
 .. code-block:: python
 
@@ -60,3 +60,20 @@ You can update other collections or other filtered collections whenever the fiel
 
         return new_value
 
+.. code-block:: python
+
+and you can perform more complex queries using ElasticSearch.
+
+@registry.add
+    def processor(instance, new_value):
+        """ Update 5 latest OtherModel that have foo=bar or bar=foo and created since 2015 """
+        from nefertari import engine
+        from nefertari.elasticsearch import ES
+
+        _other_model = engine.get_document_cls("OtherModel")
+        es_objects = ES(_other_model.__name__).get_collection(
+                _raw_terms="foo:bar OR bar:foo AND created_at:[2015 TO *]", _limit=5)
+        db_objects = _other_model.filter_objects(es_objects, _limit=5)
+        _other_model._update_many(db_objects, {"bar": "foo"})
+
+        return new_value
