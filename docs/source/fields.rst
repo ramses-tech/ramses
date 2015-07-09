@@ -164,7 +164,7 @@ You can list the accepted values of any ``list`` or ``choice`` fields by setting
         }
     }
 
-For ``list`` fields, you can also provide the choice items' ``type``.
+You can also provide the list/choice items' ``type``.
 
 .. code-block:: json
 
@@ -172,8 +172,6 @@ For ``list`` fields, you can also provide the choice items' ``type``.
         (...)
         "type": "list",
         "args": {
-            "choices": ["choice1", "choice2"],
-            "default": ["choice1"],
             "item_type": "string"
         }
     }
