@@ -3,7 +3,6 @@ import logging
 import six
 from nefertari.view import BaseView as NefertariBaseView
 from nefertari.json_httpexceptions import JHTTPNotFound
-from nefertari import engine
 
 
 log = logging.getLogger(__name__)
@@ -38,11 +37,6 @@ class BaseView(NefertariBaseView):
     Use `self.get_collection` and `self.get_item` to get access to set of
     objects and object respectively which are valid at current level.
     """
-    def __init__(self, *args, **kwargs):
-        super(BaseView, self).__init__(*args, **kwargs)
-        if self.request.method.upper() in ['GET', 'HEAD']:
-            self._query_params.process_int_param('_limit', 20)
-
     @property
     def clean_id_name(self):
         id_name = self._resource.id_name
@@ -494,7 +488,6 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
         raise AttributeError
 
     class RESTView(base_view_cls):
-        _json_encoder = engine.JSONEncoder
         Model = model_cls
 
     for attr in missing_attrs:

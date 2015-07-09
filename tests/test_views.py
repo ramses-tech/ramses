@@ -2,7 +2,7 @@ import pytest
 from mock import Mock, patch
 
 from nefertari.json_httpexceptions import (
-    JHTTPNotFound, JHTTPCreated, JHTTPOk, JHTTPMethodNotAllowed)
+    JHTTPNotFound, JHTTPMethodNotAllowed)
 
 from ramses import views
 
@@ -20,8 +20,11 @@ class ViewTestBase(object):
     )
 
     def _test_view(self):
+        class View(self.view_cls):
+            _json_encoder = 'foo'
+
         request = Mock(**self.request_kwargs)
-        return self.view_cls(request=request, **self.view_kwargs)
+        return View(request=request, **self.view_kwargs)
 
 
 class TestBaseView(ViewTestBase):
@@ -134,6 +137,7 @@ class TestBaseView(ViewTestBase):
             'story', 'stories', id_name='prof_id',
             view=views.BaseView, factory=BaseACL)
         view_cls = root.resource_map['user:story'].view
+        view_cls._json_encoder = 'foo'
 
         request = Mock(
             registry={'foo': 'bar'},
@@ -285,6 +289,7 @@ class TestESBaseView(ViewTestBase):
             'story', 'stories', id_name='prof_id',
             view=views.ESBaseView, factory=BaseACL)
         view_cls = root.resource_map['user:story'].view
+        view_cls._json_encoder = 'foo'
 
         request = Mock(
             registry={'foo': 'bar'},
@@ -599,14 +604,14 @@ class TestItemSingularView(ViewTestBase):
             {'_limit': 20, 'foo': 'bar'})
 
 
-@patch('ramses.views.engine')
 class TestRestViewGeneration(object):
 
     @patch('ramses.views.ESCollectionView._run_init_actions')
-    def test_only_provided_attrs_are_available(self, run_init, mock_eng):
+    def test_only_provided_attrs_are_available(self, run_init):
         view_cls = views.generate_rest_view(
             model_cls='foo', attrs=['show', 'foobar'],
             es_based=True, attr_view=False, singular=False)
+        view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ESCollectionView)
         request = Mock(**ViewTestBase.request_kwargs)
         view = view_cls(request=request, **ViewTestBase.view_kwargs)
@@ -629,36 +634,40 @@ class TestRestViewGeneration(object):
         with pytest.raises(JHTTPMethodNotAllowed):
             view.index()
 
-    def test_singular_view(self, mock_eng):
+    def test_singular_view(self):
         view_cls = views.generate_rest_view(
             model_cls='foo', attrs=['show'],
             es_based=True, attr_view=False, singular=True)
+        view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ItemSingularView)
 
-    def test_attribute_view(self, mock_eng):
+    def test_attribute_view(self):
         view_cls = views.generate_rest_view(
             model_cls='foo', attrs=['show'],
             es_based=True, attr_view=True, singular=False)
+        view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ItemAttributeView)
 
-    def test_escollection_view(self, mock_eng):
+    def test_escollection_view(self):
         view_cls = views.generate_rest_view(
             model_cls='foo', attrs=['show'],
             es_based=True, attr_view=False, singular=False)
+        view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)
 
-    def test_dbcollection_view(self, mock_eng):
+    def test_dbcollection_view(self):
         view_cls = views.generate_rest_view(
             model_cls='foo', attrs=['show'],
             es_based=False, attr_view=False, singular=False)
+        view_cls._json_encoder = 'foo'
         assert not issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)
 
-    def test_default_values(self, mock_eng):
+    def test_default_values(self):
         view_cls = views.generate_rest_view(
             model_cls='foo', attrs=['show'])
+        view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)
         assert view_cls.Model == 'foo'
-        assert view_cls._json_encoder == mock_eng.JSONEncoder
