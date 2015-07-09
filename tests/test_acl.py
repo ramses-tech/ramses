@@ -262,7 +262,8 @@ class TestBaseACL(object):
         mock_es.assert_called_with('Foo')
         es_obj.get_collection.assert_called_once_with(
             myname='varvar', _limit=1, __raise_on_empty=True)
-        mock_eng.objectify_acl.assert_called_once_with([value._acl[0]._data])
-        assert value.__acl__ == mock_eng.objectify_acl()
+        mock_eng.ACLField.objectify_acl.assert_called_once_with(
+            [value._acl[0]._data])
+        assert value.__acl__ == mock_eng.ACLField.objectify_acl()
         assert value.__parent__ is obj
         assert value.__name__ == 'varvar'

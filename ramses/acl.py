@@ -182,7 +182,7 @@ class BaseACL(SelfParamMixin):
             '__raise_on_empty': True,
         }
         obj = es.get_collection(**kwargs)[0]
-        obj.__acl__ = engine.objectify_acl([
+        obj.__acl__ = engine.ACLField.objectify_acl([
             ace._data for ace in obj._acl])
         obj.__parent__ = self
         obj.__name__ = key
