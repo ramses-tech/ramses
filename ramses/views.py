@@ -205,13 +205,6 @@ class ESBaseView(BaseView):
     to the set of objects and individual object respectively which are
     valid at the current level.
     """
-    def _get_raw_terms(self):
-        search_params = []
-        if 'q' in self._query_params:
-            search_params.append(self._query_params.pop('q'))
-        _raw_terms = ' AND '.join(search_params)
-        return _raw_terms
-
     def _parent_queryset_es(self):
         """ Get queryset (list of object IDs) of parent view.
 
@@ -255,9 +248,7 @@ class ESBaseView(BaseView):
             if not objects_ids:
                 return []
             self._query_params['id'] = objects_ids
-        return es.get_collection(
-            _raw_terms=self._get_raw_terms(),
-            **self._query_params)
+        return es.get_collection(**self._query_params)
 
     def get_item_es(self, **kwargs):
         """ Get ES collection item taking into account generated queryset

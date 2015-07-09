@@ -271,11 +271,6 @@ class TestCollectionView(ViewTestBase):
 class TestESBaseView(ViewTestBase):
     view_cls = views.ESBaseView
 
-    def test_get_raw_terms(self):
-        view = self._test_view()
-        view._query_params['q'] = 'foo'
-        assert view._get_raw_terms() == 'foo'
-
     def test_parent_queryset_es(self):
         from pyramid.config import Configurator
         from ramses.acl import BaseACL
@@ -326,7 +321,7 @@ class TestESBaseView(ViewTestBase):
         view.get_collection_es(arg=1)
         mock_es.assert_called_once_with('Foo')
         mock_es().get_collection.assert_called_once_with(
-            _raw_terms='', _limit=20, foo='bar')
+            _limit=20, foo='bar')
 
     @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_parent_no_obj_ids(self, mock_es):
@@ -347,7 +342,7 @@ class TestESBaseView(ViewTestBase):
         view.get_collection_es(arg=7)
         view.get_es_object_ids.assert_called_once_with(['obj1', 'obj2'])
         mock_es().get_collection.assert_called_once_with(
-            _raw_terms='', _limit=20, foo='bar', id=[1, 2])
+            _limit=20, foo='bar', id=[1, 2])
 
     def test_get_item_es_no_parent(self):
         view = self._test_view()
