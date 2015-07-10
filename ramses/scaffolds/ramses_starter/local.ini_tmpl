@@ -3,9 +3,9 @@ use = egg:{{package}}
 
 # Ramses
 ramses.raml_schema = api.raml
-ramses.auth = false
 
 # Nefertari
+auth = false
 nefertari.engine = nefertari_{{engine}}
 auth_tkt_secret = {{random_string}}
 debug = true
