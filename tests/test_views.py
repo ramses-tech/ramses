@@ -438,8 +438,7 @@ class TestESCollectionView(ViewTestBase):
         view.Model = Mock()
         result = view.get_dbcollection_with_es(foo='bar')
         view.get_collection_es.assert_called_once_with(foo='bar')
-        view.Model.filter_objects.assert_called_once_with(
-            [1, 2], _limit=50)
+        view.Model.filter_objects.assert_called_once_with([1, 2])
         assert result == view.Model.filter_objects()
 
     def test_delete_many_need_confirmation(self):

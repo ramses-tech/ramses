@@ -5,6 +5,7 @@ from ramses import generators
 from .fixtures import engine_mock
 
 
+@pytest.mark.usefixtures('engine_mock')
 class TestGenerationHelpers(object):
 
     @patch('ramses.models.get_existing_model')
@@ -132,6 +133,7 @@ class TestGenerateModels(object):
         ])
 
 
+@pytest.mark.usefixtures('engine_mock')
 class TestConfigureResources(object):
 
     @patch('ramses.generators.is_restful_uri')

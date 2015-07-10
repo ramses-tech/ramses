@@ -304,8 +304,7 @@ class ESCollectionView(ESBaseView, CollectionView):
     def get_dbcollection_with_es(self, **kwargs):
         """ Get DB objects collection by first querying ES. """
         es_objects = self.get_collection_es(**kwargs)
-        db_objects = self.Model.filter_objects(
-            es_objects, _limit=self._query_params.get('_limit'))
+        db_objects = self.Model.filter_objects(es_objects)
         return db_objects
 
     def delete_many(self, **kwargs):

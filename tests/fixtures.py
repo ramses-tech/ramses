@@ -18,7 +18,13 @@ def engine_mock(request):
     class ESBaseDocument(object):
         pass
 
+    original_engine = nefertari.engine
     nefertari.engine = Mock()
     nefertari.engine.BaseDocument = BaseDocument
     nefertari.engine.ESBaseDocument = ESBaseDocument
+
+    def clear():
+        nefertari.engine = original_engine
+    request.addfinalizer(clear)
+
     return nefertari.engine
