@@ -267,9 +267,14 @@ class ESBaseView(BaseView):
             if not objects_ids:
                 return []
             self._query_params['id'] = objects_ids
-        return es.get_collection(
-            _raw_terms=self._get_raw_terms(),
-            **self._query_params)
+
+        params = {'_raw_terms': self._get_raw_terms()}
+        params.update(self._query_params)
+
+        if ES.settings.asbool('acl_filtering'):
+            params['_identifiers'] = self.request.effective_principals
+
+        return es.get_collection(**params)
 
     def get_item_es(self, **kwargs):
         """ Get ES collection item taking into account generated queryset

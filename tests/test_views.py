@@ -2,7 +2,7 @@ import pytest
 from mock import Mock, patch
 
 from nefertari.json_httpexceptions import (
-    JHTTPNotFound, JHTTPCreated, JHTTPOk, JHTTPMethodNotAllowed)
+    JHTTPNotFound, JHTTPMethodNotAllowed)
 
 from ramses import views
 
@@ -326,6 +326,7 @@ class TestESBaseView(ViewTestBase):
 
     @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_no_parent(self, mock_es):
+        mock_es.settings.asbool.return_value = False
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=None)
         view.Model = Mock(__name__='Foo')
@@ -335,7 +336,22 @@ class TestESBaseView(ViewTestBase):
             _raw_terms='', _limit=20, foo='bar')
 
     @patch('nefertari.elasticsearch.ES')
+    def test_get_collection_es_acl_filtering(self, mock_es):
+        mock_es.settings.asbool.return_value = True
+        view = self._test_view()
+        view.request.effective_principals = [4, 5, 6]
+        view._parent_queryset_es = Mock(return_value=None)
+        view.Model = Mock(__name__='Foo')
+        view.get_collection_es(arg=1)
+        mock_es.assert_called_once_with('Foo')
+        mock_es().get_collection.assert_called_once_with(
+            _raw_terms='', _limit=20, foo='bar',
+            _identifiers=[4, 5, 6])
+        mock_es.settings.asbool.assert_called_with('acl_filtering')
+
+    @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_parent_no_obj_ids(self, mock_es):
+        mock_es.settings.asbool.return_value = False
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=[1, 2])
         view.Model = Mock(__name__='Foo')
@@ -346,6 +362,7 @@ class TestESBaseView(ViewTestBase):
 
     @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_parent_with_ids(self, mock_es):
+        mock_es.settings.asbool.return_value = False
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=['obj1', 'obj2'])
         view.Model = Mock(__name__='Foo')
