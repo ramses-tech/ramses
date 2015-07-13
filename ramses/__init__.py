@@ -45,10 +45,9 @@ def includeme(config):
     generate_models(config, raml_resources=parsed_raml.resources)
 
     if ramses_auth:
+        from .auth import setup_auth_policies, get_authuser_model
         if getattr(config.registry, 'auth_model', None) is None:
-            from nefertari.authentication.models import get_authuser_model
             config.registry.auth_model = get_authuser_model()
-        from .auth import setup_auth_policies
         setup_auth_policies(config, parsed_raml)
 
     config.include('nefertari.elasticsearch')

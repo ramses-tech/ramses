@@ -206,6 +206,17 @@ def create_admin_user(config):
         log.error('Failed to create system user. Missing config: %s' % e)
 
 
+def get_authuser_model():
+    """ Define and return AuthUser model using nefertari base classes """
+    from nefertari.authentication.models import AuthUserMixin
+    from nefertari import engine
+
+    class AuthUser(AuthUserMixin, engine.BaseDocument):
+        __tablename__ = 'ramses_authuser'
+
+    return AuthUser
+
+
 def includeme(config):
     log.info('Creating admin user')
     create_admin_user(config)
