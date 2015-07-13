@@ -17,7 +17,7 @@ def includeme(config):
     config.include('nefertari.view')
 
     # Process nefertari settings
-    if Settings.asbool('debug'):
+    if Settings.asbool('enable_get_tunneling'):
         log.warning('*** DEBUG DEBUG DEBUG mode ***')
         config.add_tween('nefertari.tweens.get_tunneling')
 
