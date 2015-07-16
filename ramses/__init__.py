@@ -18,7 +18,6 @@ def includeme(config):
 
     # Process nefertari settings
     if Settings.asbool('enable_get_tunneling'):
-        log.warning('GET tunneling enabled')
         config.add_tween('nefertari.tweens.get_tunneling')
 
     if Settings.asbool('cors.enable'):
