@@ -99,7 +99,7 @@ class TestGenerateModelCls(object):
         assert model_cls._nested_relationships == ['nested_field1']
         assert model_cls.foo == 'bar'
         assert issubclass(model_cls, models.engine.ESBaseDocument)
-        assert not issubclass(model_cls, models.AuthModelDefaultMixin)
+        assert not issubclass(model_cls, models.AuthModelMethodsMixin)
         models.engine.FloatField.assert_called_once_with(
             default=0, required=True, before_validation=[1],
             after_validation=[1])
@@ -133,7 +133,7 @@ class TestGenerateModelCls(object):
         model_cls, auth_model = models.generate_model_cls(
             schema=schema, model_name='Story', raml_resource=None)
         assert auth_model
-        assert issubclass(model_cls, models.AuthModelDefaultMixin)
+        assert issubclass(model_cls, models.AuthModelMethodsMixin)
 
     def test_db_based_model(self, mock_reg):
         from ramses import models
@@ -146,7 +146,7 @@ class TestGenerateModelCls(object):
             es_based=False)
         assert issubclass(model_cls, models.engine.BaseDocument)
         assert not issubclass(model_cls, models.engine.ESBaseDocument)
-        assert not issubclass(model_cls, models.AuthModelDefaultMixin)
+        assert not issubclass(model_cls, models.AuthModelMethodsMixin)
 
     def test_unknown_field_type(self, mock_reg):
         from ramses import models
