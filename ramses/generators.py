@@ -7,7 +7,8 @@ from .acl import generate_acl
 from .utils import (
     is_dynamic_uri, resource_view_attrs, generate_model_name,
     is_restful_uri, dynamic_part_name, resource_schema,
-    attr_subresource, singular_subresource)
+    attr_subresource, singular_subresource,
+    get_resource_siblings, get_static_parent)
 
 
 log = logging.getLogger(__name__)
@@ -83,69 +84,70 @@ def configure_resources(config, raml_resources, parsed_raml,
         :parsed_raml: Whole parsed RAML object
         :parent_resource: Instance of `nefertari.resource.Resource`
     """
-    from .models import get_existing_model
-    if not raml_resources:
-        return
+    # from .models import get_existing_model
+    # if not raml_resources:
+    #     return
 
-    # Use root factory for root-level resources
-    parent_arg = parent_resource
-    if parent_resource is None:
-        parent_resource = config.get_root_resource()
+    # # Use root factory for root-level resources
+    # parent_arg = parent_resource
+    # if parent_resource is None:
+    #     parent_resource = config.get_root_resource()
 
     for resource_uri, raml_resource in raml_resources.items():
-        if not is_restful_uri(resource_uri):
-            raise ValueError('Resource URI `{}` is not RESTful'.format(
-                resource_uri))
+        # if not is_restful_uri(resource_uri):
+        #     raise ValueError('Resource URI `{}` is not RESTful'.format(
+        #         resource_uri))
 
-        clean_uri = route_name = resource_uri.strip('/')
-        log.info('Configuring resource: `{}`. Parent: `{}`'.format(
-            route_name, parent_resource.uid or 'root'))
+        # clean_uri = route_name = resource_uri.strip('/')
+        # log.info('Configuring resource: `{}`. Parent: `{}`'.format(
+        #     route_name, parent_resource.uid or 'root'))
 
         # No need to setup routes/views for dynamic resource as it was already
         # setup when parent was configured.
-        if is_dynamic_uri(resource_uri):
-            if parent_arg is None:
-                raise Exception("Top-level resources can't be dynamic and must "
-                                "represent collections instead")
-            return configure_resources(
-                config=config,
-                raml_resources=raml_resource.resources,
-                parsed_raml=parsed_raml,
-                parent_resource=parent_resource)
+        # if is_dynamic_uri(resource_uri):
+        #     if parent_arg is None:
+        #         raise Exception("Top-level resources can't be dynamic and must "
+        #                         "represent collections instead")
+        #     return configure_resources(
+        #         config=config,
+        #         raml_resources=raml_resource.resources,
+        #         parsed_raml=parsed_raml,
+        #         parent_resource=parent_resource)
 
         # Generate DB model
         # If this is an attribute or singular resource, we don't need to
         # generate model
-        is_singular = singular_subresource(raml_resource, route_name)
-        is_attr_res = attr_subresource(raml_resource, route_name)
-        if parent_arg is not None and (is_attr_res or is_singular):
-            model_cls = parent_resource.view.Model
-        else:
-            model_name = generate_model_name(route_name)
-            model_cls = get_existing_model(model_name)
+        # is_singular = singular_subresource(raml_resource, route_name)
+        # is_attr_res = attr_subresource(raml_resource, route_name)
+        # if parent_arg is not None and (is_attr_res or is_singular):
+        #     model_cls = parent_resource.view.Model
+        # else:
+        #     model_name = generate_model_name(route_name)
+        #     model_cls = get_existing_model(model_name)
 
-        resource_kwargs = {}
+        # resource_kwargs = {}
 
-        # Generate ACL. Use GuestACL for now
-        log.info('Generating ACL for `{}`'.format(route_name))
-        resource_kwargs['factory'] = generate_acl(
-            context_cls=model_cls,
-            raml_resource=raml_resource,
-            parsed_raml=parsed_raml,
-        )
+        # Generate ACL
+        # log.info('Generating ACL for `{}`'.format(route_name))
+        # resource_kwargs['factory'] = generate_acl(
+        #     context_cls=model_cls,
+        #     raml_resource=raml_resource,
+        #     parsed_raml=parsed_raml,
+        # )
 
-        # Generate dynamic part name
-        if not is_singular:
-            resource_kwargs['id_name'] = dynamic_part_name(
-                raml_resource=raml_resource,
-                clean_uri=clean_uri,
-                pk_field=model_cls.pk_field())
+        # # Generate dynamic part name
+        # if not is_singular:
+        #     resource_kwargs['id_name'] = dynamic_part_name(
+        #         raml_resource=raml_resource,
+        #         clean_uri=clean_uri,
+        #         pk_field=model_cls.pk_field())
 
         # Generate REST view
         log.info('Generating view for `{}`'.format(route_name))
+        view_attrs = resource_view_attrs(raml_resource, is_singular)
         resource_kwargs['view'] = generate_rest_view(
             model_cls=model_cls,
-            attrs=resource_view_attrs(raml_resource, is_singular),
+            attrs=view_attrs,
             attr_view=is_attr_res,
             singular=is_singular,
         )
@@ -174,19 +176,77 @@ def configure_resources(config, raml_resources, parsed_raml,
             parent_resource=new_resource)
 
 
-def generate_server(parsed_raml, config):
+def generate_server(raml_root, config):
     """ Run server generation process.
 
     Arguments:
         :config: Pyramid Configurator instance.
-        :parsed_raml: Parsed pyraml structure.
+        :raml_root: Parsed pyraml structure.
     """
     log.info('Server generation started')
 
-    # Setup resources
-    configure_resources(
-        config=config, raml_resources=parsed_raml.resources,
-        parsed_raml=parsed_raml)
+    from .models import get_existing_model
+    if not raml_root.resources:
+        return
+
+    generated_resources = {'root': config.get_root_resource()}
+
+    for raml_resource in raml_root.resources:
+        # Check if nefertari resource is already generated
+        if raml_resource.path in generated_resources:
+            continue
+
+        # Get Nefertari parent resource
+        parent_raml_res = get_static_parent(raml_resource)
+        if parent_raml_res is not None:
+            parent_resource = generated_resources[parent_raml_res.path]
+        else:
+            parent_resource = generated_resources['root']
+
+        # Don't generate resources for dynamic routes as they are already
+        # generated by their parent
+        resource_uri = raml_resource.path.split('/')[-1].strip()
+        if is_dynamic_uri(resource_uri):
+            if parent_resource.is_root:
+                raise Exception("Top-level resources can't be dynamic and must "
+                                "represent collections instead")
+            continue
+
+        clean_uri = route_name = resource_uri.strip('/')
+        log.info('Configuring resource: `{}`. Parent: `{}`'.format(
+            route_name, parent_resource.uid or 'root'))
+
+        # Get DB model. If this is an attribute or singular resource,
+        # we don't need to get model
+        is_singular = singular_subresource(raml_resource, route_name)
+        is_attr_res = attr_subresource(raml_resource, route_name)
+        if not parent_resource.is_root and (is_attr_res or is_singular):
+            model_cls = parent_resource.view.Model
+        else:
+            model_name = generate_model_name(route_name)
+            model_cls = get_existing_model(model_name)
+
+        resource_kwargs = {}
+
+        # Generate ACL
+        log.info('Generating ACL for `{}`'.format(route_name))
+        resource_kwargs['factory'] = generate_acl(
+            model_cls=model_cls,
+            raml_resource=raml_resource)
+
+        # Generate dynamic part name
+        if not is_singular:
+            resource_kwargs['id_name'] = dynamic_part_name(
+                raml_resource=raml_resource,
+                clean_uri=clean_uri,
+                pk_field=model_cls.pk_field())
+
+
+    # # Setup resources
+    # configure_resources(
+    #     config=config,
+    #     raml_resources=raml_root.resources,
+    #     parsed_raml=raml_root)
 
 
 def generate_models(config, raml_resources):

@@ -181,12 +181,12 @@ class TestUtils(object):
         parent = Mock(path='/stories', method='post')
         resource = Mock(path='/{id}')
         resource.parent = parent
-        assert utils.get_static_parent(resource) is parent
+        assert utils.get_static_parent(resource, method='post') is parent
 
     def test_get_static_parent_none(self):
         resource = Mock(path='/{id}')
         resource.parent = None
-        assert utils.get_static_parent(resource) is None
+        assert utils.get_static_parent(resource, method='post') is None
 
     def test_get_static_parent_wrong_parent_method(self):
         root = Mock(resources=[
@@ -197,8 +197,20 @@ class TestUtils(object):
         parent = Mock(path='/stories', method='get', root=root)
         resource = Mock(path='/{id}')
         resource.parent = parent
-        res = utils.get_static_parent(resource)
+        res = utils.get_static_parent(resource, method='post')
         assert res.method == 'post'
+        assert res.path == '/stories'
+
+    def test_get_static_parent_without_method_parent_present(self):
+        root = Mock(resources=[
+            Mock(path='/stories', method='options'),
+            Mock(path='/stories', method='post'),
+        ])
+        parent = Mock(path='/stories', method='get', root=root)
+        resource = Mock(path='/{id}')
+        resource.parent = parent
+        res = utils.get_static_parent(resource)
+        assert res.method == 'get'
         assert res.path == '/stories'
 
     def test_get_static_parent_none_found_in_root(self):
@@ -208,14 +220,14 @@ class TestUtils(object):
         parent = Mock(path='/stories', method='options', root=root)
         resource = Mock(path='/{id}')
         resource.parent = parent
-        assert utils.get_static_parent(resource) is None
+        assert utils.get_static_parent(resource, method='post') is None
 
     @patch('ramses.utils.get_static_parent')
     @patch('ramses.utils.resource_schema')
     def test_attr_subresource_no_static_parent(self, mock_schema, mock_par):
         mock_par.return_value = None
         assert not utils.attr_subresource('foo', 1)
-        mock_par.assert_called_once_with('foo')
+        mock_par.assert_called_once_with('foo', method='POST')
 
     @patch('ramses.utils.get_static_parent')
     @patch('ramses.utils.resource_schema')
@@ -224,7 +236,7 @@ class TestUtils(object):
         mock_par.return_value = parent
         mock_schema.return_value = None
         assert not utils.attr_subresource('foo', 1)
-        mock_par.assert_called_once_with('foo')
+        mock_par.assert_called_once_with('foo', method='POST')
         mock_schema.assert_called_once_with(parent)
 
     @patch('ramses.utils.get_static_parent')
@@ -240,7 +252,7 @@ class TestUtils(object):
             }
         }
         assert not utils.attr_subresource('resource', 'route_name')
-        mock_par.assert_called_once_with('resource')
+        mock_par.assert_called_once_with('resource', method='POST')
         mock_schema.assert_called_once_with(parent)
 
     @patch('ramses.utils.get_static_parent')
@@ -259,7 +271,7 @@ class TestUtils(object):
             }
         }
         assert utils.attr_subresource('resource', 'route_name')
-        mock_par.assert_called_once_with('resource')
+        mock_par.assert_called_once_with('resource', method='POST')
         mock_schema.assert_called_once_with(parent)
         assert utils.attr_subresource('resource', 'route_name2')
 
@@ -268,7 +280,7 @@ class TestUtils(object):
     def test_singular_subresource_no_static_parent(self, mock_schema, mock_par):
         mock_par.return_value = None
         assert not utils.singular_subresource('foo', 1)
-        mock_par.assert_called_once_with('foo')
+        mock_par.assert_called_once_with('foo', method='POST')
 
     @patch('ramses.utils.get_static_parent')
     @patch('ramses.utils.resource_schema')
@@ -277,7 +289,7 @@ class TestUtils(object):
         mock_par.return_value = parent
         mock_schema.return_value = None
         assert not utils.singular_subresource('foo', 1)
-        mock_par.assert_called_once_with('foo')
+        mock_par.assert_called_once_with('foo', method='POST')
         mock_schema.assert_called_once_with(parent)
 
     @patch('ramses.utils.get_static_parent')
@@ -293,7 +305,7 @@ class TestUtils(object):
             }
         }
         assert not utils.singular_subresource('resource', 'route_name')
-        mock_par.assert_called_once_with('resource')
+        mock_par.assert_called_once_with('resource', method='POST')
         mock_schema.assert_called_once_with(parent)
 
     @patch('ramses.utils.get_static_parent')
@@ -310,7 +322,7 @@ class TestUtils(object):
             }
         }
         assert utils.singular_subresource('resource', 'route_name')
-        mock_par.assert_called_once_with('resource')
+        mock_par.assert_called_once_with('resource', method='POST')
         mock_schema.assert_called_once_with(parent)
 
     def test_closest_secured_by(self):

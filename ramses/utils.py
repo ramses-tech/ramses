@@ -111,9 +111,9 @@ def dynamic_part_name(raml_resource, clean_uri, pk_field):
             dynamic part name is being generated.
         :clean_uri: Cleaned URI of :raml_resource:
     """
-    subresources = raml_resource.resources or {}
-    dynamic_uris = [uri for uri in subresources.keys()
-                    if is_dynamic_uri(uri)]
+    subresources = get_resource_children(raml_resource)
+    dynamic_uris = [res.path for res in subresources
+                    if is_dynamic_uri(res.path)]
     if dynamic_uris:
         dynamic_part = clean_dynamic_uri(dynamic_uris[0])
     else:
@@ -195,7 +195,7 @@ def is_dynamic_resource(raml_resource):
     return raml_resource and is_dynamic_uri(raml_resource.path)
 
 
-def get_static_parent(raml_resource, method='POST'):
+def get_static_parent(raml_resource, method=None):
     """ Get static parent resource of :raml_resource: with HTTP
     method :method:.
 
@@ -205,12 +205,21 @@ def get_static_parent(raml_resource, method='POST'):
     parent = raml_resource.parent
     while is_dynamic_resource(parent):
         parent = parent.parent
-    if parent is None or parent.method.upper() == method:
+
+    if parent is None:
+        return parent
+
+    match_method = method is not None
+    if match_method:
+        if parent.method.upper() == method.upper():
+            return parent
+    else:
         return parent
 
     for res in parent.root.resources:
-        if res.method.upper() == method and res.path == parent.path:
-            return res
+        if res.path == parent.path:
+            if res.method.upper() == method.upper():
+                return res
 
 
 def attr_subresource(raml_resource, route_name):
@@ -220,7 +229,7 @@ def attr_subresource(raml_resource, route_name):
         :raml_resource: Instance of pyraml.entities.RamlResource.
         :route_name: Name of the :raml_resource:.
     """
-    static_parent = get_static_parent(raml_resource)
+    static_parent = get_static_parent(raml_resource, method='POST')
     if static_parent is None:
         return False
     schema = resource_schema(static_parent) or {}
@@ -236,8 +245,7 @@ def singular_subresource(raml_resource, route_name):
         :raml_resource: Instance of pyraml.entities.RamlResource.
         :route_name: Name of the :raml_resource:.
     """
-    # NOTE: static_parent is now resource with method POST
-    static_parent = get_static_parent(raml_resource)
+    static_parent = get_static_parent(raml_resource, method='POST')
     if static_parent is None:
         return False
     schema = resource_schema(static_parent) or {}
@@ -300,3 +308,19 @@ def resolve_to_callable(callable_name):
         except ImportError:
             raise ImportError(
                 'Failed to load callable `{}`'.format(clean_callable_name))
+
+
+def get_resource_siblings(raml_resource):
+    path = raml_resource.path
+    return [res for res in raml_resource.root.resources
+            if res.path == path]
+
+
+def get_resource_children(raml_resource):
+    path = raml_resource.path
+    return [res for res in raml_resource.root.resources
+            if res.parent and res.parent.path == path]
+
+
+def get_resource_direct_parents(raml_resource):
+    return get_resource_siblings(raml_resource.parent)
