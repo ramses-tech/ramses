@@ -4,6 +4,7 @@ from mock import Mock, patch, call
 from .fixtures import engine_mock
 
 
+@pytest.mark.usefixtures('engine_mock')
 class TestHelperFunctions(object):
 
     @patch('ramses.models.engine')
