@@ -6,11 +6,11 @@ You can read the full RAML specs `here <http://raml.org/spec.html>`_.
 Authentication
 --------------
 
-In order to enable authentication, add the ``ramses.auth`` paramer to your .ini file.
+In order to enable authentication, add the ``auth`` paramer to your .ini file.
 
 .. code-block:: ini
 
-    ramses.auth = true
+    auth = true
 
 In the root section of your RAML file, you can add a ``securitySchemes``, define the ``x_ticket_auth`` method and list it in your root-level ``securedBy``. This will enable cookie-based authentication.
 
