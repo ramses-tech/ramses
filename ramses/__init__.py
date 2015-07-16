@@ -34,8 +34,7 @@ def includeme(config):
 
     # Process auth settings
     root = config.get_root_resource()
-    ramses_auth = Settings.asbool('ramses.auth', False)
-    root.auth = ramses_auth
+    root_auth = getattr(root, 'auth', False)
 
     log.info('Parsing RAML')
     parsed_raml = pyraml.parser.load(Settings['ramses.raml_schema'])
@@ -43,7 +42,7 @@ def includeme(config):
     log.info('Starting models generation')
     generate_models(config, raml_resources=parsed_raml.resources)
 
-    if ramses_auth:
+    if root_auth:
         from .auth import setup_auth_policies, get_authuser_model
         if getattr(config.registry, 'auth_model', None) is None:
             config.registry.auth_model = get_authuser_model()
@@ -61,7 +60,7 @@ def includeme(config):
     from nefertari.elasticsearch import ES
     ES.setup_mappings()
 
-    if ramses_auth:
+    if root_auth:
         config.include('ramses.auth')
 
     log.info('Server succesfully generated\n')
