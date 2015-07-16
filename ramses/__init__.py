@@ -1,6 +1,6 @@
 import logging
 
-import pyraml.parser
+import ramlfications
 from nefertari.acl import RootACL as NefertariRootACL
 from nefertari.utils import dictset
 
@@ -39,7 +39,7 @@ def includeme(config):
     root.auth = ramses_auth
 
     log.info('Parsing RAML')
-    parsed_raml = pyraml.parser.load(Settings['ramses.raml_schema'])
+    parsed_raml = ramlfications.parse(Settings['ramses.raml_schema'])
 
     log.info('Starting models generation')
     generate_models(config, raml_resources=parsed_raml.resources)

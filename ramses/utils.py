@@ -17,7 +17,7 @@ class ContentTypes(object):
     FORM_URLENCODED = 'application/x-www-form-urlencoded'
 
 
-def convert_schema(raml_schema, schema_ct):
+def convert_schema(raml_schema, mime_type):
     """ Restructure `raml_schema` to a dictionary that has 'properties'
     as well as other schema keys/values.
 
@@ -39,16 +39,16 @@ def convert_schema(raml_schema, schema_ct):
 
     Arguments:
         :raml_schema: pyraml.entities.RamlBody.schema.
-        :schema_ct: ContentType of the schema as a string from RAML file. Only
+        :mime_type: ContentType of the schema as a string from RAML file. Only
             JSON is currently supported.
     """
-    if schema_ct == ContentTypes.JSON:
+    if mime_type == ContentTypes.JSON:
         if not isinstance(raml_schema, dict):
             raise TypeError(
                 'Schema is not a valid JSON. Please check your '
                 'schema syntax.\n{}...'.format(str(raml_schema)[:60]))
         return raml_schema
-    if schema_ct == ContentTypes.TEXT_XML:
+    if mime_type == ContentTypes.TEXT_XML:
         # Process XML schema
         pass
 
@@ -95,18 +95,6 @@ def generate_model_name(name):
     """
     model_name = inflection.camelize(name.strip('/'))
     return inflection.singularize(model_name)
-
-
-def find_dynamic_resource(raml_resource):
-    """ Find dymanic resource in :raml_resource:'s resources.
-
-    Arguments:
-        :raml_resource: Instance of pyraml.entities.RamlResource.
-    """
-    subresources = raml_resource.resources or {}
-    dynamic_resources = [res for uri, res in subresources.items()
-                         if is_dynamic_uri(uri)]
-    return dynamic_resources[0] if dynamic_resources else None
 
 
 def dynamic_part_name(raml_resource, clean_uri, pk_field):
@@ -175,6 +163,8 @@ def resource_view_attrs(raml_resource, singular=False):
 def resource_schema(raml_resource):
     """ Get schema properties of RAML resource :raml_resource:.
 
+    Must be called with RAML resource that defines body schema.
+
     The process follows these steps:
       * :raml_resource: post, put, patch methods body schemas are checked
         to see if a schema is defined.
@@ -184,25 +174,15 @@ def resource_schema(raml_resource):
     Arguments:
         :raml_resource: Instance of pyraml.entities.RamlResource.
     """
+    # NOTE: Must be called with resource that defines body schema
     log.info('Searching for model schema')
-    schemas = (ContentTypes.JSON, ContentTypes.TEXT_XML)
-    methods = raml_resource.methods or {}
+    if not raml_resource.body:
+        raise ValueError('RAML resource has no body to setup database '
+                         'schema from')
 
-    # Get 'schema' from particular methods' bodies
-    method = (methods.get('post') or
-              methods.get('put') or
-              methods.get('patch'))
-    if not method:
-        raise ValueError('No methods to setup database schema from')
-
-    # Find what schema from 'schemas' is defined
-    body = method.body or {}
-    for schema_ct in schemas:
-        if schema_ct not in body:
-            continue
-        schema = body[schema_ct].schema
-        if schema:
-            return convert_schema(schema, schema_ct)
+    for body in raml_resource.body:
+        if body.schema:
+            return convert_schema(body.schema, body.mime_type)
     log.debug('No model schema found.')
 
 
@@ -210,24 +190,27 @@ def is_dynamic_resource(raml_resource):
     """ Determine if :raml_resource: is a dynamic resource.
 
     Arguments:
-        :raml_resource:Instance of pyraml.entities.RamlResource.
+        :raml_resource: Instance of pyraml.entities.RamlResource.
     """
-    if not (raml_resource and raml_resource.parentResource):
-        return False
-    dyn = find_dynamic_resource(raml_resource.parentResource)
-    return dyn is raml_resource
+    return raml_resource and is_dynamic_uri(raml_resource.path)
 
 
-def get_static_parent(raml_resource):
-    """ Get static parent resource of :raml_resource:.
+def get_static_parent(raml_resource, method='POST'):
+    """ Get static parent resource of :raml_resource: with HTTP
+    method :method:.
 
     Arguments:
         :raml_resource:Instance of pyraml.entities.RamlResource.
     """
-    parent = raml_resource.parentResource
+    parent = raml_resource.parent
     while is_dynamic_resource(parent):
-        parent = parent.parentResource
-    return parent
+        parent = parent.parent
+    if parent is None or parent.method.upper() == method:
+        return parent
+
+    for res in parent.root.resources:
+        if res.method.upper() == method and res.path == parent.path:
+            return res
 
 
 def attr_subresource(raml_resource, route_name):
@@ -253,6 +236,7 @@ def singular_subresource(raml_resource, route_name):
         :raml_resource: Instance of pyraml.entities.RamlResource.
         :route_name: Name of the :raml_resource:.
     """
+    # NOTE: static_parent is now resource with method POST
     static_parent = get_static_parent(raml_resource)
     if static_parent is None:
         return False

@@ -23,40 +23,43 @@ class TestHelperFunctions(object):
         assert model_cls == 1
         mock_eng.get_document_cls.assert_called_once_with('Foo')
 
-    @patch('ramses.models.find_dynamic_resource')
+    @patch('ramses.generators.setup_data_model')
     @patch('ramses.models.get_existing_model')
-    def test_prepare_relationship_model_exists(self, mock_get, mock_find):
+    def test_prepare_relationship_model_exists(self, mock_get, mock_set):
         from ramses import models
         models.prepare_relationship('foobar', 'Story', 'raml_resource')
         mock_get.assert_called_once_with('Story')
-        assert not mock_find.called
+        assert not mock_set.called
 
-    @patch('ramses.models.find_dynamic_resource')
     @patch('ramses.models.get_existing_model')
-    def test_prepare_relationship_no_subresource(self, mock_get, mock_find):
+    def test_prepare_relationship_resource_not_found(self, mock_get):
         from ramses import models
+        resource = Mock(root=Mock(resources=[
+            Mock(method='get', path='/stories'),
+            Mock(method='options', path='/stories'),
+            Mock(method='post', path='/items'),
+        ]))
         mock_get.return_value = None
-        mock_find.return_value = Mock(resources={'/foo': 'bar'})
         with pytest.raises(ValueError) as ex:
-            models.prepare_relationship('foobar', 'Story', 'raml_resource')
-        expected = ('Model `Story` used in relationship `foobar` '
+            models.prepare_relationship('stories', 'Story', resource)
+        expected = ('Model `Story` used in relationship `stories` '
                     'is not defined')
         assert str(ex.value) == expected
-        mock_get.assert_called_once_with('Story')
-        mock_find.assert_called_once_with('raml_resource')
 
     @patch('ramses.generators.setup_data_model')
-    @patch('ramses.models.find_dynamic_resource')
     @patch('ramses.models.get_existing_model')
-    def test_prepare_relationship(self, mock_get, mock_find, mock_setup):
+    def test_prepare_relationship_resource_found(
+            self, mock_get, mock_set):
         from ramses import models
+        matching_res = Mock(method='post', path='/stories')
+        resource = Mock(root=Mock(resources=[
+            matching_res,
+            Mock(method='options', path='/stories'),
+            Mock(method='post', path='/items'),
+        ]))
         mock_get.return_value = None
-        mock_find.return_value = Mock(
-            resources={'/foobar': 'stories_resource'})
-        models.prepare_relationship('foobar', 'Story', 'raml_resource')
-        mock_get.assert_called_once_with('Story')
-        mock_find.assert_called_once_with('raml_resource')
-        mock_setup.assert_called_once_with('stories_resource', 'Story')
+        models.prepare_relationship('stories', 'Story', resource)
+        mock_set.assert_called_once_with(matching_res, 'Story')
 
 
 @patch('ramses.models.registry')

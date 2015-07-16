@@ -204,21 +204,22 @@ def generate_models(config, raml_resources):
     if not raml_resources:
         return
 
-    for resource_uri, raml_resource in raml_resources.items():
+    for raml_resource in raml_resources:
         # No need to generate models for dynamic resource
-        if is_dynamic_uri(resource_uri):
-            return generate_models(
-                config, raml_resources=raml_resource.resources)
+        if is_dynamic_uri(raml_resource.path):
+            continue
+        # Since POST resource must define schema use only POST
+        # resources to generate models
+        if raml_resource.method.upper() != 'POST':
+            continue
 
         # Generate DB model
         # If this is an attribute resource we don't need to generate model
-        route_name = resource_uri.strip('/')
+        route_name = raml_resource.path.strip('/')
+
         if not attr_subresource(raml_resource, route_name):
             log.info('Configuring model for route `{}`'.format(route_name))
             model_cls, is_auth_model = handle_model_generation(
                 raml_resource, route_name)
             if is_auth_model:
                 config.registry.auth_model = model_cls
-
-        # Generate child models if present
-        generate_models(config, raml_resources=raml_resource.resources)

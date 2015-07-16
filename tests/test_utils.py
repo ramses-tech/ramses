@@ -43,18 +43,6 @@ class TestUtils(object):
         model_name = utils.generate_model_name('/collectionitems')
         assert model_name == 'Collectionitem'
 
-    def test_find_dynamic_resource(self):
-        resource = Mock(resources={'/items': 'foo', '/{id}': 'bar'})
-        assert utils.find_dynamic_resource(resource) == 'bar'
-
-    def test_find_dynamic_resource_no_dynamic(self):
-        resource = Mock(resources={'/items': 'foo'})
-        assert utils.find_dynamic_resource(resource) is None
-
-    def test_find_dynamic_resource_no_resources(self):
-        resource = Mock(resources=None)
-        assert utils.find_dynamic_resource(resource) is None
-
     def test_dynamic_part_name(self):
         resource = Mock(resources={'/items': 'foo', '/{myid}': 'bar'})
         part_name = utils.dynamic_part_name(
@@ -160,96 +148,67 @@ class TestUtils(object):
         attrs = utils.resource_view_attrs(resource, singular=False)
         assert attrs == set()
 
-    def test_resource_schema(self):
-        body = Mock(schema={'foo': 'bar'})
-        method = Mock(body={'application/json': body})
-        resource = Mock(methods={'post': method})
-        assert utils.resource_schema(resource) == {'foo': 'bar'}
-        resource = Mock(methods={'put': method})
-        assert utils.resource_schema(resource) == {'foo': 'bar'}
-        resource = Mock(methods={'patch': method})
-        assert utils.resource_schema(resource) == {'foo': 'bar'}
-
-    def test_resource_schema_methods_order(self):
-        body = Mock(schema={'foo': 'bar'})
-        method = Mock(body={'application/json': body})
-        body2 = Mock(schema={'foo2': 'bar2'})
-        method2 = Mock(body={'application/json': body2})
-        resource = Mock(methods={
-            'post': method,
-            'patch': method2,
-        })
-        assert utils.resource_schema(resource) == {'foo': 'bar'}
-
-    def test_resource_schema_no_propper_method(self):
+    def test_resource_schema_no_body(self):
+        resource = Mock(body=None)
         with pytest.raises(ValueError) as ex:
-            utils.resource_schema(Mock(methods=None))
-        assert str(ex.value) == 'No methods to setup database schema from'
+            utils.resource_schema(resource)
+        expected = 'RAML resource has no body to setup database'
+        assert expected in str(ex.value)
 
-        with pytest.raises(ValueError) as ex:
-            utils.resource_schema(Mock(methods={'get': ''}))
-        assert str(ex.value) == 'No methods to setup database schema from'
-
-    def test_resource_schema_no_method_body(self):
-        method = Mock(body=None)
-        resource = Mock(methods={'post': method})
+    def test_resource_schema_no_schemas(self):
+        resource = Mock(body=[Mock(schema=None), Mock(schema='')])
         assert utils.resource_schema(resource) is None
 
-    def test_resource_schema_schema_none(self):
-        body = Mock(schema=None)
-        method = Mock(body={'application/json': body})
-        resource = Mock(methods={'post': method})
-        assert utils.resource_schema(resource) is None
-
-    def test_resource_schema_invalid_content_type(self):
-        body = Mock(schema={'foo': 'bar'})
-        method = Mock(body={'dsadadasdasdasdasd': body})
-        resource = Mock(methods={'post': method})
-        assert utils.resource_schema(resource) is None
+    def test_resource_schema_success(self):
+        resource = Mock(body=[
+            Mock(schema={'foo': 'bar'},
+                 mime_type=utils.ContentTypes.JSON)
+        ])
+        assert utils.resource_schema(resource) == {'foo': 'bar'}
 
     def test_is_dynamic_resource_no_resource(self):
         assert not utils.is_dynamic_resource(None)
 
-    def test_is_dynamic_resource_no_parent(self):
-        resource = Mock(parentResource=None)
-        assert not utils.is_dynamic_resource(resource)
-
-    def test_is_dynamic_resource(self):
-        resource = Mock()
-        parent = Mock(resources={'/{id}': resource})
-        resource.parentResource = parent
+    def test_is_dynamic_resource_dynamic(self):
+        resource = Mock(path='/{id}')
         assert utils.is_dynamic_resource(resource)
 
     def test_is_dynamic_resource_not_dynamic(self):
-        resource = Mock()
-        parent = Mock(resources={'/items': resource})
-        resource.parentResource = parent
-        assert not utils.is_dynamic_resource(resource)
-
-    def test_is_dynamic_resource_no_resources(self):
-        resource = Mock()
-        parent = Mock(resources=None)
-        resource.parentResource = parent
+        resource = Mock(path='/stories')
         assert not utils.is_dynamic_resource(resource)
 
     def test_get_static_parent(self):
-        resource = Mock()
-        parent = Mock(
-            resources={'/{id}': resource},
-            parentResource=Mock(resources=None))
-        resource.parentResource = parent
+        parent = Mock(path='/stories', method='post')
+        resource = Mock(path='/{id}')
+        resource.parent = parent
         assert utils.get_static_parent(resource) is parent
 
-    def test_get_static_parent_nested(self):
-        resource = Mock()
-        parent2 = Mock(
-            parentResource=Mock(resources=None))
-        parent = Mock(
-            resources={'/{id}': resource},
-            parentResource=parent2)
-        parent2.resources = {'/{id}': parent}
-        resource.parentResource = parent
-        assert utils.get_static_parent(resource) is parent2
+    def test_get_static_parent_none(self):
+        resource = Mock(path='/{id}')
+        resource.parent = None
+        assert utils.get_static_parent(resource) is None
+
+    def test_get_static_parent_wrong_parent_method(self):
+        root = Mock(resources=[
+            Mock(path='/stories', method='options'),
+            Mock(path='/users', method='post'),
+            Mock(path='/stories', method='post'),
+        ])
+        parent = Mock(path='/stories', method='get', root=root)
+        resource = Mock(path='/{id}')
+        resource.parent = parent
+        res = utils.get_static_parent(resource)
+        assert res.method == 'post'
+        assert res.path == '/stories'
+
+    def test_get_static_parent_none_found_in_root(self):
+        root = Mock(resources=[
+            Mock(path='/stories', method='get'),
+        ])
+        parent = Mock(path='/stories', method='options', root=root)
+        resource = Mock(path='/{id}')
+        resource.parent = parent
+        assert utils.get_static_parent(resource) is None
 
     @patch('ramses.utils.get_static_parent')
     @patch('ramses.utils.resource_schema')

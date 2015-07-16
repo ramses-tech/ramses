@@ -73,22 +73,30 @@ class TestGenerateModels(object):
 
     @patch('ramses.generators.is_dynamic_uri')
     def test_no_resources(self, mock_dyn):
-        generators.generate_models(config=1, raml_resources={})
+        generators.generate_models(config=1, raml_resources=[])
         assert not mock_dyn.called
 
     @patch('ramses.generators.handle_model_generation')
     def test_dynamic_uri(self, mock_handle):
         generators.generate_models(
-            config=1, raml_resources={'/{id}': Mock(resources={})})
+            config=1, raml_resources=[Mock(path='/{id}')])
+        assert not mock_handle.called
+
+    @patch('ramses.generators.handle_model_generation')
+    def test_no_post_resources(self, mock_handle):
+        generators.generate_models(config=1, raml_resources=[
+            Mock(path='/stories', method='get'),
+            Mock(path='/stories', method='options'),
+            Mock(path='/stories', method='patch'),
+        ])
         assert not mock_handle.called
 
     @patch('ramses.generators.attr_subresource')
     @patch('ramses.generators.handle_model_generation')
     def test_attr_subresource(self, mock_handle, mock_attr):
         mock_attr.return_value = True
-        resource = Mock(resources={})
-        generators.generate_models(
-            config=1, raml_resources={'/stories': resource})
+        resource = Mock(path='/stories', method='POST')
+        generators.generate_models(config=1, raml_resources=[resource])
         assert not mock_handle.called
         mock_attr.assert_called_once_with(resource, 'stories')
 
@@ -98,9 +106,9 @@ class TestGenerateModels(object):
         mock_attr.return_value = False
         mock_handle.return_value = ('Foo', False)
         config = Mock()
-        resource = Mock(resources={})
+        resource = Mock(path='/stories', method='POST')
         generators.generate_models(
-            config=config, raml_resources={'/stories': resource})
+            config=config, raml_resources=[resource])
         mock_attr.assert_called_once_with(resource, 'stories')
         mock_handle.assert_called_once_with(resource, 'stories')
         assert config.registry.auth_model != 'Foo'
@@ -111,26 +119,12 @@ class TestGenerateModels(object):
         mock_attr.return_value = False
         mock_handle.return_value = ('Foo', True)
         config = Mock()
-        resource = Mock(resources={})
+        resource = Mock(path='/stories', method='POST')
         generators.generate_models(
-            config=config, raml_resources={'/stories': resource})
+            config=config, raml_resources=[resource])
         mock_attr.assert_called_once_with(resource, 'stories')
         mock_handle.assert_called_once_with(resource, 'stories')
         assert config.registry.auth_model == 'Foo'
-
-    @patch('ramses.generators.attr_subresource')
-    @patch('ramses.generators.handle_model_generation')
-    def test_recursion(self, mock_handle, mock_attr):
-        mock_attr.return_value = False
-        mock_handle.return_value = ('Foo', False)
-        resource1 = Mock(resources={})
-        resource2 = Mock(resources={'/users': resource1})
-        generators.generate_models(
-            config='', raml_resources={'/stories': resource2})
-        mock_handle.assert_has_calls([
-            call(resource2, 'stories'),
-            call(resource1, 'users'),
-        ])
 
 
 @pytest.mark.usefixtures('engine_mock')

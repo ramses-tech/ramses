@@ -3,8 +3,7 @@ import logging
 from nefertari import engine
 from nefertari.authentication.models import AuthModelMethodsMixin
 
-from .utils import (
-    find_dynamic_resource, resolve_to_callable, is_callable_tag)
+from .utils import resolve_to_callable, is_callable_tag
 from . import registry
 
 
@@ -61,23 +60,24 @@ def prepare_relationship(field_name, model_name, raml_resource):
     When preparing a relationship, we check to see if the model that will be
     referenced already exists. If not, it is created so that it will be possible
     to use it in a relationship. Thus the first usage of this model in RAML file
-    must provide its schema in one of http methods that are assumed to contain
-    a full body schema.
+    must provide its schema in POST method resource body schema.
 
     Arguments:
         :field_name: Name of the field that should become a `Relationship`.
         :raml_resource: Instance of pyraml.entities.RamlResource. Resource
-            for which :model_name: will is being defined.
+            for which :model_name: will be defined.
     """
     from .generators import setup_data_model
     if get_existing_model(model_name) is None:
-        dynamic_res = find_dynamic_resource(raml_resource)
-        subresources = getattr(dynamic_res, 'resources', {}) or {}
-        subresources = {k.strip('/'): v for k, v in subresources.items()}
-        if field_name not in subresources:
+        for res in raml_resource.root.resources:
+            if res.method.upper() != 'POST':
+                continue
+            if res.path.endswith('/' + field_name):
+                break
+        else:
             raise ValueError('Model `{}` used in relationship `{}` is not '
                              'defined'.format(model_name, field_name))
-        setup_data_model(subresources[field_name], model_name)
+        setup_data_model(res, model_name)
 
 
 def generate_model_cls(schema, model_name, raml_resource, es_based=True):
