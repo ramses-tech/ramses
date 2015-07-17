@@ -19,7 +19,7 @@ class RamsesStarterTemplate(PyramidTemplate):
         (2) for MongoEngine/MongoDB?
 
         [default is '1']: """) or '1']
-        vars['random_string'] = binascii.hexlify(os.urandom(20))
+
         if vars['package'] == 'site':
             raise ValueError("""
                 "Site" is a reserved keyword in Python.
