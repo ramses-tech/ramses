@@ -18,7 +18,6 @@ def includeme(config):
 
     # Process nefertari settings
     if Settings.asbool('enable_get_tunneling'):
-        log.warning('GET tunneling enabled')
         config.add_tween('nefertari.tweens.get_tunneling')
 
     if Settings.asbool('cors.enable'):
@@ -35,8 +34,7 @@ def includeme(config):
 
     # Process auth settings
     root = config.get_root_resource()
-    ramses_auth = Settings.asbool('ramses.auth', False)
-    root.auth = ramses_auth
+    root_auth = getattr(root, 'auth', False)
 
     log.info('Parsing RAML')
     raml_root = ramlfications.parse(Settings['ramses.raml_schema'])
@@ -44,7 +42,7 @@ def includeme(config):
     log.info('Starting models generation')
     generate_models(config, raml_resources=raml_root.resources)
 
-    if ramses_auth:
+    if root_auth:
         from .auth import setup_auth_policies, get_authuser_model
         if getattr(config.registry, 'auth_model', None) is None:
             config.registry.auth_model = get_authuser_model()
@@ -62,7 +60,7 @@ def includeme(config):
     from nefertari.elasticsearch import ES
     ES.setup_mappings()
 
-    if ramses_auth:
+    if root_auth:
         config.include('ramses.auth')
 
     log.info('Server succesfully generated\n')

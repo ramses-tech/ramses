@@ -182,15 +182,15 @@ class TestSetupAuthPolicies(object):
 @pytest.mark.usefixtures('engine_mock')
 class TestHelperFunctions(object):
 
-    def test_create_admin_user_key_error(self):
+    def test_create_system_user_key_error(self):
         from ramses import auth
         config = Mock()
         config.registry.settings = {}
-        auth.create_admin_user(config)
+        auth.create_system_user(config)
         assert not config.registry.auth_model.get_or_create.called
 
     @patch('ramses.auth.transaction')
-    def test_create_admin_user_exists(self, mock_trans):
+    def test_create_system_user_exists(self, mock_trans):
         from ramses import auth
         config = Mock()
         config.registry.settings = {
@@ -199,7 +199,7 @@ class TestHelperFunctions(object):
             'system.email': 'user12@example.com',
         }
         config.registry.auth_model.get_or_create.return_value = (1, False)
-        auth.create_admin_user(config)
+        auth.create_system_user(config)
         assert not mock_trans.commit.called
         config.registry.auth_model.get_or_create.assert_called_once_with(
             username='user12',
@@ -211,7 +211,7 @@ class TestHelperFunctions(object):
         )
 
     @patch('ramses.auth.transaction')
-    def test_create_admin_user_created(self, mock_trans):
+    def test_create_system_user_created(self, mock_trans):
         from ramses import auth
         config = Mock()
         config.registry.settings = {
@@ -221,7 +221,7 @@ class TestHelperFunctions(object):
         }
         config.registry.auth_model.get_or_create.return_value = (
             Mock(), True)
-        auth.create_admin_user(config)
+        auth.create_system_user(config)
         mock_trans.commit.assert_called_once_with()
         config.registry.auth_model.get_or_create.assert_called_once_with(
             username='user12',
@@ -232,7 +232,7 @@ class TestHelperFunctions(object):
             }
         )
 
-    @patch('ramses.auth.create_admin_user')
+    @patch('ramses.auth.create_system_user')
     def test_includeme(self, mock_create):
         from ramses import auth
         auth.includeme(config=1)
