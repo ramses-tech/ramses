@@ -3,7 +3,6 @@ import logging
 import six
 from nefertari.view import BaseView as NefertariBaseView
 from nefertari.json_httpexceptions import JHTTPNotFound
-from nefertari import engine
 
 
 log = logging.getLogger(__name__)
@@ -38,11 +37,6 @@ class BaseView(NefertariBaseView):
     Use `self.get_collection` and `self.get_item` to get access to set of
     objects and object respectively which are valid at current level.
     """
-    def __init__(self, *args, **kwargs):
-        super(BaseView, self).__init__(*args, **kwargs)
-        if self.request.method.upper() in ['GET', 'HEAD']:
-            self._query_params.process_int_param('_limit', 20)
-
     @property
     def clean_id_name(self):
         id_name = self._resource.id_name
@@ -217,13 +211,6 @@ class ESBaseView(BaseView):
     to the set of objects and individual object respectively which are
     valid at the current level.
     """
-    def _get_raw_terms(self):
-        search_params = []
-        if 'q' in self._query_params:
-            search_params.append(self._query_params.pop('q'))
-        _raw_terms = ' AND '.join(search_params)
-        return _raw_terms
-
     def _parent_queryset_es(self):
         """ Get queryset (list of object IDs) of parent view.
 
@@ -268,8 +255,7 @@ class ESBaseView(BaseView):
                 return []
             self._query_params['id'] = objects_ids
 
-        params = {'_raw_terms': self._get_raw_terms()}
-        params.update(self._query_params)
+        params = self._query_params.copy()
 
         if ES.settings.asbool('acl_filtering'):
             params['_identifiers'] = self.request.effective_principals
@@ -330,8 +316,7 @@ class ESCollectionView(ESBaseView, CollectionView):
     def get_dbcollection_with_es(self, **kwargs):
         """ Get DB objects collection by first querying ES. """
         es_objects = self.get_collection_es(**kwargs)
-        db_objects = self.Model.filter_objects(
-            es_objects, _limit=self._query_params.get('_limit'))
+        db_objects = self.Model.filter_objects(es_objects)
         return db_objects
 
     def delete_many(self, **kwargs):
@@ -506,7 +491,6 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
         raise AttributeError
 
     class RESTView(base_view_cls):
-        _json_encoder = engine.JSONEncoder
         Model = model_cls
 
     for attr in missing_attrs:

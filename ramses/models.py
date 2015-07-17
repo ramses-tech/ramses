@@ -1,7 +1,7 @@
 import logging
 
 from nefertari import engine
-from nefertari.authentication.models import AuthModelDefaultMixin
+from nefertari.authentication.models import AuthModelMethodsMixin
 
 from .utils import (
     find_dynamic_resource, resolve_to_callable, is_callable_tag)
@@ -103,7 +103,7 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     metaclass = type(base_cls)
     auth_model = schema.get('auth_model', False)
     if auth_model:
-        bases = (AuthModelDefaultMixin, base_cls)
+        bases = (AuthModelMethodsMixin, base_cls)
     else:
         bases = (base_cls,)
     attrs = {

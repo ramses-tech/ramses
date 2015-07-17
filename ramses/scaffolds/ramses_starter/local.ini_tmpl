@@ -3,16 +3,10 @@ use = egg:{{package}}
 
 # Ramses
 ramses.raml_schema = api.raml
-ramses.auth = false
 
 # Nefertari
 nefertari.engine = nefertari_{{engine}}
-auth_tkt_secret = {{random_string}}
-debug = true
-public_max_limit = 100
-system.user = system
-system.password = 123456
-system.email = user@domain.com
+enable_get_tunneling = true
 
 # SQLA
 sqlalchemy.url = postgresql://localhost:5432/{{package}}

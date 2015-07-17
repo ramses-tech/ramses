@@ -1,7 +1,7 @@
 Changelog
 =========
 
-* :release:`0.3.1 <2015-07-06>`
+* :release:`0.3.1 <2015-07-07>`
 * :support:`- backported` Added support for callables in 'default' field argument
 * :support:`- backported` Added support for 'onupdate' field argument
 

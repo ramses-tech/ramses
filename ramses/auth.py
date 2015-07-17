@@ -5,7 +5,7 @@ policies setup.
 In particular:
     :includeme: Function that actually creates routes listed above and
         connects view to them
-    :create_admin_user: Function that creates system/admin user
+    :create_system_user: Function that creates system/admin user
     :_setup_ticket_policy: Setup Pyramid AuthTktAuthenticationPolicy
     :_setup_apikey_policy: Setup nefertari.ApiKeyAuthenticationPolicy
     :setup_auth_policies: Runs generation of particular auth policy
@@ -19,8 +19,6 @@ from pyramid.authorization import ACLAuthorizationPolicy
 from nefertari.utils import dictset
 from nefertari.json_httpexceptions import *
 from nefertari.authentication.policies import ApiKeyAuthenticationPolicy
-from nefertari.authentication.views import (
-    TicketAuthenticationView, TokenAuthenticationView)
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +39,10 @@ def _setup_ticket_policy(config, params):
         :config: Pyramid Configurator instance.
         :params: Nefertari dictset which contains security scheme `settings`.
     """
+    from nefertari.authentication.views import (
+        TicketAuthRegisterView, TicketAuthLoginView,
+        TicketAuthLogoutView)
+
     log.info('Configuring Pyramid Ticket Authn policy')
     if 'secret' not in params:
         raise ValueError(
@@ -61,23 +63,24 @@ def _setup_ticket_policy(config, params):
 
     policy = AuthTktAuthenticationPolicy(**params)
 
-    class RamsesTicketAuthenticationView(TicketAuthenticationView):
+    class RamsesTicketAuthRegisterView(TicketAuthRegisterView):
         Model = config.registry.auth_model
 
-    config.add_route('login', '/auth/login')
-    config.add_view(
-        view=RamsesTicketAuthenticationView,
-        route_name='login', attr='login', request_method='POST')
+    class RamsesTicketAuthLoginView(TicketAuthLoginView):
+        Model = config.registry.auth_model
 
-    config.add_route('logout', '/auth/logout')
-    config.add_view(
-        view=RamsesTicketAuthenticationView,
-        route_name='logout', attr='logout')
+    class RamsesTicketAuthLogoutView(TicketAuthLogoutView):
+        Model = config.registry.auth_model
 
-    config.add_route('register', '/auth/register')
-    config.add_view(
-        view=RamsesTicketAuthenticationView,
-        route_name='register', attr='register', request_method='POST')
+    common_kw = {
+        'prefix': 'auth',
+        'factory': 'nefertari.acl.AuthenticationACL',
+    }
+
+    root = config.get_root_resource()
+    root.add('register', view=RamsesTicketAuthRegisterView, **common_kw)
+    root.add('login', view=RamsesTicketAuthLoginView, **common_kw)
+    root.add('logout', view=RamsesTicketAuthLogoutView, **common_kw)
 
     return policy
 
@@ -98,6 +101,9 @@ def _setup_apikey_policy(config, params):
         :config: Pyramid Configurator instance.
         :params: Nefertari dictset which contains security scheme `settings`.
     """
+    from nefertari.authentication.views import (
+        TokenAuthRegisterView, TokenAuthClaimView,
+        TokenAuthResetView)
     log.info('Configuring ApiKey Authn policy')
 
     auth_model = config.registry.auth_model
@@ -109,23 +115,24 @@ def _setup_apikey_policy(config, params):
 
     policy = ApiKeyAuthenticationPolicy(**params)
 
-    class RamsesTokenAuthenticationView(TokenAuthenticationView):
+    class RamsesTokenAuthRegisterView(TokenAuthRegisterView):
         Model = auth_model
 
-    config.add_route('token', '/auth/token')
-    config.add_view(
-        view=RamsesTokenAuthenticationView,
-        route_name='token', attr='claim_token', request_method='POST')
+    class RamsesTokenAuthClaimView(TokenAuthClaimView):
+        Model = auth_model
 
-    config.add_route('reset_token', '/auth/reset_token')
-    config.add_view(
-        view=RamsesTokenAuthenticationView,
-        route_name='reset_token', attr='reset_token', request_method='POST')
+    class RamsesTokenAuthResetView(TokenAuthResetView):
+        Model = auth_model
 
-    config.add_route('register', '/auth/register')
-    config.add_view(
-        view=RamsesTokenAuthenticationView,
-        route_name='register', attr='register', request_method='POST')
+    common_kw = {
+        'prefix': 'auth',
+        'factory': 'nefertari.acl.AuthenticationACL',
+    }
+
+    root = config.get_root_resource()
+    root.add('register', view=RamsesTokenAuthRegisterView, **common_kw)
+    root.add('token', view=RamsesTokenAuthClaimView, **common_kw)
+    root.add('reset_token', view=RamsesTokenAuthResetView, **common_kw)
 
     return policy
 
@@ -185,7 +192,7 @@ def setup_auth_policies(config, raml_data):
     config.set_authorization_policy(authz_policy)
 
 
-def create_admin_user(config):
+def create_system_user(config):
     log.info('Creating system user')
     from pyramid.security import Allow, ALL_PERMISSIONS
     settings = config.registry.settings
@@ -208,6 +215,16 @@ def create_admin_user(config):
         log.error('Failed to create system user. Missing config: %s' % e)
 
 
+def get_authuser_model():
+    """ Define and return AuthUser model using nefertari base classes """
+    from nefertari.authentication.models import AuthUserMixin
+    from nefertari import engine
+
+    class AuthUser(AuthUserMixin, engine.BaseDocument):
+        __tablename__ = 'ramses_authuser'
+
+    return AuthUser
+
+
 def includeme(config):
-    log.info('Creating admin user')
-    create_admin_user(config)
+    create_system_user(config)
