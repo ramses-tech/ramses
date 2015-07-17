@@ -5,6 +5,64 @@ from ramses import generators
 from .fixtures import engine_mock
 
 
+class TestHelperFunctions(object):
+    @patch.object(generators, 'get_static_parent')
+    def test_get_nefertari_parent_resource_no_parent(self, mock_get):
+        mock_get.return_value = None
+        assert generators._get_nefertari_parent_resource(1, 2, 3) == 3
+        mock_get.assert_called_once_with(1)
+
+    @patch.object(generators, 'get_static_parent')
+    def test_get_nefertari_parent_resource_parent_not_defined(
+            self, mock_get):
+        mock_get.return_value = Mock(path='foo')
+        assert generators._get_nefertari_parent_resource(
+            1, {}, 3) == 3
+        mock_get.assert_called_once_with(1)
+
+    @patch.object(generators, 'get_static_parent')
+    def test_get_nefertari_parent_resource_parent_defined(
+            self, mock_get):
+        mock_get.return_value = Mock(path='foo')
+        assert generators._get_nefertari_parent_resource(
+            1, {'foo': 'bar'}, 3) == 'bar'
+        mock_get.assert_called_once_with(1)
+
+    @patch.object(generators, 'generate_resource')
+    def test_generate_server_no_resources(self, mock_gen):
+        generators.generate_server(Mock(resources=None), 'foo')
+        assert not mock_gen.called
+
+    @patch.object(generators, '_get_nefertari_parent_resource')
+    @patch.object(generators, 'generate_resource')
+    def test_generate_server_resources_generated(
+            self, mock_gen, mock_get):
+        config = Mock()
+        resources = [
+            Mock(path='/foo'),
+            Mock(path='/bar'),
+        ]
+        generators.generate_server(Mock(resources=resources), config)
+        assert mock_get.call_count == 2
+        mock_gen.assert_has_calls([
+            call(resources[0], mock_get()),
+            call(resources[1], mock_get()),
+        ])
+
+    @patch.object(generators, '_get_nefertari_parent_resource')
+    @patch.object(generators, 'generate_resource')
+    def test_generate_server_call_per_path(
+            self, mock_gen, mock_get):
+        config = Mock()
+        resources = [
+            Mock(path='/foo'),
+            Mock(path='/foo'),
+        ]
+        generators.generate_server(Mock(resources=resources), config)
+        assert mock_get.call_count == 1
+        mock_gen.assert_called_once_with(resources[0], mock_get())
+
+
 @pytest.mark.usefixtures('engine_mock')
 class TestGenerateModels(object):
 
@@ -64,136 +122,101 @@ class TestGenerateModels(object):
         assert config.registry.auth_model == 'Foo'
 
 
-# @pytest.mark.usefixtures('engine_mock')
-# class TestGenerateServer(object):
+class TestGenerateResource(object):
+    def test_dynamic_root_parent(self):
+        raml_resource = Mock(path='/foobar/{id}')
+        parent_resource = Mock(is_root=True)
+        with pytest.raises(Exception) as ex:
+            generators.generate_resource(raml_resource, parent_resource)
 
+        expected = ("Top-level resources can't be dynamic and must "
+                    "represent collections instead")
+        assert str(ex.value) == expected
 
+    def test_dynamic_not_root_parent(self):
+        raml_resource = Mock(path='/foobar/{id}')
+        parent_resource = Mock(is_root=False)
+        new_resource = generators.generate_resource(
+            raml_resource, parent_resource)
+        assert new_resource is None
 
+    @patch('ramses.generators.dynamic_part_name')
+    @patch('ramses.generators.singular_subresource')
+    @patch('ramses.generators.attr_subresource')
+    @patch('ramses.models.get_existing_model')
+    @patch('ramses.generators.generate_acl')
+    @patch('ramses.generators.resource_view_attrs')
+    @patch('ramses.generators.generate_rest_view')
+    def test_full_run(
+            self, generate_view, view_attrs, generate_acl, get_model,
+            attr_res, singular_res, mock_dyn):
+        mock_dyn.return_value = 'fooid'
+        model_cls = Mock()
+        model_cls.pk_field.return_value = 'my_id'
+        attr_res.return_value = False
+        singular_res.return_value = False
+        get_model.return_value = model_cls
+        raml_resource = Mock(path='/stories')
+        parent_resource = Mock(is_root=False, uid=1)
 
-# @pytest.mark.usefixtures('engine_mock')
-# class TestConfigureResources(object):
+        res = generators.generate_resource(raml_resource, parent_resource)
+        get_model.assert_called_once_with('Story')
+        generate_acl.assert_called_once_with(
+            model_cls=model_cls, raml_resource=raml_resource)
+        mock_dyn.assert_called_once_with(
+            raml_resource=raml_resource,
+            clean_uri='stories', pk_field='my_id')
+        view_attrs.assert_called_once_with(raml_resource, False)
+        generate_view.assert_called_once_with(
+            model_cls=model_cls,
+            attrs=view_attrs(),
+            attr_view=False,
+            singular=False
+        )
+        parent_resource.add.assert_called_once_with(
+            'story', 'stories',
+            id_name='fooid',
+            factory=generate_acl(),
+            view=generate_view()
+        )
+        assert res == parent_resource.add()
 
-#     @patch('ramses.generators.is_restful_uri')
-#     def test_no_raml_resources(self, mock_rest):
-#         config = Mock()
-#         generators.configure_resources(
-#             config, raml_resources={}, parsed_raml='',
-#             parent_resource=None)
-#         assert not config.get_root_resource.called
-#         assert not mock_rest.called
+    @patch('ramses.generators.dynamic_part_name')
+    @patch('ramses.generators.singular_subresource')
+    @patch('ramses.generators.attr_subresource')
+    @patch('ramses.models.get_existing_model')
+    @patch('ramses.generators.generate_acl')
+    @patch('ramses.generators.resource_view_attrs')
+    @patch('ramses.generators.generate_rest_view')
+    def test_full_run_singular(
+            self, generate_view, view_attrs, generate_acl, get_model,
+            attr_res, singular_res, mock_dyn):
+        mock_dyn.return_value = 'fooid'
+        model_cls = Mock()
+        model_cls.pk_field.return_value = 'my_id'
+        attr_res.return_value = False
+        singular_res.return_value = True
+        get_model.return_value = model_cls
+        raml_resource = Mock(path='/stories')
+        parent_resource = Mock(is_root=False, uid=1)
+        parent_resource.view.Model.pk_field.return_value = 'other_id'
 
-#     def test_no_parent_not_restful_uri(self):
-#         config = Mock()
-#         with pytest.raises(ValueError) as ex:
-#             generators.configure_resources(
-#                 config, raml_resources={'/foo/bar': ''},
-#                 parsed_raml='', parent_resource=None)
-#         expected = 'Resource URI `/foo/bar` is not RESTful'
-#         assert str(ex.value) == expected
-#         config.get_root_resource.assert_called_once_with()
-
-#     @patch('ramses.generators.singular_subresource')
-#     def test_root_dynamic_resource(self, mock_singular):
-#         config = Mock()
-#         resource = Mock(resource={})
-#         with pytest.raises(Exception) as ex:
-#             generators.configure_resources(
-#                 config, raml_resources={'/{id}': resource},
-#                 parsed_raml='', parent_resource=None)
-#         assert "Top-level resources can't be dynamic" in str(ex.value)
-#         assert not mock_singular.called
-
-#     @patch('ramses.generators.singular_subresource')
-#     def test_dynamic_resource(self, mock_singular):
-#         resource = Mock(resources={})
-#         parent_resource = Mock(uid=1)
-#         generators.configure_resources(
-#             None, raml_resources={'/{id}': resource},
-#             parsed_raml='', parent_resource=parent_resource)
-#         assert not mock_singular.called
-
-#     @patch('ramses.generators.singular_subresource')
-#     @patch('ramses.generators.attr_subresource')
-#     @patch('ramses.models.get_existing_model')
-#     @patch('ramses.generators.generate_acl')
-#     @patch('ramses.generators.resource_view_attrs')
-#     @patch('ramses.generators.generate_rest_view')
-#     def test_full_run(
-#             self, generate_view, view_attrs, generate_acl, get_model,
-#             attr_res, singular_res):
-#         model_cls = Mock()
-#         model_cls.pk_field.return_value = 'my_id'
-#         attr_res.return_value = False
-#         singular_res.return_value = False
-#         get_model.return_value = model_cls
-#         config = Mock()
-#         resource = Mock(resources={})
-#         parent_resource = Mock(uid=1)
-
-#         generators.configure_resources(
-#             config, raml_resources={'/stories': resource},
-#             parsed_raml='foo', parent_resource=parent_resource)
-
-#         singular_res.assert_called_once_with(resource, 'stories')
-#         attr_res.assert_called_once_with(resource, 'stories')
-#         get_model.assert_called_once_with('Story')
-#         generate_acl.assert_called_once_with(
-#             context_cls=model_cls,
-#             raml_resource=resource,
-#             parsed_raml='foo'
-#         )
-#         view_attrs.assert_called_once_with(resource, False)
-#         generate_view.assert_called_once_with(
-#             model_cls=model_cls,
-#             attrs=view_attrs(),
-#             attr_view=False,
-#             singular=False
-#         )
-#         parent_resource.add.assert_called_once_with(
-#             'story', 'stories',
-#             id_name='stories_my_id',
-#             factory=generate_acl(),
-#             view=generate_view()
-#         )
-
-#     @patch('ramses.generators.singular_subresource')
-#     @patch('ramses.generators.attr_subresource')
-#     @patch('ramses.models.get_existing_model')
-#     @patch('ramses.generators.generate_acl')
-#     @patch('ramses.generators.resource_view_attrs')
-#     @patch('ramses.generators.generate_rest_view')
-#     def test_full_run_singular(
-#             self, generate_view, view_attrs, generate_acl, get_model,
-#             attr_res, singular_res):
-#         attr_res.return_value = False
-#         singular_res.return_value = True
-#         config = Mock()
-#         resource = Mock(resources={})
-#         parent_resource = Mock(uid=1)
-#         parent_resource.view.Model.pk_field.return_value = 'other_id'
-
-#         generators.configure_resources(
-#             config, raml_resources={'/stories': resource},
-#             parsed_raml='foo', parent_resource=parent_resource)
-
-#         singular_res.assert_called_once_with(resource, 'stories')
-#         attr_res.assert_called_once_with(resource, 'stories')
-#         get_model.assert_called_once_with('Story')
-#         generate_acl.assert_called_once_with(
-#             context_cls=parent_resource.view.Model,
-#             raml_resource=resource,
-#             parsed_raml='foo'
-#         )
-#         view_attrs.assert_called_once_with(resource, True)
-#         generate_view.assert_called_once_with(
-#             model_cls=parent_resource.view.Model,
-#             attrs=view_attrs(),
-#             attr_view=False,
-#             singular=True
-#         )
-#         parent_resource.add.assert_called_once_with(
-#             'story',
-#             factory=generate_acl(),
-#             view=generate_view()
-#         )
-#         assert generate_view()._singular_model == get_model()
+        res = generators.generate_resource(raml_resource, parent_resource)
+        get_model.assert_called_once_with('Story')
+        generate_acl.assert_called_once_with(
+            model_cls=parent_resource.view.Model,
+            raml_resource=raml_resource)
+        assert not mock_dyn.called
+        view_attrs.assert_called_once_with(raml_resource, True)
+        generate_view.assert_called_once_with(
+            model_cls=parent_resource.view.Model,
+            attrs=view_attrs(),
+            attr_view=False,
+            singular=True
+        )
+        parent_resource.add.assert_called_once_with(
+            'story',
+            factory=generate_acl(),
+            view=generate_view()
+        )
+        assert res == parent_resource.add()
