@@ -38,108 +38,110 @@ class TestUtils(object):
         model_name = utils.generate_model_name('/collectionitems')
         assert model_name == 'Collectionitem'
 
-    def test_dynamic_part_name(self):
-        resource = Mock(resources={'/items': 'foo', '/{myid}': 'bar'})
+    @patch.object(utils, 'get_resource_children')
+    def test_dynamic_part_name(self, get_children):
+        get_children.return_value = [
+            Mock(path='/items'), Mock(path='/{myid}')]
+        resource = Mock()
         part_name = utils.dynamic_part_name(
             resource, 'stories', 'default_id')
         assert part_name == 'stories_myid'
+        get_children.assert_called_once_with(resource)
 
-    def test_dynamic_part_name_no_dynamic(self):
-        resource = Mock(resources={'/items': 'foo'})
+    @patch.object(utils, 'get_resource_children')
+    def test_dynamic_part_name_no_dynamic(self, get_children):
+        get_children.return_value = [Mock(path='/items')]
+        resource = Mock()
         part_name = utils.dynamic_part_name(
             resource, 'stories', 'default_id')
         assert part_name == 'stories_default_id'
+        get_children.assert_called_once_with(resource)
 
-    def test_dynamic_part_name_no_resources(self):
+    @patch.object(utils, 'get_resource_children')
+    def test_dynamic_part_name_no_resources(self, get_children):
+        get_children.return_value = []
         resource = Mock(resources=None)
         part_name = utils.dynamic_part_name(
             resource, 'stories', 'default_id')
         assert part_name == 'stories_default_id'
+        get_children.assert_called_once_with(resource)
 
-    def test_resource_view_attrs_no_dynamic_subres(self):
-        resource = Mock(
-            resources={
-                '/items': 'foo'},
-            methods={
-                'get': '', 'post': '', 'put': '',
-                'patch': '', 'delete': ''}
-        )
+    def _get_mock_method_resources(self, *methods):
+        return [Mock(method=meth) for meth in methods]
+
+    @patch.object(utils, 'get_resource_children')
+    @patch.object(utils, 'get_resource_siblings')
+    def test_resource_view_attrs_no_dynamic_subres(self, get_sib, get_child):
+        get_child.return_value = []
+        get_sib.return_value = self._get_mock_method_resources(
+            'get', 'post', 'put', 'patch', 'delete')
+        resource = Mock()
         attrs = utils.resource_view_attrs(resource, singular=False)
+        get_sib.assert_called_once_with(resource)
+        get_child.assert_called_once_with(resource)
         assert attrs == set(['create', 'delete_many', 'index', 'update_many'])
 
-    def test_resource_view_attrs_dynamic_subres(self):
-        resource = Mock(
-            resources={
-                '/items': 'foo',
-                '/{id}': Mock(methods={
-                    'get': '', 'put': '', 'patch': '',
-                    'DELETE': ''
-                })
-            },
-            methods={
-                'get': '', 'POST': '', 'put': '',
-                'patch': '', 'delete': ''}
-        )
+    @patch.object(utils, 'get_resource_children')
+    @patch.object(utils, 'get_resource_siblings')
+    def test_resource_view_attrs_dynamic_subres(self, get_sib, get_child):
+        get_child.return_value = self._get_mock_method_resources(
+            'get', 'put', 'patch', 'delete')
+        get_sib.return_value = self._get_mock_method_resources(
+            'get', 'post', 'put', 'patch', 'delete')
+        resource = Mock()
         attrs = utils.resource_view_attrs(resource, singular=False)
+        get_sib.assert_called_once_with(resource)
+        get_child.assert_called_once_with(resource)
         assert attrs == set([
             'create', 'delete_many', 'index', 'update_many',
             'show', 'update', 'delete', 'replace'
         ])
 
-    def test_resource_view_attrs_singular(self):
-        resource = Mock(
-            resources={
-                '/items': 'foo',
-            },
-            methods={
-                'get': '', 'POST': '', 'put': '',
-                'patch': '', 'delete': ''}
-        )
+    @patch.object(utils, 'get_resource_children')
+    @patch.object(utils, 'get_resource_siblings')
+    def test_resource_view_attrs_singular(self, get_sib, get_child):
+        get_child.return_value = []
+        get_sib.return_value = self._get_mock_method_resources(
+            'get', 'post', 'put', 'patch', 'delete')
+        resource = Mock()
         attrs = utils.resource_view_attrs(resource, singular=True)
+        get_sib.assert_called_once_with(resource)
+        get_child.assert_called_once_with(resource)
         assert attrs == set(['create', 'delete', 'show', 'update', 'replace'])
 
-    def test_resource_view_attrs_no_subresources(self):
-        resource = Mock(
-            resources=None,
-            methods={
-                'get': '', 'POST': '', 'put': '',
-                'patch': '', 'delete': ''}
-        )
+    @patch.object(utils, 'get_resource_children')
+    @patch.object(utils, 'get_resource_siblings')
+    def test_resource_view_attrs_no_subresources(self, get_sib, get_child):
+        child_res = self._get_mock_method_resources('get')
+        child_res[0].path = '/items'
+        get_child.return_value = child_res
+        get_sib.return_value = self._get_mock_method_resources(
+            'get', 'post', 'put', 'patch', 'delete')
+        resource = Mock()
         attrs = utils.resource_view_attrs(resource, singular=False)
+        get_sib.assert_called_once_with(resource)
+        get_child.assert_called_once_with(resource)
         assert attrs == set(['create', 'delete_many', 'index', 'update_many'])
 
-    def test_resource_view_attrs_no_methods(self):
-        resource = Mock(
-            resources={
-                '/items': 'foo',
-            },
-            methods=None
-        )
+    @patch.object(utils, 'get_resource_children')
+    @patch.object(utils, 'get_resource_siblings')
+    def test_resource_view_attrs_no_methods(self, get_sib, get_child):
+        get_sib.return_value = []
+        get_child.return_value = []
+        resource = Mock()
         attrs = utils.resource_view_attrs(resource, singular=False)
+        get_sib.assert_called_once_with(resource)
+        get_child.assert_called_once_with(resource)
         assert attrs == set()
 
-    def test_resource_view_attrs_dynamic_subres_no_methods(self):
-        resource = Mock(
-            resources={
-                '/items': 'foo',
-                '/{id}': Mock(methods=None)
-            },
-            methods={
-                'get': '', 'POST': '', 'put': '',
-                'patch': '', 'delete': ''}
-        )
-        attrs = utils.resource_view_attrs(resource, singular=False)
-        assert attrs == set([
-            'create', 'delete_many', 'index', 'update_many',
-        ])
-
-    def test_resource_view_attrs_not_supported_method(self):
-        resource = Mock(
-            resources={
-                '/items': 'foo',
-            },
-            methods={'nice_method': ''}
-        )
+    @patch.object(utils, 'get_resource_children')
+    @patch.object(utils, 'get_resource_siblings')
+    def test_resource_view_attrs_not_supported_method(
+            self, get_sib, get_child):
+        get_sib.return_value = []
+        get_child.return_value = self._get_mock_method_resources(
+            'nice_method')
+        resource = Mock()
         attrs = utils.resource_view_attrs(resource, singular=False)
         assert attrs == set()
 

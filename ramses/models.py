@@ -1,9 +1,10 @@
 import logging
 
 from nefertari import engine
-from nefertari.authentication.models import AuthModelMethodsMixin
 
-from .utils import resolve_to_callable, is_callable_tag
+from .utils import (
+    resolve_to_callable, is_callable_tag,
+    resource_schema, generate_model_name)
 from . import registry
 
 
@@ -67,7 +68,6 @@ def prepare_relationship(field_name, model_name, raml_resource):
         :raml_resource: Instance of pyraml.entities.RamlResource. Resource
             for which :model_name: will be defined.
     """
-    from .generators import setup_data_model
     if get_existing_model(model_name) is None:
         for res in raml_resource.root.resources:
             if res.method.upper() != 'POST':
@@ -98,6 +98,7 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         :predefined_fields: Dictionary of {field_name: field_obj} of fields
             that are already instantiated.
     """
+    from nefertari.authentication.models import AuthModelMethodsMixin
     base_cls = engine.ESBaseDocument if es_based else engine.BaseDocument
     model_name = str(model_name)
     metaclass = type(base_cls)
@@ -156,3 +157,47 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
 
     # Generate new model class
     return metaclass(model_name, bases, attrs), auth_model
+
+
+def setup_data_model(raml_resource, model_name):
+    """ Setup storage/data model and return generated model class.
+
+    Process follows these steps:
+      * Resource schema is found and restructured by `resource_schema`.
+      * Model class is generated from properties dict using util function
+        `generate_model_cls`.
+
+    Arguments:
+        :raml_resource: Instance of pyraml.entities.RamlResource.
+        :model_name: String representing model name.
+    """
+    from .models import generate_model_cls, get_existing_model
+    model_cls = get_existing_model(model_name)
+    if model_cls is not None:
+        return model_cls, False
+
+    schema = resource_schema(raml_resource)
+    if not schema:
+        raise Exception('Missing schema for model `{}`'.format(model_name))
+
+    log.info('Generating model class `{}`'.format(model_name))
+    return generate_model_cls(
+        schema=schema,
+        model_name=model_name,
+        raml_resource=raml_resource,
+    )
+
+
+def handle_model_generation(raml_resource, route_name):
+    """ Generates model name and runs `setup_data_model` to get
+    or generate actual model class.
+
+    Arguments:
+        :raml_resource: Instance of pyraml.entities.RamlResource.
+        :route_name: String name of the resource.
+    """
+    model_name = generate_model_name(route_name)
+    try:
+        return setup_data_model(raml_resource, model_name)
+    except ValueError as ex:
+        raise ValueError('{}: {}'.format(model_name, str(ex)))

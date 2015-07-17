@@ -4,13 +4,12 @@ import ramlfications
 from nefertari.acl import RootACL as NefertariRootACL
 from nefertari.utils import dictset
 
-from .generators import generate_server, generate_models
-
 
 log = logging.getLogger(__name__)
 
 
 def includeme(config):
+    from .generators import generate_server, generate_models
     Settings = dictset(config.registry.settings)
     config.include('nefertari.engine')
     config.include('nefertari')

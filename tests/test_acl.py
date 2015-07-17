@@ -82,9 +82,8 @@ class TestGenerateACL(object):
 
     def test_no_security(self, mock_parse):
         acl_cls = acl.generate_acl(
-            context_cls='Foo',
-            raml_resource=Mock(securedBy=None),
-            parsed_raml=1123,
+            model_cls='Foo',
+            raml_resource=Mock(security_schemes=[]),
             es_based=True)
         assert acl_cls.__context_class__ == 'Foo'
         assert issubclass(acl_cls, acl.BaseACL)
@@ -94,24 +93,29 @@ class TestGenerateACL(object):
         assert instance.item_acl == [acl.ALLOW_ALL]
         assert not mock_parse.called
 
-    def test_non_existing_security_scheme(self, mock_parse):
-        with pytest.raises(ValueError) as ex:
-            acl.generate_acl(
-                context_cls='Foo',
-                raml_resource=Mock(securedBy=['foo']),
-                parsed_raml=Mock(securitySchemes={'1': '2'}),
-                es_based=True)
-
-        assert 'Undefined ACL security scheme: foo' == str(ex.value)
-
-    def test_existing_security_scheme(self, mock_parse):
-        parsed_raml = Mock(securitySchemes={
-            'foo': Mock(settings={'collection': 4, 'item': 7})
-        })
+    def test_wrong_security_scheme_type(self, mock_parse):
+        raml_resource = Mock(security_schemes=[
+            Mock(type='x-Foo', settings={'collection': 4, 'item': 7})
+        ])
         acl_cls = acl.generate_acl(
-            context_cls='Foo',
-            raml_resource=Mock(securedBy=['foo']),
-            parsed_raml=parsed_raml,
+            model_cls='Foo',
+            raml_resource=raml_resource,
+            es_based=False)
+        assert not mock_parse.called
+        assert acl_cls.__context_class__ == 'Foo'
+        assert issubclass(acl_cls, acl.BaseACL)
+        instance = acl_cls(request=None)
+        assert not instance.es_based
+        assert instance.collection_acl == [acl.ALLOW_ALL]
+        assert instance.item_acl == [acl.ALLOW_ALL]
+
+    def test_correct_security_scheme(self, mock_parse):
+        raml_resource = Mock(security_schemes=[
+            Mock(type='x-ACL', settings={'collection': 4, 'item': 7})
+        ])
+        acl_cls = acl.generate_acl(
+            model_cls='Foo',
+            raml_resource=raml_resource,
             es_based=False)
         mock_parse.assert_has_calls([
             call(acl_string=4, methods_map=acl.collection_methods),
