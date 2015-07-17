@@ -5,7 +5,7 @@ policies setup.
 In particular:
     :includeme: Function that actually creates routes listed above and
         connects view to them
-    :create_admin_user: Function that creates system/admin user
+    :create_system_user: Function that creates system/admin user
     :_setup_ticket_policy: Setup Pyramid AuthTktAuthenticationPolicy
     :_setup_apikey_policy: Setup nefertari.ApiKeyAuthenticationPolicy
     :setup_auth_policies: Runs generation of particular auth policy
@@ -192,7 +192,7 @@ def setup_auth_policies(config, raml_data):
     config.set_authorization_policy(authz_policy)
 
 
-def create_admin_user(config):
+def create_system_user(config):
     log.info('Creating system user')
     settings = config.registry.settings
     try:
@@ -225,5 +225,4 @@ def get_authuser_model():
 
 
 def includeme(config):
-    log.info('Creating admin user')
-    create_admin_user(config)
+    create_system_user(config)
