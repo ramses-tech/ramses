@@ -53,19 +53,6 @@ def convert_schema(raml_schema, mime_type):
         pass
 
 
-def is_restful_uri(uri):
-    """ Check whether `uri` is a RESTful uri.
-
-    Uri is assumed to be restful if it only contains a single token.
-    E.g. 'stories' and 'users' but NOT 'stories/comments' and 'users/{id}'
-
-    Arguments:
-        :uri: URI as a string
-    """
-    uri = uri.strip('/')
-    return '/' not in uri
-
-
 def is_dynamic_uri(uri):
     """ Determine whether `uri` is a dynamic uri or not.
 
@@ -143,19 +130,17 @@ def resource_view_attrs(raml_resource, singular=False):
     if singular:
         collection_methods = item_methods
 
-    http_methods = list((raml_resource.methods or {}).keys())
-    attrs = [collection_methods.get(m.lower()) for m in http_methods]
+    siblings = get_resource_siblings(raml_resource)
+    http_methods = [sibl.method.lower() for sibl in siblings]
+    attrs = [collection_methods.get(method) for method in http_methods]
 
     # Check if resource has dynamic subresource like collection/{id}
-    subresources = raml_resource.resources or {}
-    dynamic_res = [res for uri, res in subresources.items()
-                   if is_dynamic_uri(uri)]
-
     # If dynamic subresource exists, add its methods to attrs, as both
     # resources are handled by a single view
-    if dynamic_res and dynamic_res[0].methods:
-        http_submethods = list((dynamic_res[0].methods or {}).keys())
-        attrs += [item_methods.get(m.lower()) for m in http_submethods]
+    children = get_resource_children(raml_resource)
+    http_submethods = [child.method.lower() for child in children
+                       if is_dynamic_uri(child.path)]
+    attrs += [item_methods.get(method) for method in http_submethods]
 
     return set(filter(bool, attrs))
 
@@ -258,25 +243,6 @@ def singular_subresource(raml_resource, route_name):
     return is_obj and single_obj
 
 
-def closest_secured_by(raml_resource):
-    """ Get closest securedBy attr valid for current resource.
-
-    Finds the attr by going up the inheritance tree and stops
-    when first 'securedBy' attr is met.
-
-    Attributes:
-        :raml_resource: Instance of pyraml.entities.RamlResource.
-    """
-    secured_by = []
-    resource = raml_resource
-
-    while not secured_by and resource:
-        secured_by = resource.securedBy or []
-        resource = resource.parentResource
-
-    return secured_by
-
-
 def is_callable_tag(tag):
     """ Determine whether :tag: is a valid callable string tag.
 
@@ -320,7 +286,3 @@ def get_resource_children(raml_resource):
     path = raml_resource.path
     return [res for res in raml_resource.root.resources
             if res.parent and res.parent.path == path]
-
-
-def get_resource_direct_parents(raml_resource):
-    return get_resource_siblings(raml_resource.parent)

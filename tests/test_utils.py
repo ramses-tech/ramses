@@ -26,11 +26,6 @@ class TestUtils(object):
     def test_convert_schema_xml(self):
         assert utils.convert_schema({'foo': 'bar'}, 'text/xml') is None
 
-    def test_is_restful_uri(self):
-        assert utils.is_restful_uri('/collection')
-        assert utils.is_restful_uri('/{id}')
-        assert not utils.is_restful_uri('/collection/{id}')
-
     def test_is_dynamic_uri(self):
         assert utils.is_dynamic_uri('/{id}')
         assert not utils.is_dynamic_uri('/collection')
@@ -324,21 +319,6 @@ class TestUtils(object):
         assert utils.singular_subresource('resource', 'route_name')
         mock_par.assert_called_once_with('resource', method='POST')
         mock_schema.assert_called_once_with(parent)
-
-    def test_closest_secured_by(self):
-        parent = Mock(securedBy=['foo'])
-        resource = Mock(securedBy=['bar'], parentResource=parent)
-        assert utils.closest_secured_by(resource) == ['bar']
-
-    def test_closest_secured_by_parent(self):
-        parent = Mock(securedBy=['foo'])
-        resource = Mock(securedBy=None, parentResource=parent)
-        assert utils.closest_secured_by(resource) == ['foo']
-
-    def test_closest_secured_no_secured(self):
-        parent = Mock(securedBy=None, parentResource=None)
-        resource = Mock(securedBy=None, parentResource=parent)
-        assert utils.closest_secured_by(resource) == []
 
     def test_is_callable_tag_not_str(self):
         assert not utils.is_callable_tag(1)
