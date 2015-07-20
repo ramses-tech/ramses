@@ -4,4 +4,5 @@ pytest
 pytest-cov
 mock
 
+git+https://github.com/brandicted/nefertari.git@develop#egg=nefertari
 -e .
