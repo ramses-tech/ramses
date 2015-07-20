@@ -35,9 +35,9 @@ def _setup_ticket_policy(config, params):
         parser currently does not support setting value being a boolean.
       * Also connects basic routes to perform authentication actions.
 
-    Arguments:
-        :config: Pyramid Configurator instance.
-        :params: Nefertari dictset which contains security scheme `settings`.
+    :param config: Pyramid Configurator instance.
+    :param params: Nefertari dictset which contains security scheme
+        `settings`.
     """
     from nefertari.authentication.views import (
         TicketAuthRegisterView, TicketAuthLoginView,
@@ -91,10 +91,10 @@ def _setup_apikey_policy(config, params):
     Notes:
       * User may provide model name in :params['user_model']: do define
         the name of the user model.
-      * `auth_model.get_groups_by_token` is used to perform username & token
-        check
-      * `auth_model.get_token_credentials` is used to get username and token
-        from userid
+      * `auth_model.get_groups_by_token` is used to perform username and
+        token check
+      * `auth_model.get_token_credentials` is used to get username and
+        token from userid
       * Also connects basic routes to perform authentication actions.
 
     Arguments:
@@ -159,9 +159,8 @@ def setup_auth_policies(config, raml_root):
     and performs authentication, authorization policies generation using
     generator functions from `AUTHENTICATION_POLICIES`.
 
-    Arguments:
-        :config: Pyramid Configurator instance.
-        :raml_root: Instance of pyraml.parser.entities.RamlRoot.
+    :param config: Pyramid Configurator instance.
+    :param raml_root: Instance of ramlfications.raml.RootNode.
     """
     log.info('Configuring auth policies')
     secured_by_all = raml_root.secured_by or []

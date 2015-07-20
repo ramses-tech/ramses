@@ -25,25 +25,26 @@ def _get_nefertari_parent_resource(
 def generate_resource(raml_resource, parent_resource):
     """ Perform complete one resource configuration process
 
-    RAML data from `raml_resources` is used. Created resources
-    are attached to `parent_resource` class which is an instance of
+    This function generates: ACL, view, route, resource, database
+    model for a given `raml_resource`. New nefertari resource is
+    attached to `parent_resource` class which is an instance of
     `nefertari.resource.Resource`.
-
-    This function iterates through resources data from `raml_resources` and
-    generates: ACL, view, route, resource,
-    database model. It is called recursively for configuring child resources.
 
     Things to consider:
       * Top-level resources must be collection names.
-      * Resource nesting must look like collection/id/collection/id/...
       * No resources are explicitly created for dynamic (ending with '}')
         RAML resources as they are implicitly processed by parent collection
         resources.
-      * Collection resources can only have 1 dynamic child resource.
+      * Resource nesting must look like collection/id/collection/id/...
+      * Only part of resource path after last '/' is taken into account,
+        thus each level of resource nesting should add one more path
+        element. E.g. /stories -> /stories/{id} and not
+        /stories -> /stories/mystories/{id}. Latter route will be generated
+        at /stories/{id}.
 
-    Arguments:
-        :config: Pyramid Configurator instance
-        :raml_root: Map of {uri_string: pyraml.entities.RamlResource}
+    :param raml_resource: Instance of Instance of
+        ramlfications.raml.ResourceNode.
+    :param parent_resource: Parent nefertari resource object.
     """
     from .models import get_existing_model
 
@@ -113,8 +114,10 @@ def generate_resource(raml_resource, parent_resource):
 
 
 def generate_server(raml_root, config):
-    """
+    """ Handle server generation process.
 
+    :param raml_root: Instance of ramlfications.raml.RootNode.
+    :param config: Pyramid Configurator instance.
     """
     log.info('Server generation started')
 
@@ -141,14 +144,12 @@ def generate_server(raml_root, config):
 def generate_models(config, raml_resources):
     """ Generate model for each resource in :raml_resources:
 
-    Notes:
-      * The DB model name is generated using singular titled version of current
-        resource's url. E.g. for resource under url '/stories', model with
-        name 'Story' will be generated.
+    The DB model name is generated using singular titled version of current
+    resource's url. E.g. for resource under url '/stories', model with
+    name 'Story' will be generated.
 
-    Arguments:
-        :config: Pyramid Configurator instance
-        :raml_resources: Map of {uri_string: pyraml.entities.RamlResource}
+    :param config: Pyramid Configurator instance.
+    :param raml_resources: List of ramlfications.raml.ResourceNode.
     """
     from .models import handle_model_generation
     if not raml_resources:
@@ -158,6 +159,7 @@ def generate_models(config, raml_resources):
         # No need to generate models for dynamic resource
         if is_dynamic_uri(raml_resource.path):
             continue
+
         # Since POST resource must define schema use only POST
         # resources to generate models
         if raml_resource.method.upper() != 'POST':

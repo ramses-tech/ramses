@@ -43,8 +43,7 @@ type_fields = {
 def get_existing_model(model_name):
     """ Try to find existing model class named `model_name`.
 
-    Arguments:
-        :model_name: String name of the model class.
+    :param model_name: String name of the model class.
     """
     try:
         model_cls = engine.get_document_cls(model_name)
@@ -63,10 +62,10 @@ def prepare_relationship(field_name, model_name, raml_resource):
     to use it in a relationship. Thus the first usage of this model in RAML file
     must provide its schema in POST method resource body schema.
 
-    Arguments:
-        :field_name: Name of the field that should become a `Relationship`.
-        :raml_resource: Instance of pyraml.entities.RamlResource. Resource
-            for which :model_name: will be defined.
+    :param field_name: Name of the field that should become a `Relationship`.
+    :param model_name: Name of model which should be generated.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode for
+        which :model_name: will be defined.
     """
     if get_existing_model(model_name) is None:
         for res in raml_resource.root.resources:
@@ -86,17 +85,13 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     Engine DB field types are determined using `type_fields` and only those
     types may be used.
 
-    Arguments:
-        :properties: Dictionary of DB schema fields which looks like
-            {field_name: {required: boolean, type: type_name}, ...}
-        :model_name: String that is used as new model's name.
-        :raml_resource: Instance of pyraml.entities.RamlResource.
-        :es_based: Boolean indicating if generated model should be a
-            subclass of Elasticsearch-based document class or not.
-            It True, ESBaseDocument is used; BaseDocument is used otherwise.
-            Defaults to True.
-        :predefined_fields: Dictionary of {field_name: field_obj} of fields
-            that are already instantiated.
+    :param schema: Model schema dict parsed from RAML.
+    :param model_name: String that is used as new model's name.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    :param es_based: Boolean indicating if generated model should be a
+        subclass of Elasticsearch-based document class or not.
+        It True, ESBaseDocument is used; BaseDocument is used otherwise.
+        Defaults to True.
     """
     from nefertari.authentication.models import AuthModelMethodsMixin
     base_cls = engine.ESBaseDocument if es_based else engine.BaseDocument
@@ -167,9 +162,8 @@ def setup_data_model(raml_resource, model_name):
       * Model class is generated from properties dict using util function
         `generate_model_cls`.
 
-    Arguments:
-        :raml_resource: Instance of pyraml.entities.RamlResource.
-        :model_name: String representing model name.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    :param model_name: String representing model name.
     """
     from .models import generate_model_cls, get_existing_model
     model_cls = get_existing_model(model_name)
@@ -192,9 +186,8 @@ def handle_model_generation(raml_resource, route_name):
     """ Generates model name and runs `setup_data_model` to get
     or generate actual model class.
 
-    Arguments:
-        :raml_resource: Instance of pyraml.entities.RamlResource.
-        :route_name: String name of the resource.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    :param route_name: String name of the resource.
     """
     model_name = generate_model_name(route_name)
     try:

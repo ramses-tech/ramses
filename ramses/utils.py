@@ -37,10 +37,9 @@ def convert_schema(raml_schema, mime_type):
         ...more schema options
     }
 
-    Arguments:
-        :raml_schema: pyraml.entities.RamlBody.schema.
-        :mime_type: ContentType of the schema as a string from RAML file. Only
-            JSON is currently supported.
+    :param raml_schema: RAML request body schema.
+    :param mime_type: ContentType of the schema as a string from RAML
+        file. Only JSON is currently supported.
     """
     if mime_type == ContentTypes.JSON:
         if not isinstance(raml_schema, dict):
@@ -59,8 +58,7 @@ def is_dynamic_uri(uri):
     Assumes a dynamic uri is one that ends with '}' which is a Pyramid
     way to define dynamic parts in uri.
 
-    Arguments:
-        :uri: URI as a string.
+    :param uri: URI as a string.
     """
     return uri.strip('/').endswith('}')
 
@@ -68,8 +66,7 @@ def is_dynamic_uri(uri):
 def clean_dynamic_uri(uri):
     """ Strips /, {, } from dynamic `uri`.
 
-    Arguments:
-        :uri: URI as a string.
+    :param uri: URI as a string.
     """
     return uri.replace('/', '').replace('{', '').replace('}', '')
 
@@ -77,8 +74,7 @@ def clean_dynamic_uri(uri):
 def generate_model_name(name):
     """ Generate model name.
 
-    Arguments:
-        :name: String representing a field or route name.
+    :param name: String representing a field or route name.
     """
     model_name = inflection.camelize(name.strip('/'))
     return inflection.singularize(model_name)
@@ -88,15 +84,16 @@ def dynamic_part_name(raml_resource, clean_uri, pk_field):
     """ Generate a dynamic part for a resource :raml_resource:.
 
     A dynamic part is generated using 2 parts: :clean_uri: of the resource
-    and the dynamic part of any dymanic subresources. If :raml_resource:
-    has no dynamic subresources, 'id' is used as the 2nd part.
+    and the dynamic part of first dynamic child resources. If
+    :raml_resource: has no dynamic child resources, 'id' is used as the
+    2nd part.
     E.g. if your dynamic part on route 'stories' is named 'superId' then
     dynamic part will be 'stories_superId'.
 
-    Arguments:
-        :raml_resource: Instance of pyraml.entities.RamlResource for which
-            dynamic part name is being generated.
-        :clean_uri: Cleaned URI of :raml_resource:
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode for
+        which dynamic part name is being generated.
+    :param clean_uri: Cleaned URI of :raml_resource:
+    :param pk_field: Model Primary Key field name.
     """
     subresources = get_resource_children(raml_resource)
     dynamic_uris = [res.path for res in subresources
@@ -111,17 +108,17 @@ def dynamic_part_name(raml_resource, clean_uri, pk_field):
 def resource_view_attrs(raml_resource, singular=False):
     """ Generate view method names needed for `raml_resource` view.
 
-    Collects HTTP method names from `raml_resource.methods` and
-    dynamic child `methods` if a child exists. Collected methods are
-    then translated  to `nefertari.view.BaseView` method names,
-    each of which is used to process a particular HTTP method request.
+    Collects HTTP method names from resource siblings and dynamic children
+    if exist. Collected methods are then translated  to
+    `nefertari.view.BaseView` method names, each of which is used to
+    process a particular HTTP method request.
 
     Maps of {HTTP_method: view_method} `collection_methods` and
     `item_methods` are used to convert collection and item methods
     respectively.
 
-    Arguments:
-        :raml_resource: Instance of pyraml.entities.RamlResource.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode
+    :param singular: Boolean indicating if resource is singular or not
     """
     from .views import collection_methods, item_methods
     # Singular resource doesn't have collection methods though
@@ -133,9 +130,9 @@ def resource_view_attrs(raml_resource, singular=False):
     http_methods = [sibl.method.lower() for sibl in siblings]
     attrs = [collection_methods.get(method) for method in http_methods]
 
-    # Check if resource has dynamic subresource like collection/{id}
-    # If dynamic subresource exists, add its methods to attrs, as both
-    # resources are handled by a single view
+    # Check if resource has dynamic child resource like collection/{id}
+    # If dynamic child resource exists, add its siblings' methods to attrs,
+    # as both resources are handled by a single view
     children = get_resource_children(raml_resource)
     http_submethods = [child.method.lower() for child in children
                        if is_dynamic_uri(child.path)]
@@ -147,16 +144,12 @@ def resource_view_attrs(raml_resource, singular=False):
 def resource_schema(raml_resource):
     """ Get schema properties of RAML resource :raml_resource:.
 
-    Must be called with RAML resource that defines body schema.
+    Must be called with RAML resource that defines body schema. First
+    body that defines schema is used. Schema is converted on return using
+    'convert_schema'.
 
-    The process follows these steps:
-      * :raml_resource: post, put, patch methods body schemas are checked
-        to see if a schema is defined.
-      * If found, the schema is restructured into a dictionary of form
-        {field_name: {required: boolean, type: type_name}} and returned.
-
-    Arguments:
-        :raml_resource: Instance of pyraml.entities.RamlResource.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode of
+        POST method.
     """
     # NOTE: Must be called with resource that defines body schema
     log.info('Searching for model schema')
@@ -173,8 +166,7 @@ def resource_schema(raml_resource):
 def is_dynamic_resource(raml_resource):
     """ Determine if :raml_resource: is a dynamic resource.
 
-    Arguments:
-        :raml_resource: Instance of pyraml.entities.RamlResource.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
     """
     return raml_resource and is_dynamic_uri(raml_resource.path)
 
@@ -183,8 +175,9 @@ def get_static_parent(raml_resource, method=None):
     """ Get static parent resource of :raml_resource: with HTTP
     method :method:.
 
-    Arguments:
-        :raml_resource:Instance of pyraml.entities.RamlResource.
+    :param raml_resource:Instance of ramlfications.raml.ResourceNode.
+    :param method: HTTP method name which matching static resource
+        must have.
     """
     parent = raml_resource.parent
     while is_dynamic_resource(parent):
@@ -209,9 +202,8 @@ def get_static_parent(raml_resource, method=None):
 def attr_subresource(raml_resource, route_name):
     """ Determine if :raml_resource: is an attribute subresource.
 
-    Attribute:
-        :raml_resource: Instance of pyraml.entities.RamlResource.
-        :route_name: Name of the :raml_resource:.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    :param route_name: Name of the :raml_resource:.
     """
     static_parent = get_static_parent(raml_resource, method='POST')
     if static_parent is None:
@@ -225,9 +217,8 @@ def attr_subresource(raml_resource, route_name):
 def singular_subresource(raml_resource, route_name):
     """ Determine if :raml_resource: is a singular subresource.
 
-    Attribute:
-        :raml_resource: Instance of pyraml.entities.RamlResource.
-        :route_name: Name of the :raml_resource:.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    :param route_name: Name of the :raml_resource:.
     """
     static_parent = get_static_parent(raml_resource, method='POST')
     if static_parent is None:
@@ -247,6 +238,8 @@ def is_callable_tag(tag):
 
     String is assumed to be valid callable if it starts with '{{'
     and ends with '}}'.
+
+    :param tag: String name of tag.
     """
     return (isinstance(tag, six.string_types) and
             tag.strip().startswith('{{') and
@@ -256,10 +249,9 @@ def is_callable_tag(tag):
 def resolve_to_callable(callable_name):
     """ Resolve string :callable_name: to a callable.
 
-    Arguments:
-        :callable_name: String representing callable name as registered
-            in ramses registry or dotted import path of callable. Can be
-            wrapped in double curly brackets, e.g. '{{my_callable}}'.
+    :param callable_name: String representing callable name as registered
+        in ramses registry or dotted import path of callable. Can be
+        wrapped in double curly brackets, e.g. '{{my_callable}}'.
     """
     from . import registry
     clean_callable_name = callable_name.replace(
@@ -276,12 +268,20 @@ def resolve_to_callable(callable_name):
 
 
 def get_resource_siblings(raml_resource):
+    """ Get siblings of :raml_resource:.
+
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    """
     path = raml_resource.path
     return [res for res in raml_resource.root.resources
             if res.path == path]
 
 
 def get_resource_children(raml_resource):
+    """ Get children of :raml_resource:.
+
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    """
     path = raml_resource.path
     return [res for res in raml_resource.root.resources
             if res.parent and res.parent.path == path]
