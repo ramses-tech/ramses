@@ -124,7 +124,6 @@ def resource_view_attrs(raml_resource, singular=False):
         :raml_resource: Instance of pyraml.entities.RamlResource.
     """
     from .views import collection_methods, item_methods
-
     # Singular resource doesn't have collection methods though
     # it looks like a collection
     if singular:

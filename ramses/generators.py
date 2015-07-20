@@ -165,8 +165,8 @@ def generate_models(config, raml_resources):
 
         # Generate DB model
         # If this is an attribute resource we don't need to generate model
-        route_name = raml_resource.path.strip('/')
-
+        route_name = raml_resource.path.split('/')[-1]
+        route_name = route_name.strip('/')
         if not attr_subresource(raml_resource, route_name):
             log.info('Configuring model for route `{}`'.format(route_name))
             model_cls, is_auth_model = handle_model_generation(
