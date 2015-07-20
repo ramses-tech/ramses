@@ -20,12 +20,12 @@ class TestSetupTicketPolicy(object):
     def test_params_converted(self, mock_policy):
         from ramses import auth
         params = dictset(
-            secure='true',
-            include_ip='true',
-            http_only='false',
-            wild_domain='true',
-            debug='true',
-            parent_domain='true',
+            secure=True,
+            include_ip=True,
+            http_only=False,
+            wild_domain=True,
+            debug=True,
+            parent_domain=True,
             secret='my_secret_setting'
         )
         auth_model = Mock()

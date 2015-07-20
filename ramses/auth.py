@@ -30,9 +30,6 @@ def _setup_ticket_policy(config, params):
       * Initial `secret` params value is considered to be a name of config
         param that represents a cookie name.
       * `auth_model.get_groups_by_userid` is used as a `callback`.
-      * Special processing is applied to boolean params to convert string
-        values like 'True', 'true' to booleans. This is done because pyraml
-        parser currently does not support setting value being a boolean.
       * Also connects basic routes to perform authentication actions.
 
     :param config: Pyramid Configurator instance.
@@ -47,12 +44,6 @@ def _setup_ticket_policy(config, params):
     if 'secret' not in params:
         raise ValueError(
             'Missing required security scheme settings: secret')
-    bool_keys = ('secure', 'include_ip', 'http_only', 'wild_domain', 'debug',
-                 'parent_domain')
-    for key in bool_keys:
-        if key in params:
-            params[key] = params.asbool(key)
-
     params['secret'] = config.registry.settings[params['secret']]
 
     auth_model = config.registry.auth_model
