@@ -15,6 +15,7 @@ def includeme(config):
     config.include('nefertari.engine')
     config.include('nefertari')
     config.include('nefertari.view')
+    config.include('nefertari.json_httpexceptions')
 
     # Process nefertari settings
     if Settings.asbool('enable_get_tunneling'):
