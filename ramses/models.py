@@ -124,10 +124,14 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
             if is_callable_tag(value):
                 field_kwargs[default_attr_key] = resolve_to_callable(value)
 
-        for processor_key in ('before_validation', 'after_validation'):
-            processors = field_kwargs.get(processor_key, [])
-            field_kwargs[processor_key] = [
-                resolve_to_callable(name) for name in processors]
+        for processor_key in ('before_validation',
+                              'after_validation',
+                              'backref_before_validation',
+                              'backref_after_validation'):
+            if processor_key in field_kwargs:
+                processors = field_kwargs.get(processor_key, [])
+                field_kwargs[processor_key] = [
+                    resolve_to_callable(name) for name in processors]
 
         raml_type = (props.get('type', 'string') or 'string').lower()
         if raml_type not in type_fields:

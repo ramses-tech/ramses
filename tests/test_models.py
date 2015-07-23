@@ -143,7 +143,9 @@ class TestGenerateModelCls(object):
             "args": {
                 "default": 0,
                 "before_validation": ["zoo"],
-                "after_validation": ["foo"]
+                "after_validation": ["foo"],
+                "backref_after_validation": ["foo"],
+                "backref_before_validation": ["foo"]
             }
         }
         mock_res.return_value = 1
@@ -162,7 +164,8 @@ class TestGenerateModelCls(object):
         assert not issubclass(model_cls, AuthModelMethodsMixin)
         models.engine.FloatField.assert_called_once_with(
             default=0, required=True, before_validation=[1],
-            after_validation=[1])
+            after_validation=[1], backref_after_validation=[1],
+            backref_before_validation=[1])
         mock_res.assert_has_calls([call('zoo'), call('foo')])
         mock_reg.mget.assert_called_once_with('Story')
 
@@ -179,8 +182,7 @@ class TestGenerateModelCls(object):
         model_cls, auth_model = models.generate_model_cls(
             schema=schema, model_name='Story', raml_resource=None)
         models.engine.FloatField.assert_called_with(
-            default=1, after_validation=[], required=False,
-            before_validation=[])
+            default=1, required=False)
         mock_res.assert_called_once_with('{{foobar}}')
 
     def test_auth_model(self, mock_reg):
@@ -247,8 +249,7 @@ class TestGenerateModelCls(object):
         models.generate_model_cls(
             schema=schema, model_name='Story', raml_resource=1)
         models.engine.ForeignKeyField.assert_called_once_with(
-            required=False, ref_column_type=models.engine.StringField,
-            before_validation=[], after_validation=[])
+            required=False, ref_column_type=models.engine.StringField)
 
     def test_list_field(self, mock_reg):
         from ramses import models
@@ -263,8 +264,7 @@ class TestGenerateModelCls(object):
         models.generate_model_cls(
             schema=schema, model_name='Story', raml_resource=1)
         models.engine.ListField.assert_called_once_with(
-            required=False, item_type=models.engine.IntegerField,
-            before_validation=[], after_validation=[])
+            required=False, item_type=models.engine.IntegerField)
 
     def test_duplicate_field_name(self, mock_reg):
         from ramses import models
