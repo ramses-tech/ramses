@@ -30,14 +30,11 @@ def _setup_ticket_policy(config, params):
       * Initial `secret` params value is considered to be a name of config
         param that represents a cookie name.
       * `auth_model.get_groups_by_userid` is used as a `callback`.
-      * Special processing is applied to boolean params to convert string
-        values like 'True', 'true' to booleans. This is done because pyraml
-        parser currently does not support setting value being a boolean.
       * Also connects basic routes to perform authentication actions.
 
-    Arguments:
-        :config: Pyramid Configurator instance.
-        :params: Nefertari dictset which contains security scheme `settings`.
+    :param config: Pyramid Configurator instance.
+    :param params: Nefertari dictset which contains security scheme
+        `settings`.
     """
     from nefertari.authentication.views import (
         TicketAuthRegisterView, TicketAuthLoginView,
@@ -47,12 +44,6 @@ def _setup_ticket_policy(config, params):
     if 'secret' not in params:
         raise ValueError(
             'Missing required security scheme settings: secret')
-    bool_keys = ('secure', 'include_ip', 'http_only', 'wild_domain', 'debug',
-                 'parent_domain')
-    for key in bool_keys:
-        if key in params:
-            params[key] = params.asbool(key)
-
     params['secret'] = config.registry.settings[params['secret']]
 
     auth_model = config.registry.auth_model
@@ -91,10 +82,10 @@ def _setup_apikey_policy(config, params):
     Notes:
       * User may provide model name in :params['user_model']: do define
         the name of the user model.
-      * `auth_model.get_groups_by_token` is used to perform username & token
-        check
-      * `auth_model.get_token_credentials` is used to get username and token
-        from userid
+      * `auth_model.get_groups_by_token` is used to perform username and
+        token check
+      * `auth_model.get_token_credentials` is used to get username and
+        token from userid
       * Also connects basic routes to perform authentication actions.
 
     Arguments:
@@ -152,31 +143,33 @@ AUTHENTICATION_POLICIES = {
 }
 
 
-def setup_auth_policies(config, raml_data):
+def setup_auth_policies(config, raml_root):
     """ Setup authentication, authorization policies.
 
     Performs basic validation to check all the required values are present
     and performs authentication, authorization policies generation using
     generator functions from `AUTHENTICATION_POLICIES`.
 
-    Arguments:
-        :config: Pyramid Configurator instance.
-        :raml_data: Instance of pyraml.parser.entities.RamlRoot.
+    :param config: Pyramid Configurator instance.
+    :param raml_root: Instance of ramlfications.raml.RootNode.
     """
     log.info('Configuring auth policies')
-    secured_by_all = raml_data.securedBy or []
+    secured_by_all = raml_root.secured_by or []
     secured_by = [item for item in secured_by_all if item]
     if not secured_by:
-        log.info('API is not secured. `securedBy` attribute value missing.')
+        log.info('API is not secured. `secured_by` attribute '
+                 'value missing.')
         return
     secured_by = secured_by[0]
 
-    if secured_by not in raml_data.securitySchemes:
+    schemes = {scheme.name: scheme
+               for scheme in raml_root.security_schemes}
+    if secured_by not in schemes:
         raise ValueError(
-            'Not defined security scheme used in `securedBy`: {}'.format(
+            'Not defined security scheme used in `secured_by`: {}'.format(
                 secured_by))
 
-    scheme = raml_data.securitySchemes[secured_by]
+    scheme = schemes[secured_by]
     if scheme.type not in AUTHENTICATION_POLICIES:
         raise ValueError('Not supported security scheme type: {}'.format(
             scheme.type))
