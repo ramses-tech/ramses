@@ -459,19 +459,19 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
                        attr_view=False, singular=False):
     """ Generate REST view for a model class.
 
-    Arguments:
-        :model_cls: Generated DB model class.
-        :attr: List of strings that represent names of view methods, new
-            generated view should support. Not supported methods are replaced
-            with property that raises AttributeError to display MethodNotAllowed
-            error.
-        :es_based: Boolean indicating if generated view should read from
-            elasticsearch. If True - collection reads are performed from
-            elasticsearch; database is used for reads instead. Defaults to True.
-        :attr_view: Boolean indicating if ItemAttributeView should be used as a
-            base class for generated view.
-        :singular: Boolean indicating if ItemSingularView should be used as a
-            base class for generated view.
+    :param model_cls: Generated DB model class.
+    :param attr: List of strings that represent names of view methods, new
+        generated view should support. Not supported methods are replaced
+        with property that raises AttributeError to display MethodNotAllowed
+        error.
+    :param es_based: Boolean indicating if generated view should read from
+        elasticsearch. If True - collection reads are performed from
+        elasticsearch. Database is used for reads otherwise.
+        Defaults to True.
+    :param attr_view: Boolean indicating if ItemAttributeView should be
+        used as a base class for generated view.
+    :param singular: Boolean indicating if ItemSingularView should be
+        used as a base class for generated view.
     """
     valid_attrs = (list(collection_methods.values()) +
                    list(item_methods.values()))

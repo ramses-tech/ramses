@@ -1,20 +1,20 @@
 import logging
 
-import pyraml.parser
+import ramlfications
 from nefertari.acl import RootACL as NefertariRootACL
 from nefertari.utils import dictset
-
-from .generators import generate_server, generate_models
 
 
 log = logging.getLogger(__name__)
 
 
 def includeme(config):
+    from .generators import generate_server, generate_models
     Settings = dictset(config.registry.settings)
     config.include('nefertari.engine')
     config.include('nefertari')
     config.include('nefertari.view')
+    config.include('nefertari.json_httpexceptions')
 
     # Process nefertari settings
     if Settings.asbool('enable_get_tunneling'):
@@ -37,21 +37,21 @@ def includeme(config):
     root_auth = getattr(root, 'auth', False)
 
     log.info('Parsing RAML')
-    parsed_raml = pyraml.parser.load(Settings['ramses.raml_schema'])
+    raml_root = ramlfications.parse(Settings['ramses.raml_schema'])
 
     log.info('Starting models generation')
-    generate_models(config, raml_resources=parsed_raml.resources)
+    generate_models(config, raml_resources=raml_root.resources)
 
     if root_auth:
         from .auth import setup_auth_policies, get_authuser_model
         if getattr(config.registry, 'auth_model', None) is None:
             config.registry.auth_model = get_authuser_model()
-        setup_auth_policies(config, parsed_raml)
+        setup_auth_policies(config, raml_root)
 
     config.include('nefertari.elasticsearch')
 
     log.info('Starting server generation')
-    generate_server(parsed_raml, config)
+    generate_server(raml_root, config)
 
     log.info('Running nefertari.engine.setup_database')
     from nefertari.engine import setup_database

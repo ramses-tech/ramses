@@ -27,10 +27,9 @@ def methods_to_perms(perms, methods_map):
     """ Convert permissions ("perms") which are either HTTP methods or
     the keyword 'all' into a set of valid Pyramid permissions.
 
-    Arguments:
-        :perms: List or comma-separated string of HTTP methods, or 'all'
-        :methods_map: Map of HTTP methods to permission names (nefertari
-            view methods)
+    :param perms: List or comma-separated string of HTTP methods, or 'all'
+    :param methods_map: Map of HTTP methods to permission names (nefertari view
+        methods)
     """
     if isinstance(perms, six.string_types):
         perms = perms.split(',')
@@ -59,10 +58,8 @@ def parse_acl(acl_string, methods_map):
     Permissions must be comma-separated.
     E.g. 'allow everyone get,post,patch' and 'deny authenticated delete'
 
-    Arguments:
-        :acl_string: Raw RAML string containing defined ACEs.
-        :methods_map: Map of HTTP methods to nefertari method handler
-            names.
+    :param acl_string: Raw RAML string containing defined ACEs.
+    :param methods_map: Map of HTTP methods to nefertari method handler names.
     """
     if not acl_string:
         return [ALLOW_ALL]
@@ -119,11 +116,10 @@ class BaseACL(SelfParamMixin):
             :obj: Object instance to be accessed via the ACL
         Principals must return a single ACE or a list of ACEs.
 
-        Arguments:
-            :acl: Sequence of valid Pyramid ACEs which will be processed
-            :methods_map: Map of HTTP methods to nefertari view method
-                names (permissions)
-            :obj: Object to be accessed via the ACL
+        :param acl: Sequence of valid Pyramid ACEs which will be processed
+        :param methods_map: Map of HTTP methods to nefertari view method names
+            (permissions)
+        :param obj: Object to be accessed via the ACL
         """
         new_acl = []
         for i, ace in enumerate(acl):
@@ -189,39 +185,34 @@ class BaseACL(SelfParamMixin):
         return obj
 
 
-def generate_acl(context_cls, raml_resource, parsed_raml, es_based=True):
+def generate_acl(model_cls, raml_resource, es_based=True):
     """ Generate an ACL.
 
     Generated ACL class has a `__context_class__` attribute set to
-    :context_cls:.
+    :model_cls:.
 
     ACLs used for collection and item access control are generated from a
-    security scheme which has a name of :raml_resource.securedBy[0]:.
-    If :raml_resource: has no `securedBy` schemes defined then ALLOW_ALL
+    first security scheme with type `x-ACL`.
+    If :raml_resource: has no x-ACL security schemes defined then ALLOW_ALL
     ACL is used.
     If the `collection` or `item` settings are empty, then ALLOW_ALL ACL
     is used.
 
-    Arguments:
-        :context_cls: Generated model class
-        :raml_resource: Instance of pyraml.entities.RamlResource for which
-            ACL is being generated
-        :parsed_raml: Whole parsed RAML object
-        :es_based: Boolean inidicating whether ACL should query ES or not
-            when getting an object
+    :param model_cls: Generated model class
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode
+        for which ACL is being generated
+    :param es_based: Boolean inidicating whether ACL should query ES or
+        not when getting an object
     """
-    secured_by = raml_resource.securedBy or []
+    schemes = raml_resource.security_schemes or []
+    schemes = [sch for sch in schemes if sch.type == 'x-ACL']
 
-    if not secured_by:
-        log.debug('No ACL scheme applied. Giving all permissions')
+    if not schemes:
         collection_acl = item_acl = [ALLOW_ALL]
+        log.debug('No ACL scheme applied. Using ACL: {}'.format(item_acl))
     else:
-        log.debug('{} ACL scheme applied'.format(secured_by[0]))
-        security_schemes = parsed_raml.securitySchemes or {}
-        sec_scheme = security_schemes.get(secured_by[0])
-        if sec_scheme is None:
-            raise ValueError('Undefined ACL security scheme: {}'.format(
-                secured_by[0]))
+        sec_scheme = schemes[0]
+        log.debug('{} ACL scheme applied'.format(sec_scheme.name))
         settings = sec_scheme.settings or {}
         collection_acl = parse_acl(
             acl_string=settings.get('collection'),
@@ -231,7 +222,7 @@ def generate_acl(context_cls, raml_resource, parsed_raml, es_based=True):
             methods_map=item_methods)
 
     class GeneratedACL(BaseACL):
-        __context_class__ = context_cls
+        __context_class__ = model_cls
 
         def __init__(self, request, es_based=es_based):
             super(GeneratedACL, self).__init__(request=request)

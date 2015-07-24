@@ -1,5 +1,5 @@
 import pytest
-from mock import Mock, patch, call
+from mock import Mock, patch
 
 from nefertari.utils import dictset
 from pyramid.security import Allow, ALL_PERMISSIONS
@@ -21,12 +21,12 @@ class TestSetupTicketPolicy(object):
     def test_params_converted(self, mock_policy):
         from ramses import auth
         params = dictset(
-            secure='true',
-            include_ip='true',
-            http_only='false',
-            wild_domain='true',
-            debug='true',
-            parent_domain='true',
+            secure=True,
+            include_ip=True,
+            http_only=False,
+            wild_domain=True,
+            debug=True,
+            parent_domain=True,
             secret='my_secret_setting'
         )
         auth_model = Mock()
@@ -136,7 +136,7 @@ class TestSetupAuthPolicies(object):
 
     def test_not_secured(self):
         from ramses import auth
-        raml_data = Mock(securedBy=[None])
+        raml_data = Mock(secured_by=[None])
         config = Mock()
         auth.setup_auth_policies(config, raml_data)
         assert not config.set_authentication_policy.called
@@ -144,18 +144,19 @@ class TestSetupAuthPolicies(object):
 
     def test_not_defined_security_scheme(self):
         from ramses import auth
-        raml_data = Mock(securedBy=['zoo'], securitySchemes={'foo': 'bar'})
+        scheme = Mock()
+        scheme.name = 'foo'
+        raml_data = Mock(secured_by=['zoo'], security_schemes=[scheme])
         with pytest.raises(ValueError) as ex:
             auth.setup_auth_policies('asd', raml_data)
-        expected = 'Not defined security scheme used in `securedBy`: zoo'
+        expected = 'Not defined security scheme used in `secured_by`: zoo'
         assert expected == str(ex.value)
 
     def test_not_supported_scheme_type(self):
         from ramses import auth
-        raml_data = Mock(
-            securedBy=['foo'],
-            securitySchemes={'foo': Mock(type='asd123')}
-        )
+        scheme = Mock(type='asd123')
+        scheme.name = 'foo'
+        raml_data = Mock(secured_by=['foo'], security_schemes=[scheme])
         with pytest.raises(ValueError) as ex:
             auth.setup_auth_policies(None, raml_data)
         expected = 'Not supported security scheme type: asd123'
@@ -165,10 +166,8 @@ class TestSetupAuthPolicies(object):
     def test_policies_calls(self, mock_acl):
         from ramses import auth
         scheme = Mock(type='mytype', settings={'name': 'user1'})
-        raml_data = Mock(
-            securedBy=['foo'],
-            securitySchemes={'foo': scheme}
-        )
+        scheme.name = 'foo'
+        raml_data = Mock(secured_by=['foo'], security_schemes=[scheme])
         config = Mock()
         mock_setup = Mock()
         with patch.dict(auth.AUTHENTICATION_POLICIES, {'mytype': mock_setup}):

@@ -1,10 +1,10 @@
 import logging
 
 from nefertari import engine
-from nefertari.authentication.models import AuthModelMethodsMixin
 
 from .utils import (
-    find_dynamic_resource, resolve_to_callable, is_callable_tag)
+    resolve_to_callable, is_callable_tag,
+    resource_schema, generate_model_name)
 from . import registry
 
 
@@ -43,8 +43,7 @@ type_fields = {
 def get_existing_model(model_name):
     """ Try to find existing model class named `model_name`.
 
-    Arguments:
-        :model_name: String name of the model class.
+    :param model_name: String name of the model class.
     """
     try:
         model_cls = engine.get_document_cls(model_name)
@@ -61,23 +60,23 @@ def prepare_relationship(field_name, model_name, raml_resource):
     When preparing a relationship, we check to see if the model that will be
     referenced already exists. If not, it is created so that it will be possible
     to use it in a relationship. Thus the first usage of this model in RAML file
-    must provide its schema in one of http methods that are assumed to contain
-    a full body schema.
+    must provide its schema in POST method resource body schema.
 
-    Arguments:
-        :field_name: Name of the field that should become a `Relationship`.
-        :raml_resource: Instance of pyraml.entities.RamlResource. Resource
-            for which :model_name: will is being defined.
+    :param field_name: Name of the field that should become a `Relationship`.
+    :param model_name: Name of model which should be generated.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode for
+        which :model_name: will be defined.
     """
-    from .generators import setup_data_model
     if get_existing_model(model_name) is None:
-        dynamic_res = find_dynamic_resource(raml_resource)
-        subresources = getattr(dynamic_res, 'resources', {}) or {}
-        subresources = {k.strip('/'): v for k, v in subresources.items()}
-        if field_name not in subresources:
+        for res in raml_resource.root.resources:
+            if res.method.upper() != 'POST':
+                continue
+            if res.path.endswith('/' + field_name):
+                break
+        else:
             raise ValueError('Model `{}` used in relationship `{}` is not '
                              'defined'.format(model_name, field_name))
-        setup_data_model(subresources[field_name], model_name)
+        setup_data_model(res, model_name)
 
 
 def generate_model_cls(schema, model_name, raml_resource, es_based=True):
@@ -86,18 +85,15 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     Engine DB field types are determined using `type_fields` and only those
     types may be used.
 
-    Arguments:
-        :properties: Dictionary of DB schema fields which looks like
-            {field_name: {required: boolean, type: type_name}, ...}
-        :model_name: String that is used as new model's name.
-        :raml_resource: Instance of pyraml.entities.RamlResource.
-        :es_based: Boolean indicating if generated model should be a
-            subclass of Elasticsearch-based document class or not.
-            It True, ESBaseDocument is used; BaseDocument is used otherwise.
-            Defaults to True.
-        :predefined_fields: Dictionary of {field_name: field_obj} of fields
-            that are already instantiated.
+    :param schema: Model schema dict parsed from RAML.
+    :param model_name: String that is used as new model's name.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    :param es_based: Boolean indicating if generated model should be a
+        subclass of Elasticsearch-based document class or not.
+        It True, ESBaseDocument is used; BaseDocument is used otherwise.
+        Defaults to True.
     """
+    from nefertari.authentication.models import AuthModelMethodsMixin
     base_cls = engine.ESBaseDocument if es_based else engine.BaseDocument
     model_name = str(model_name)
     metaclass = type(base_cls)
@@ -128,10 +124,14 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
             if is_callable_tag(value):
                 field_kwargs[default_attr_key] = resolve_to_callable(value)
 
-        for processor_key in ('before_validation', 'after_validation'):
-            processors = field_kwargs.get(processor_key, [])
-            field_kwargs[processor_key] = [
-                resolve_to_callable(name) for name in processors]
+        for processor_key in ('before_validation',
+                              'after_validation',
+                              'backref_before_validation',
+                              'backref_after_validation'):
+            if processor_key in field_kwargs:
+                processors = field_kwargs.get(processor_key, [])
+                field_kwargs[processor_key] = [
+                    resolve_to_callable(name) for name in processors]
 
         raml_type = (props.get('type', 'string') or 'string').lower()
         if raml_type not in type_fields:
@@ -156,3 +156,45 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
 
     # Generate new model class
     return metaclass(model_name, bases, attrs), auth_model
+
+
+def setup_data_model(raml_resource, model_name):
+    """ Setup storage/data model and return generated model class.
+
+    Process follows these steps:
+      * Resource schema is found and restructured by `resource_schema`.
+      * Model class is generated from properties dict using util function
+        `generate_model_cls`.
+
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    :param model_name: String representing model name.
+    """
+    from .models import generate_model_cls, get_existing_model
+    model_cls = get_existing_model(model_name)
+    if model_cls is not None:
+        return model_cls, False
+
+    schema = resource_schema(raml_resource)
+    if not schema:
+        raise Exception('Missing schema for model `{}`'.format(model_name))
+
+    log.info('Generating model class `{}`'.format(model_name))
+    return generate_model_cls(
+        schema=schema,
+        model_name=model_name,
+        raml_resource=raml_resource,
+    )
+
+
+def handle_model_generation(raml_resource, route_name):
+    """ Generates model name and runs `setup_data_model` to get
+    or generate actual model class.
+
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    :param route_name: String name of the resource.
+    """
+    model_name = generate_model_name(route_name)
+    try:
+        return setup_data_model(raml_resource, model_name)
+    except ValueError as ex:
+        raise ValueError('{}: {}'.format(model_name, str(ex)))
