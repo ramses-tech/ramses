@@ -4,27 +4,28 @@ Field Types
 Available Types
 ---------------
 
-* id_field
 * biginteger
+* binary
 * boolean
+* choice
 * date
 * datetime
-* choice
+* decimal
+* dict
 * float
+* foreign_key
+* id_field
 * integer
 * interval
-* binary
-* decimal
+* list
 * pickle
+* relationship
 * smallinteger
 * string
 * text
 * time
 * unicode
 * unicodetext
-* relationship
-* list
-* dict
 
 
 Required Fields
@@ -43,17 +44,18 @@ You can set a field as required by setting the ``required`` property.
 Primary Key
 -----------
 
-You can set a field as the primary key by setting the ``primary_key`` property under ``args``.
+You can elect a field to be the primary key of a model by setting its ``primary_key`` property under ``args``, for example, if you decide to use `username` as the primary key of your `User` model.
 
 .. code-block:: json
 
-    "field": {
+    "username": {
         (...)
         "args": {
             "primary_key": true
         }
     }
 
+Note that you do not need to define ``id_field`` for models that have a primary key defined.
 
 Constraints
 -----------
