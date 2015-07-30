@@ -166,12 +166,12 @@ def setup_auth_policies(config, raml_root):
                for scheme in raml_root.security_schemes}
     if secured_by not in schemes:
         raise ValueError(
-            'Not defined security scheme used in `secured_by`: {}'.format(
+            'Undefined security scheme used in `secured_by`: {}'.format(
                 secured_by))
 
     scheme = schemes[secured_by]
     if scheme.type not in AUTHENTICATION_POLICIES:
-        raise ValueError('Not supported security scheme type: {}'.format(
+        raise ValueError('Unsupported security scheme type: {}'.format(
             scheme.type))
 
     # Setup Authentication policy
