@@ -62,7 +62,7 @@ class TestACLHelpers(object):
     @patch.object(acl, 'methods_to_perms')
     def test_parse_acl_group_principal(self, mock_perms):
         mock_perms.return_value = 'Foo'
-        perms = acl.parse_acl('allow admin all', self.methods_map)
+        perms = acl.parse_acl('allow g:admin all', self.methods_map)
         mock_perms.assert_called_once_with(['all'], self.methods_map)
         assert perms == [(Allow, 'g:admin', 'Foo')]
 
@@ -246,30 +246,27 @@ class TestBaseACL(object):
         obj = acl.BaseACL('req')
         obj.__context_class__ = Mock()
         obj.__context_class__.pk_field.return_value = 'myname'
-        obj.context_acl = Mock()
         value = obj.getitem_db(key='varvar')
         obj.__context_class__.get_resource.assert_called_once_with(
             myname='varvar')
-        obj.context_acl.assert_called_once_with(
-            obj.__context_class__.get_resource())
-        assert value.__acl__ == obj.context_acl()
         assert value.__parent__ is obj
         assert value.__name__ == 'varvar'
 
+    @patch('nefertari.engine')
     @patch('nefertari.elasticsearch.ES')
-    def test_getitem_es(self, mock_es):
-        found_obj = Mock()
+    def test_getitem_es(self, mock_es, mock_eng):
+        found_obj = Mock(_acl=[Mock()])
         es_obj = Mock()
         es_obj.get_resource.return_value = found_obj
         mock_es.return_value = es_obj
         obj = acl.BaseACL('req')
         obj.__context_class__ = Mock(__name__='Foo')
         obj.__context_class__.pk_field.return_value = 'myname'
-        obj.context_acl = Mock()
         value = obj.getitem_es(key='varvar')
         mock_es.assert_called_with('Foo')
         es_obj.get_resource.assert_called_once_with(id='varvar')
-        obj.context_acl.assert_called_once_with(found_obj)
-        assert value.__acl__ == obj.context_acl()
+        mock_eng.ACLField.objectify_acl.assert_called_once_with(
+            [value._acl[0]._data])
+        assert value.__acl__ == mock_eng.ACLField.objectify_acl()
         assert value.__parent__ is obj
         assert value.__name__ == 'varvar'

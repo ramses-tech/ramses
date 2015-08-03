@@ -2,9 +2,7 @@ import logging
 
 import six
 from pyramid.security import (
-    Allow, Deny,
-    Everyone, Authenticated,
-    ALL_PERMISSIONS)
+    Allow, Deny, Everyone, Authenticated, ALL_PERMISSIONS)
 from nefertari.acl import SelfParamMixin
 
 from .views import collection_methods, item_methods
@@ -76,8 +74,9 @@ def parse_acl(acl_string, methods_map):
         action_str = action_str.strip().lower()
         action = actions.get(action_str)
         if action is None:
-            raise ValueError('Unknown ACL action: {}. Valid actions: {}'.format(
-                action_str, list(actions.keys())))
+            raise ValueError(
+                'Unknown ACL action: {}. Valid actions: {}'.format(
+                    action_str, list(actions.keys())))
 
         # Process principal
         princ_str = princ_str.strip().lower()
@@ -86,7 +85,7 @@ def parse_acl(acl_string, methods_map):
         elif is_callable_tag(princ_str):
             principal = resolve_to_callable(princ_str)
         else:
-            principal = 'g:' + princ_str
+            principal = princ_str
 
         # Process permissions
         permissions = methods_to_perms(perms, methods_map)
@@ -107,7 +106,8 @@ class BaseACL(SelfParamMixin):
         self.request = request
 
     def _apply_callables(self, acl, methods_map, obj=None):
-        """ Iterate over ACEs from :acl: and apply callable principals if any.
+        """ Iterate over ACEs from :acl: and apply callable principals
+        if any.
 
         Principals are passed 3 arguments on call:
             :ace: Single ACE object that looks like (action, callable,
@@ -161,9 +161,7 @@ class BaseACL(SelfParamMixin):
     def getitem_db(self, key):
         """ Get item with ID of :key: from database """
         pk_field = self.__context_class__.pk_field()
-        obj = self.__context_class__.get_resource(
-            **{pk_field: key})
-        obj.__acl__ = self.context_acl(obj)
+        obj = self.__context_class__.get_resource(**{pk_field: key})
         obj.__parent__ = self
         obj.__name__ = key
         return obj
@@ -171,9 +169,11 @@ class BaseACL(SelfParamMixin):
     def getitem_es(self, key):
         """ Get item with ID of :key: from elasticsearch """
         from nefertari.elasticsearch import ES
+        from nefertari import engine
         es = ES(self.__context_class__.__name__)
         obj = es.get_resource(id=key)
-        obj.__acl__ = self.context_acl(obj)
+        obj.__acl__ = engine.ACLField.objectify_acl([
+            ace._data for ace in obj._acl])
         obj.__parent__ = self
         obj.__name__ = key
         return obj

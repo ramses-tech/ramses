@@ -24,6 +24,7 @@ elasticsearch.index.disable = false
 elasticsearch.enable_refresh_query = false
 elasticsearch.enable_aggregations = false
 elasticsearch.enable_polymorphic_query = false
+elasticsearch.acl_filtering = true
 
 # {{package}}
 host = localhost

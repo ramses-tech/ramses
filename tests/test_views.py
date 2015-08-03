@@ -41,6 +41,15 @@ class TestBaseView(ViewTestBase):
         view._resource = Mock(id_name='foo_bar')
         assert view.clean_id_name == 'bar'
 
+    def test_set_object_acl(self):
+        view = self._test_view()
+        view._factory = Mock()
+        obj = Mock(_acl=None)
+        view.set_object_acl(obj)
+        view._factory.assert_called_once_with(view.request)
+        view._factory().context_acl.assert_called_once_with(obj)
+        assert obj._acl == view._factory().context_acl()
+
     def test_resolve_kw(self):
         view = self._test_view()
         kwargs = {'foo_bar_qoo': 1, 'arg_val': 4, 'q': 3}
@@ -194,6 +203,7 @@ class TestCollectionView(ViewTestBase):
 
     def test_create(self):
         view = self._test_view()
+        view.set_object_acl = Mock()
         view.request.registry._root_resources = {
             'foo': Mock(auth=False)
         }
@@ -205,6 +215,7 @@ class TestCollectionView(ViewTestBase):
         resp = view.create(foo='bar')
         view.Model.assert_called_with(foo2='bar2')
         view.Model().save.assert_called_with(view.request)
+        assert view.set_object_acl.call_count == 1
         assert resp == view.Model().save()
 
     def test_update(self):
@@ -314,6 +325,7 @@ class TestESBaseView(ViewTestBase):
 
     @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_no_parent(self, mock_es):
+        mock_es.settings.asbool.return_value = False
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=None)
         view.Model = Mock(__name__='Foo')
@@ -323,7 +335,21 @@ class TestESBaseView(ViewTestBase):
             _limit=20, foo='bar')
 
     @patch('nefertari.elasticsearch.ES')
+    def test_get_collection_es_acl_filtering(self, mock_es):
+        mock_es.settings.asbool.return_value = True
+        view = self._test_view()
+        view.request.effective_principals = [4, 5, 6]
+        view._parent_queryset_es = Mock(return_value=None)
+        view.Model = Mock(__name__='Foo')
+        view.get_collection_es(arg=1)
+        mock_es.assert_called_once_with('Foo')
+        mock_es().get_collection.assert_called_once_with(
+            _limit=20, foo='bar', _identifiers=[4, 5, 6])
+        mock_es.settings.asbool.assert_called_with('acl_filtering')
+
+    @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_parent_no_obj_ids(self, mock_es):
+        mock_es.settings.asbool.return_value = False
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=[1, 2])
         view.Model = Mock(__name__='Foo')
@@ -334,6 +360,7 @@ class TestESBaseView(ViewTestBase):
 
     @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_parent_with_ids(self, mock_es):
+        mock_es.settings.asbool.return_value = False
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=['obj1', 'obj2'])
         view.Model = Mock(__name__='Foo')
@@ -553,6 +580,7 @@ class TestItemSingularView(ViewTestBase):
 
     def test_create(self):
         view = self._test_view()
+        view.set_object_acl = Mock()
         view.request.registry._root_resources = {
             'foo': Mock(auth=False)
         }
@@ -566,6 +594,7 @@ class TestItemSingularView(ViewTestBase):
         parent = view.get_item()
         parent.update.assert_called_once_with(
             {'profile': child.save()}, view.request)
+        assert view.set_object_acl.call_count == 1
         assert resp == child.save()
 
     def test_update(self):

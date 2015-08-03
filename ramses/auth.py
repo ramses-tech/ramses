@@ -187,6 +187,7 @@ def setup_auth_policies(config, raml_root):
 
 def create_system_user(config):
     log.info('Creating system user')
+    from pyramid.security import Allow, ALL_PERMISSIONS
     settings = config.registry.settings
     try:
         auth_model = config.registry.auth_model
@@ -198,7 +199,8 @@ def create_system_user(config):
             defaults=dict(
                 password=s_pass,
                 email=s_email,
-                groups=['admin']
+                groups=['admin'],
+                _acl=[(Allow, 'g:admin', ALL_PERMISSIONS)],
             ))
         if created:
             transaction.commit()
