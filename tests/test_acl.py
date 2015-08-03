@@ -268,7 +268,7 @@ class TestBaseACL(object):
         obj.context_acl = Mock()
         value = obj.getitem_es(key='varvar')
         mock_es.assert_called_with('Foo')
-        es_obj.get_resource.assert_called_once_with(myname='varvar')
+        es_obj.get_resource.assert_called_once_with(id='varvar')
         obj.context_acl.assert_called_once_with(found_obj)
         assert value.__acl__ == obj.context_acl()
         assert value.__parent__ is obj
