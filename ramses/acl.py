@@ -172,8 +172,7 @@ class BaseACL(SelfParamMixin):
         """ Get item with ID of :key: from elasticsearch """
         from nefertari.elasticsearch import ES
         es = ES(self.__context_class__.__name__)
-        pk_field = self.__context_class__.pk_field()
-        obj = es.get_resource(**{pk_field: key})
+        obj = es.get_resource(id=key)
         obj.__acl__ = self.context_acl(obj)
         obj.__parent__ = self
         obj.__name__ = key
