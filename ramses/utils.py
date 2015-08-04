@@ -210,8 +210,11 @@ def attr_subresource(raml_resource, route_name):
         return False
     schema = resource_schema(static_parent) or {}
     properties = schema.get('properties', {})
-    return (route_name in properties and
-            properties[route_name]['type'] in ('dict', 'list'))
+    if route_name in properties:
+        db_settings = properties[route_name].get('_db_settings', {})
+        db_settings = clean_db_properties(db_settings)
+        return db_settings.get('type') in ('dict', 'list')
+    return False
 
 
 def singular_subresource(raml_resource, route_name):
@@ -227,9 +230,11 @@ def singular_subresource(raml_resource, route_name):
     properties = schema.get('properties', {})
     if route_name not in properties:
         return False
-    is_obj = properties[route_name]['type'] == 'relationship'
-    args = properties[route_name].get('args', {})
-    single_obj = not args.get('uselist', True)
+
+    db_settings = properties[route_name].get('_db_settings', {})
+    db_settings = clean_db_properties(db_settings)
+    is_obj = db_settings.get('type') == 'relationship'
+    single_obj = not db_settings.get('uselist', True)
     return is_obj and single_obj
 
 
@@ -285,3 +290,18 @@ def get_resource_children(raml_resource):
     path = raml_resource.path
     return [res for res in raml_resource.root.resources
             if res.parent and res.parent.path == path]
+
+
+def clean_db_properties(properties):
+    """ Remove prefix underscore from ramses DB properties keys.
+
+    DB properties are defined in JSON schema and are used to set up
+    DB fields.
+
+    :param properties: Dict of DB properties names defined in JSON schema.
+    """
+    cleaned = {}
+    for key, value in properties.items():
+        key = key[1:] if key.startswith('_') else key
+        cleaned[key] = value
+    return cleaned

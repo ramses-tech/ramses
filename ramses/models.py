@@ -3,8 +3,8 @@ import logging
 from nefertari import engine
 
 from .utils import (
-    resolve_to_callable, is_callable_tag,
-    resource_schema, generate_model_name)
+    resolve_to_callable, is_callable_tag, resource_schema,
+    generate_model_name, clean_db_properties)
 from . import registry
 
 
@@ -97,16 +97,16 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     base_cls = engine.ESBaseDocument if es_based else engine.BaseDocument
     model_name = str(model_name)
     metaclass = type(base_cls)
-    auth_model = schema.get('auth_model', False)
+    auth_model = schema.get('_auth_model', False)
     if auth_model:
         bases = (AuthModelMethodsMixin, base_cls)
     else:
         bases = (base_cls,)
     attrs = {
         '__tablename__': model_name.lower(),
-        '_public_fields': schema.get('public_fields') or [],
-        '_auth_fields': schema.get('auth_fields') or [],
-        '_nested_relationships': schema.get('nested_relationships') or [],
+        '_public_fields': schema.get('_public_fields') or [],
+        '_auth_fields': schema.get('_auth_fields') or [],
+        '_nested_relationships': schema.get('_nested_relationships') or [],
     }
     # Generate fields from properties
     properties = schema.get('properties', {})
@@ -114,10 +114,12 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         if field_name in attrs:
             continue
 
-        field_kwargs = {
-            'required': bool(props.get('required'))
-        }
-        field_kwargs.update(props.get('args', {}) or {})
+        db_settings = props.get('_db_settings')
+        if db_settings is None:
+            continue
+
+        field_kwargs = clean_db_properties(db_settings)
+        field_kwargs['required'] = bool(field_kwargs.get('required'))
 
         for default_attr_key in ('default', 'onupdate'):
             value = field_kwargs.get(default_attr_key)
@@ -133,11 +135,12 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
                 field_kwargs[processor_key] = [
                     resolve_to_callable(name) for name in processors]
 
-        raml_type = (props.get('type', 'string') or 'string').lower()
-        if raml_type not in type_fields:
-            raise ValueError('Unknown type: {}'.format(raml_type))
+        type_name = (
+            field_kwargs.pop('type', 'string') or 'string').lower()
+        if type_name not in type_fields:
+            raise ValueError('Unknown type: {}'.format(type_name))
 
-        field_cls = type_fields[raml_type]
+        field_cls = type_fields[type_name]
 
         if field_cls is engine.Relationship:
             prepare_relationship(
