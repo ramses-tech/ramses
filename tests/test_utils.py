@@ -245,7 +245,7 @@ class TestUtils(object):
             'properties': {
                 'route_name': {
                     '_db_settings': {
-                        '_type': 'string'
+                        'type': 'string'
                     }
                 }
             }
@@ -263,12 +263,12 @@ class TestUtils(object):
             'properties': {
                 'route_name': {
                     '_db_settings': {
-                        '_type': 'dict'
+                        'type': 'dict'
                     }
                 },
                 'route_name2': {
                     '_db_settings': {
-                        '_type': 'list'
+                        'type': 'list'
                     }
                 }
             }
@@ -304,7 +304,7 @@ class TestUtils(object):
             'properties': {
                 'route_name': {
                     '_db_settings': {
-                        '_type': 'string'
+                        'type': 'string'
                     }
                 }
             }
@@ -322,8 +322,8 @@ class TestUtils(object):
             'properties': {
                 'route_name': {
                     '_db_settings': {
-                        '_type': 'relationship',
-                        '_uselist': False
+                        'type': 'relationship',
+                        'uselist': False
                     }
                 },
             }

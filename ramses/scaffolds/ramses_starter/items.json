@@ -7,23 +7,23 @@
         "id": {
             "type": ["integer", "null"],
             "_db_settings": {
-                "_required": true,
-                "_type": "id_field",
-                "_primary_key": true
+                "required": true,
+                "type": "id_field",
+                "primary_key": true
             }
         },
         "name": {
             "type": "string",
             "_db_settings": {
-                "_type": "string",
-                "_required": true
+                "type": "string",
+                "required": true
             }
         },
         "description": {
             "type": ["string", "null"],
             "_db_settings": {
-                "_type": "text",
-                "_required": false
+                "type": "text",
+                "required": false
             }
         }
     }

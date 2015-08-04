@@ -3,8 +3,8 @@ import logging
 from nefertari import engine
 
 from .utils import (
-    resolve_to_callable, is_callable_tag, resource_schema,
-    generate_model_name, clean_db_properties)
+    resolve_to_callable, is_callable_tag,
+    resource_schema, generate_model_name)
 from . import registry
 
 
@@ -118,7 +118,7 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
         if db_settings is None:
             continue
 
-        field_kwargs = clean_db_properties(db_settings)
+        field_kwargs = db_settings.copy()
         field_kwargs['required'] = bool(field_kwargs.get('required'))
 
         for default_attr_key in ('default', 'onupdate'):

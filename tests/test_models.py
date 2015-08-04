@@ -139,13 +139,13 @@ class TestGenerateModelCls(object):
         schema = self._test_schema()
         schema['properties']['progress'] = {
             "_db_settings": {
-                "_type": "float",
-                "_required": True,
-                "_default": 0,
-                "_before_validation": ["zoo"],
-                "_after_validation": ["foo"],
-                "_backref_after_validation": ["foo"],
-                "_backref_before_validation": ["foo"]
+                "type": "float",
+                "required": True,
+                "default": 0,
+                "before_validation": ["zoo"],
+                "after_validation": ["foo"],
+                "backref_after_validation": ["foo"],
+                "backref_before_validation": ["foo"]
             }
         }
         mock_res.return_value = 1
@@ -176,8 +176,8 @@ class TestGenerateModelCls(object):
         schema = self._test_schema()
         schema['properties']['progress'] = {
             "_db_settings": {
-                "_type": "float",
-                "_default": "{{foobar}}",
+                "type": "float",
+                "default": "{{foobar}}",
             }
         }
         mock_res.return_value = 1
@@ -229,7 +229,7 @@ class TestGenerateModelCls(object):
         from ramses import models
         schema = self._test_schema()
         schema['properties']['progress'] = {
-            '_db_settings': {'_type': 'foobar'}}
+            '_db_settings': {'type': 'foobar'}}
         mock_reg.mget.return_value = {'foo': 'bar'}
 
         with pytest.raises(ValueError) as ex:
@@ -243,8 +243,8 @@ class TestGenerateModelCls(object):
         schema = self._test_schema()
         schema['properties']['progress'] = {
             '_db_settings': {
-                '_type': 'relationship',
-                '_document': 'FooBar',
+                'type': 'relationship',
+                'document': 'FooBar',
             }
         }
         mock_reg.mget.return_value = {'foo': 'bar'}
@@ -257,8 +257,8 @@ class TestGenerateModelCls(object):
         schema = self._test_schema()
         schema['properties']['progress'] = {
             "_db_settings": {
-                "_type": "foreign_key",
-                "_ref_column_type": "string"
+                "type": "foreign_key",
+                "ref_column_type": "string"
             }
         }
         mock_reg.mget.return_value = {'foo': 'bar'}
@@ -272,8 +272,8 @@ class TestGenerateModelCls(object):
         schema = self._test_schema()
         schema['properties']['progress'] = {
             "_db_settings": {
-                "_type": "list",
-                "_item_type": "integer"
+                "type": "list",
+                "item_type": "integer"
             }
         }
         mock_reg.mget.return_value = {'foo': 'bar'}
@@ -286,7 +286,7 @@ class TestGenerateModelCls(object):
         from ramses import models
         schema = self._test_schema()
         schema['properties']['_public_fields'] = {
-            '_db_settings': {'_type': 'interval'}}
+            '_db_settings': {'type': 'interval'}}
         mock_reg.mget.return_value = {'foo': 'bar'}
         models.generate_model_cls(
             schema=schema, model_name='Story', raml_resource=1)
