@@ -149,7 +149,7 @@ class TestSetupAuthPolicies(object):
         raml_data = Mock(secured_by=['zoo'], security_schemes=[scheme])
         with pytest.raises(ValueError) as ex:
             auth.setup_auth_policies('asd', raml_data)
-        expected = 'Not defined security scheme used in `secured_by`: zoo'
+        expected = 'Undefined security scheme used in `secured_by`: zoo'
         assert expected == str(ex.value)
 
     def test_not_supported_scheme_type(self):
@@ -159,7 +159,7 @@ class TestSetupAuthPolicies(object):
         raml_data = Mock(secured_by=['foo'], security_schemes=[scheme])
         with pytest.raises(ValueError) as ex:
             auth.setup_auth_policies(None, raml_data)
-        expected = 'Not supported security scheme type: asd123'
+        expected = 'Unsupported security scheme type: asd123'
         assert expected == str(ex.value)
 
     @patch('ramses.auth.ACLAuthorizationPolicy')

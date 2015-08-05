@@ -171,15 +171,17 @@ class BaseACL(SelfParamMixin):
         from nefertari.elasticsearch import ES
         from nefertari import engine
         es = ES(self.__context_class__.__name__)
-        pk_field = self.__context_class__.pk_field()
+
+        # pk_field = self.__context_class__.pk_field()
         kwargs = {
-            pk_field: key,
+            id: key,
             '_limit': 1,
             '__raise_on_empty': True,
         }
         obj = es.get_collection(**kwargs)[0]
         obj.__acl__ = engine.ACLField.objectify_acl([
             ace._data for ace in obj._acl])
+
         obj.__parent__ = self
         obj.__name__ = key
         return obj
