@@ -264,7 +264,6 @@ class TestBaseACL(object):
         obj.__context_class__.pk_field.return_value = 'myname'
         value = obj.getitem_es(key='varvar')
         mock_es.assert_called_with('Foo')
-
         es_obj.get_resource.assert_called_once_with(id='varvar')
         mock_eng.ACLField.objectify_acl.assert_called_once_with(
             [value._acl[0]._data])
