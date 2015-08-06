@@ -4,7 +4,9 @@ Field Processors
 Writing Processors
 ------------------
 
-You can write custom functions inside your ``__init__.py`` file, then simply add the ``@registry.add`` decorator before the functions that you'd like to turn into processors. A processor receives a number of keyword arguments:
+You can write custom functions inside your ``__init__.py`` file, then simply add the ``@registry.add`` decorator before the functions that you'd like to turn into processors. You can conviniently use Nefertari's `Wrapper API <https://nefertari.readthedocs.org/en/stable/database_backends.html#id1>`_ by importing the engine module: ``from nefertari import engine``.
+
+A processor receives a number of keyword arguments:
 
 * ``kwargs['instance']`` is the object instance being created or updated
 * ``kwargs['new_value']`` is the new value being set
