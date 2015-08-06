@@ -13,7 +13,7 @@ def includeme(config):
     Settings = dictset(config.registry.settings)
     config.include('nefertari.engine')
     config.include('nefertari')
-    config.include('nefertari.view')
+    # config.include('nefertari.view')
     config.include('nefertari.json_httpexceptions')
 
     # Process nefertari settings
