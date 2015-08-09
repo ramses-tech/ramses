@@ -1,4 +1,6 @@
 # `Ramses`
+
+[![Join the chat at https://gitter.im/brandicted/ramses](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/brandicted/ramses?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/brandicted/ramses.svg?branch=master)](https://travis-ci.org/brandicted/ramses)
 [![Documentation](https://readthedocs.org/projects/ramses/badge/?version=stable)](http://ramses.readthedocs.org)
 
