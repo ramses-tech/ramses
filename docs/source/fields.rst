@@ -44,18 +44,29 @@ You can set a field as required by setting the ``required`` property.
 Primary Key
 -----------
 
-You can elect a field to be the primary key of a model by setting its ``primary_key`` property under ``args``, for example, if you decide to use `username` as the primary key of your `User` model.
+You can use an ``id_field`` in lieu of primary key.
 
 .. code-block:: json
 
-    "username": {
+    "id": {
         (...)
+        "type": "id_field",
         "args": {
             "primary_key": true
         }
     }
 
-Note that you do not need to define ``id_field`` for models that have a primary key defined.
+You can alternatively elect a field to be the primary key of your model by setting its ``primary_key`` property under ``args``. For example, if you decide to use ``username`` as the primary key of your `User` model. This will enable resources to refer to that field in their url, e.g. ``/api/users/john``
+
+.. code-block:: json
+
+    "username": {
+        (...)
+        "type": "string",
+        "args": {
+            "primary_key": true
+        }
+    }
 
 Constraints
 -----------
@@ -73,40 +84,95 @@ You can set a minimum and/or maximum length of your field by setting the ``min_l
         }
     }
 
+.. _field-processors:
 
 Field Processors
 ----------------
 
-You can define field processors by referencing their names in the ``before_validation`` and ``after_validation`` properties under ``args``. The `before_` and `after_` prefixes refer to when those processors are executed, either before or after database validation. You can define more than one processor in each of those arguments in a comma-separated list.
+Field processors are custom functions that are called upon validation of a field. You can write those functions inside your ``__init__.py``. You can reference processors in the ``before_validation`` and ``after_validation`` properties under ``args``. The `before_` and `after_` prefixes refer to when those processors are executed, either before or after database validation. You can define more than one processor in each of those arguments in a comma-separated list. If multiple processors are listed, they are executed in the order in which they are listed.
 
 .. code-block:: json
 
-    "field": {
+    "password": {
         (...)
         "args": {
-            "before_validation": ["custom_processor"],
-            "after_validation": ["other_custom_processor"]
+            "before_validation": ["validate_password_format", "crypt"],
+            "after_validation": ["email_password_changed"]
         }
     }
 
-You can read more about writing custom field processors :doc:`here <processors>`.
+For relationship fields, you can also add processors to your backref field by adding the ``backref_`` prefix.
+
+.. code-block:: json
+
+    "parents": {
+        (...)
+        "type": "relationship",
+        "args": {
+            "document": "Parent",
+            "backref_name": "child",
+            "backref_before_validation": ["verify_filiation"],
+            "backref_after_validation": ["copy_parents_lastname"]
+        }
+    }
+
+To learn more about writing custom processors, see the :ref:`Writing Processors documentation<writing-processors>`.
 
 
 Relationship Fields
 -------------------
 
-For relationship fields, you can define the name of your 'relation' model by setting the ``document`` property under ``args``. You can also set the ``backref_name`` which will automatically add a field of that name to your schema. Note that for SQLA, you must add a ``foreign_keys`` arg to your 'relation' model if you want to use multiple foreign keys pointing to the same model (see nefertari-example).
+You can define the name of your relation model by setting the ``document`` property under ``args`` in a relationship field. You can also set the ``backref_name`` which will automatically add a field of that name to the relation model.
+
+The example below will create a one-to-one relationship.
 
 .. code-block:: json
 
-    "field": {
+    "capital": {
         (...)
         "type": "relationship",
         "args": {
-            "document": "Name_of_relation_model",
-            "backref_name": "backref_field_name"
+            "document": "City",
+            "backref_name": "country",
+            "uselist": false
         }
     }
+
+The example below will create a one-to-many relationship.
+
+.. code-block:: json
+
+    "cities": {
+        (...)
+        "type": "relationship",
+        "args": {
+            "document": "City",
+            "backref_name": "country"
+        }
+    }
+
+The example below will create both relationships above.
+
+.. code-block:: json
+
+    "capital": {
+        (...)
+        "type": "relationship",
+        "args": {
+            "document": "City",
+            "uselist": false
+        }
+    },
+    "cities": {
+        (...)
+        "type": "relationship",
+        "args": {
+            "document": "City",
+            "backref_name": "country"
+        }
+    }
+
+Note that when using SQLA, you must add a ``foreign_keys`` property to your relation model in order to have multiple foreign keys pointing to the same model.
 
 
 Default Value
