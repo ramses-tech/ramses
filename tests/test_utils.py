@@ -66,6 +66,13 @@ class TestUtils(object):
         assert part_name == 'stories_default_id'
         get_children.assert_called_once_with(resource)
 
+    def test_extract_dynamic_part(self):
+        assert utils.extract_dynamic_part('/stories/{id}/foo') == 'id'
+        assert utils.extract_dynamic_part('/stories/{id}') == 'id'
+
+    def test_extract_dynamic_part_fail(self):
+        assert utils.extract_dynamic_part('/stories/id') is None
+
     def _get_mock_method_resources(self, *methods):
         return [Mock(method=meth) for meth in methods]
 

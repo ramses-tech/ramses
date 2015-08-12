@@ -99,10 +99,21 @@ def dynamic_part_name(raml_resource, clean_uri, pk_field):
     dynamic_uris = [res.path for res in subresources
                     if is_dynamic_uri(res.path)]
     if dynamic_uris:
-        dynamic_part = clean_dynamic_uri(dynamic_uris[0])
+        dynamic_part = extract_dynamic_part(dynamic_uris[0])
     else:
         dynamic_part = pk_field
     return '_'.join([clean_uri, dynamic_part])
+
+
+def extract_dynamic_part(uri):
+    """ Extract dynamic url part from :uri: string.
+
+    :param uri: URI string that may contain dynamic part.
+    """
+    for part in uri.split('/'):
+        part = part.strip()
+        if part.startswith('{') and part.endswith('}'):
+            return clean_dynamic_uri(part)
 
 
 def resource_view_attrs(raml_resource, singular=False):
