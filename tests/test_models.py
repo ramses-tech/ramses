@@ -125,10 +125,10 @@ class TestGenerateModelCls(object):
     def _test_schema(self):
         return {
             'properties': {},
-            'auth_model': False,
-            'public_fields': ['public_field1'],
-            'auth_fields': ['auth_field1'],
-            'nested_relationships': ['nested_field1']
+            '_auth_model': False,
+            '_public_fields': ['public_field1'],
+            '_auth_fields': ['auth_field1'],
+            '_nested_relationships': ['nested_field1']
         }
 
     @patch('ramses.models.resolve_to_callable')
@@ -138,9 +138,9 @@ class TestGenerateModelCls(object):
         models.engine.FloatField.reset_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {
-            "required": True,
-            "type": "float",
-            "args": {
+            "_db_settings": {
+                "type": "float",
+                "required": True,
                 "default": 0,
                 "before_validation": ["zoo"],
                 "after_validation": ["foo"],
@@ -175,8 +175,10 @@ class TestGenerateModelCls(object):
         models.engine.FloatField.reset_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {
-            "type": "float",
-            "args": {"default": "{{foobar}}"}
+            "_db_settings": {
+                "type": "float",
+                "default": "{{foobar}}",
+            }
         }
         mock_res.return_value = 1
         model_cls, auth_model = models.generate_model_cls(
@@ -189,8 +191,8 @@ class TestGenerateModelCls(object):
         from nefertari.authentication.models import AuthModelMethodsMixin
         from ramses import models
         schema = self._test_schema()
-        schema['properties']['progress'] = {}
-        schema['auth_model'] = True
+        schema['properties']['progress'] = {'_db_settings': {}}
+        schema['_auth_model'] = True
         mock_reg.mget.return_value = {'foo': 'bar'}
 
         model_cls, auth_model = models.generate_model_cls(
@@ -202,7 +204,7 @@ class TestGenerateModelCls(object):
         from nefertari.authentication.models import AuthModelMethodsMixin
         from ramses import models
         schema = self._test_schema()
-        schema['properties']['progress'] = {}
+        schema['properties']['progress'] = {'_db_settings': {}}
         mock_reg.mget.return_value = {'foo': 'bar'}
 
         model_cls, auth_model = models.generate_model_cls(
@@ -212,10 +214,22 @@ class TestGenerateModelCls(object):
         assert not issubclass(model_cls, models.engine.ESBaseDocument)
         assert not issubclass(model_cls, AuthModelMethodsMixin)
 
+    def test_no_db_settings(self, mock_reg):
+        from ramses import models
+        schema = self._test_schema()
+        schema['properties']['progress'] = {'type': 'pickle'}
+        mock_reg.mget.return_value = {'foo': 'bar'}
+
+        model_cls, auth_model = models.generate_model_cls(
+            schema=schema, model_name='Story', raml_resource=None,
+            es_based=False)
+        assert not models.engine.PickleField.called
+
     def test_unknown_field_type(self, mock_reg):
         from ramses import models
         schema = self._test_schema()
-        schema['properties']['progress'] = {'type': 'foobar'}
+        schema['properties']['progress'] = {
+            '_db_settings': {'type': 'foobar'}}
         mock_reg.mget.return_value = {'foo': 'bar'}
 
         with pytest.raises(ValueError) as ex:
@@ -228,8 +242,10 @@ class TestGenerateModelCls(object):
         from ramses import models
         schema = self._test_schema()
         schema['properties']['progress'] = {
-            'type': 'relationship',
-            'args': {'document': 'FooBar'}
+            '_db_settings': {
+                'type': 'relationship',
+                'document': 'FooBar',
+            }
         }
         mock_reg.mget.return_value = {'foo': 'bar'}
         models.generate_model_cls(
@@ -240,8 +256,8 @@ class TestGenerateModelCls(object):
         from ramses import models
         schema = self._test_schema()
         schema['properties']['progress'] = {
-            "type": "foreign_key",
-            "args": {
+            "_db_settings": {
+                "type": "foreign_key",
                 "ref_column_type": "string"
             }
         }
@@ -255,8 +271,8 @@ class TestGenerateModelCls(object):
         from ramses import models
         schema = self._test_schema()
         schema['properties']['progress'] = {
-            "type": "list",
-            "args": {
+            "_db_settings": {
+                "type": "list",
                 "item_type": "integer"
             }
         }
@@ -269,7 +285,8 @@ class TestGenerateModelCls(object):
     def test_duplicate_field_name(self, mock_reg):
         from ramses import models
         schema = self._test_schema()
-        schema['properties']['_public_fields'] = {'type': 'interval'}
+        schema['properties']['_public_fields'] = {
+            '_db_settings': {'type': 'interval'}}
         mock_reg.mget.return_value = {'foo': 'bar'}
         models.generate_model_cls(
             schema=schema, model_name='Story', raml_resource=1)

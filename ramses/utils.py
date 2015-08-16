@@ -221,8 +221,10 @@ def attr_subresource(raml_resource, route_name):
         return False
     schema = resource_schema(static_parent) or {}
     properties = schema.get('properties', {})
-    return (route_name in properties and
-            properties[route_name]['type'] in ('dict', 'list'))
+    if route_name in properties:
+        db_settings = properties[route_name].get('_db_settings', {})
+        return db_settings.get('type') in ('dict', 'list')
+    return False
 
 
 def singular_subresource(raml_resource, route_name):
@@ -238,9 +240,10 @@ def singular_subresource(raml_resource, route_name):
     properties = schema.get('properties', {})
     if route_name not in properties:
         return False
-    is_obj = properties[route_name]['type'] == 'relationship'
-    args = properties[route_name].get('args', {})
-    single_obj = not args.get('uselist', True)
+
+    db_settings = properties[route_name].get('_db_settings', {})
+    is_obj = db_settings.get('type') == 'relationship'
+    single_obj = not db_settings.get('uselist', True)
     return is_obj and single_obj
 
 

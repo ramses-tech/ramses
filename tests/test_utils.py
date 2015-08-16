@@ -251,7 +251,9 @@ class TestUtils(object):
         mock_schema.return_value = {
             'properties': {
                 'route_name': {
-                    'type': 'string'
+                    '_db_settings': {
+                        'type': 'string'
+                    }
                 }
             }
         }
@@ -267,10 +269,14 @@ class TestUtils(object):
         mock_schema.return_value = {
             'properties': {
                 'route_name': {
-                    'type': 'dict'
+                    '_db_settings': {
+                        'type': 'dict'
+                    }
                 },
                 'route_name2': {
-                    'type': 'list'
+                    '_db_settings': {
+                        'type': 'list'
+                    }
                 }
             }
         }
@@ -304,7 +310,9 @@ class TestUtils(object):
         mock_schema.return_value = {
             'properties': {
                 'route_name': {
-                    'type': 'string'
+                    '_db_settings': {
+                        'type': 'string'
+                    }
                 }
             }
         }
@@ -320,8 +328,10 @@ class TestUtils(object):
         mock_schema.return_value = {
             'properties': {
                 'route_name': {
-                    'type': 'relationship',
-                    'args': {'uselist': False}
+                    '_db_settings': {
+                        'type': 'relationship',
+                        'uselist': False
+                    }
                 },
             }
         }
