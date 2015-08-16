@@ -25,7 +25,7 @@ E.g.
         return (kwargs['new_value'] or '').lower()
 
 
-To apply processors to your fields, see the :ref:`Field Processors documentation<field-processors>`. Note that you can use Nefertari's `Wrapper API <https://nefertari.readthedocs.org/en/stable/database_backends.html#id1>`_ by importing the engine module: ``from nefertari import engine``.
+To apply processors to your fields, see the :ref:`Field Processors documentation<field-processors>`. Note that you can use Nefertari's `Wrapper API <https://nefertari.readthedocs.org/en/stable/models.html#wrapper-api>`_ by importing the engine module: ``from nefertari import engine``.
 
 
 Other Things You Can Do

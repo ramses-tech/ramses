@@ -1,8 +1,7 @@
 Field Types
 ===========
 
-Available Types
----------------
+This is a list of all available types:
 
 * biginteger
 * binary
@@ -13,7 +12,7 @@ Available Types
 * decimal
 * dict
 * float
-* foreign_key
+* foreign_key (ignored/not required when using mongodb)
 * id_field
 * integer
 * interval
@@ -101,7 +100,7 @@ Field processors are custom functions that are called upon validation of a field
         }
     }
 
-For relationship fields, you can also add processors to your backref field by adding the ``backref_`` prefix.
+For 'relationship' fields, you can also add processors to your backref field by adding the ``backref_`` prefix.
 
 .. code-block:: json
 
@@ -204,7 +203,7 @@ The ``default`` value can also be set to a Python callable, e.g.
 Update Default Value
 --------------------
 
-You can set an update default value for your field by setting the ``onupdate`` property under ``args``. This is particularly useful to update datetime fields on every updates, e.g.
+You can set an update default value for your field by setting the ``onupdate`` property under ``args``. This is particularly useful to update 'datetime' fields on every updates, e.g.
 
 .. code-block:: json
 

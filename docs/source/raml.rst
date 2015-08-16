@@ -3,10 +3,11 @@ RAML Configuration
 
 You can read the full RAML specs `here <http://raml.org/spec.html>`_.
 
+
 Authentication
 --------------
 
-In order to enable authentication, add the ``auth`` paramer to your .ini file.
+In order to enable authentication, add the ``auth`` paramer to your .ini file:
 
 .. code-block:: ini
 
@@ -34,6 +35,7 @@ A few convenience routes will be automatically added:
 * GET ``/auth/logout``: logout currently logged-in user
 * GET ``/users/self``: returns currently logged-in user
 
+
 ACLs
 ----
 
@@ -56,6 +58,7 @@ In your ``securitySchemes``, you can add as many ACLs as you need. Then you can 
     (...)
     /items:
         securedBy: [read_only_users]
+
 
 Enabling HTTP Methods
 ---------------------

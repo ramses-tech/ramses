@@ -1,6 +1,13 @@
 Changelog
 =========
 
+* :release:`0.4.0 <2015-08-x>`
+* :support:`-` Ramses now parses RAML using spotify/ramlfications
+* :feature:`-` Renamed authentication setting `ramses.auth` to `auth`
+* :feature:`-` Added 'field' name and 'request' object to processors' arguments
+* :bug:`- major` Fixed processors not applied on fields of type 'list' and type 'dict'
+* :bug:`- major` Fixed a limitation preventing collection names to use nouns that do not have plural forms
+
 * :release:`0.3.1 <2015-07-07>`
 * :support:`- backported` Added support for callables in 'default' field argument
 * :support:`- backported` Added support for 'onupdate' field argument
