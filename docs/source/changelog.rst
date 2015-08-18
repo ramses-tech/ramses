@@ -3,8 +3,11 @@ Changelog
 
 * :release:`0.4.0 <2015-08-x>`
 * :support:`-` Ramses now parses RAML using spotify/ramlfications
+* :support:`-` Added support for json-schema draft-04
 * :feature:`-` Renamed authentication setting `ramses.auth` to `auth`
 * :feature:`-` Added 'field' name and 'request' object to processors' arguments
+* :feature:`-` Prefixed all Ramses-specific schema properties by an underscore
+* :feature:`-` Renamed schema's 'args' property to '_db_settings'
 * :bug:`- major` Fixed processors not applied on fields of type 'list' and type 'dict'
 * :bug:`- major` Fixed a limitation preventing collection names to use nouns that do not have plural forms
 
