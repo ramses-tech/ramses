@@ -99,10 +99,21 @@ def dynamic_part_name(raml_resource, clean_uri, pk_field):
     dynamic_uris = [res.path for res in subresources
                     if is_dynamic_uri(res.path)]
     if dynamic_uris:
-        dynamic_part = clean_dynamic_uri(dynamic_uris[0])
+        dynamic_part = extract_dynamic_part(dynamic_uris[0])
     else:
         dynamic_part = pk_field
     return '_'.join([clean_uri, dynamic_part])
+
+
+def extract_dynamic_part(uri):
+    """ Extract dynamic url part from :uri: string.
+
+    :param uri: URI string that may contain dynamic part.
+    """
+    for part in uri.split('/'):
+        part = part.strip()
+        if part.startswith('{') and part.endswith('}'):
+            return clean_dynamic_uri(part)
 
 
 def resource_view_attrs(raml_resource, singular=False):
@@ -210,8 +221,10 @@ def attr_subresource(raml_resource, route_name):
         return False
     schema = resource_schema(static_parent) or {}
     properties = schema.get('properties', {})
-    return (route_name in properties and
-            properties[route_name]['type'] in ('dict', 'list'))
+    if route_name in properties:
+        db_settings = properties[route_name].get('_db_settings', {})
+        return db_settings.get('type') in ('dict', 'list')
+    return False
 
 
 def singular_subresource(raml_resource, route_name):
@@ -227,9 +240,10 @@ def singular_subresource(raml_resource, route_name):
     properties = schema.get('properties', {})
     if route_name not in properties:
         return False
-    is_obj = properties[route_name]['type'] == 'relationship'
-    args = properties[route_name].get('args', {})
-    single_obj = not args.get('uselist', True)
+
+    db_settings = properties[route_name].get('_db_settings', {})
+    is_obj = db_settings.get('type') == 'relationship'
+    single_obj = not db_settings.get('uselist', True)
     return is_obj and single_obj
 
 

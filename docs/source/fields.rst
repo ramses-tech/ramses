@@ -1,8 +1,21 @@
-Field Types
-===========
+Fields
+======
 
-Available Types
----------------
+Types
+-----
+
+You can set a field's type by setting the ``type`` property under ``_db_settings``.
+
+.. code-block:: json
+
+    "created_at": {
+        (...)
+        "_db_settings": {
+            "type": "datetime"
+        }
+    }
+
+This is a list of all available types:
 
 * biginteger
 * binary
@@ -13,7 +26,7 @@ Available Types
 * decimal
 * dict
 * float
-* foreign_key
+* foreign_key (ignored/not required when using mongodb)
 * id_field
 * integer
 * interval
@@ -31,94 +44,166 @@ Available Types
 Required Fields
 ---------------
 
-You can set a field as required by setting the ``required`` property.
+You can set a field as required by setting the ``required`` property under ``_db_settings``.
 
 .. code-block:: json
 
-    "field": {
-        "required": true,
+    "password": {
         (...)
+        "_db_settings": {
+            (...)
+            "required": true
+        }
     }
 
 
 Primary Key
 -----------
 
-You can elect a field to be the primary key of a model by setting its ``primary_key`` property under ``args``, for example, if you decide to use `username` as the primary key of your `User` model.
+You can use an ``id_field`` in lieu of primary key.
+
+.. code-block:: json
+
+    "id": {
+        (...)
+        "_db_settings": {
+            (...)
+            "primary_key": true
+        }
+    }
+
+You can alternatively elect a field to be the primary key of your model by setting its ``primary_key`` property under ``_db_settings``. For example, if you decide to use ``username`` as the primary key of your `User` model. This will enable resources to refer to that field in their url, e.g. ``/api/users/john``
 
 .. code-block:: json
 
     "username": {
         (...)
-        "args": {
+        "_db_settings": {
+            (...)
             "primary_key": true
         }
     }
 
-Note that you do not need to define ``id_field`` for models that have a primary key defined.
-
 Constraints
 -----------
 
-You can set a minimum and/or maximum length of your field by setting the ``min_length`` / ``max_length`` properties under ``args``. You can also add a unique constraint on a field by setting the ``unique`` property.
+You can set a minimum and/or maximum length of your field by setting the ``min_length`` / ``max_length`` properties under ``_db_settings``. You can also add a unique constraint on a field by setting the ``unique`` property.
 
 .. code-block:: json
 
     "field": {
         (...)
-        "args": {
+        "_db_settings": {
+            (...)
             "unique": true,
             "min_length": 5,
             "max_length": 50
         }
     }
 
+.. _field-processors:
 
 Field Processors
 ----------------
 
-You can define field processors by referencing their names in the ``before_validation`` and ``after_validation`` properties under ``args``. The `before_` and `after_` prefixes refer to when those processors are executed, either before or after database validation. You can define more than one processor in each of those arguments in a comma-separated list.
+Field processors are custom functions that are called upon validation of a field. You can write those functions inside your ``__init__.py``. You can reference processors in the ``before_validation`` and ``after_validation`` properties under ``_db_settings``. The `before_` and `after_` prefixes refer to when those processors are executed, either before or after database validation. You can define more than one processor in each of those arguments in a comma-separated list. If multiple processors are listed, they are executed in the order in which they are listed.
 
 .. code-block:: json
 
-    "field": {
+    "password": {
         (...)
-        "args": {
-            "before_validation": ["custom_processor"],
-            "after_validation": ["other_custom_processor"]
+        "_db_settings": {
+            (...)
+            "before_validation": ["validate_password_format", "crypt"],
+            "after_validation": ["email_password_changed"]
         }
     }
 
-You can read more about writing custom field processors :doc:`here <processors>`.
+For 'relationship' fields, you can also add processors to your backref field by adding the ``backref_`` prefix.
+
+.. code-block:: json
+
+    "parents": {
+        (...)
+        "_db_settings": {
+            "type": "relationship",
+            "document": "Parent",
+            "backref_name": "child",
+            "backref_before_validation": ["verify_filiation"],
+            "backref_after_validation": ["copy_parents_lastname"]
+        }
+    }
+
+To learn more about writing custom processors, see the :ref:`Writing Processors documentation<writing-processors>`.
 
 
 Relationship Fields
 -------------------
 
-For relationship fields, you can define the name of your 'relation' model by setting the ``document`` property under ``args``. You can also set the ``backref_name`` which will automatically add a field of that name to your schema. Note that for SQLA, you must add a ``foreign_keys`` arg to your 'relation' model if you want to use multiple foreign keys pointing to the same model (see nefertari-example).
+You can define the name of your relation model by setting the ``document`` property under ``_db_settings`` in a relationship field. You can also set the ``backref_name`` which will automatically add a field of that name to the relation model.
+
+The example below will create a one-to-one relationship.
 
 .. code-block:: json
 
-    "field": {
+    "capital": {
         (...)
-        "type": "relationship",
-        "args": {
-            "document": "Name_of_relation_model",
-            "backref_name": "backref_field_name"
+        "_db_settings": {
+            "type": "relationship",
+            "document": "City",
+            "backref_name": "country",
+            "uselist": false
         }
     }
+
+The example below will create a one-to-many relationship.
+
+.. code-block:: json
+
+    "cities": {
+        (...)
+        "_db_settings": {
+            "type": "relationship",
+            "document": "City",
+            "backref_name": "country"
+        }
+    }
+
+The example below will create both relationships above.
+
+.. code-block:: json
+
+    "capital": {
+        (...)
+        "_db_settings": {
+            "type": "relationship",
+            "document": "City",
+            "uselist": false
+        }
+    },
+    "cities": {
+        (...)
+        "_db_settings": {
+            "type": "relationship",
+            "document": "City",
+            "backref_name": "country"
+        }
+    }
+
+Note that when using SQLA, you must add a ``foreign_keys`` property to your relation model in order to have multiple foreign keys pointing to the same model.
 
 
 Default Value
 -------------
 
-You can set a default value for you field by setting the ``default`` property under ``args``.
+You can set a default value for you field by setting the ``default`` property under ``_db_settings``.
 
 .. code-block:: json
 
     "field": {
         (...)
-        "args": {
+        "_db_settings": {
+            (...)
             "default": "default value"
         }
     },
@@ -129,7 +214,8 @@ The ``default`` value can also be set to a Python callable, e.g.
 
     "datetime_field": {
         (...)
-        "args": {
+        "_db_settings": {
+            (...)
             "default": "{{datetime.datetime.utcnow}}"
         }
     },
@@ -138,13 +224,14 @@ The ``default`` value can also be set to a Python callable, e.g.
 Update Default Value
 --------------------
 
-You can set an update default value for your field by setting the ``onupdate`` property under ``args``. This is particularly useful to update datetime fields on every updates, e.g.
+You can set an update default value for your field by setting the ``onupdate`` property under ``_db_settings``. This is particularly useful to update 'datetime' fields on every updates, e.g.
 
 .. code-block:: json
 
     "datetime_field": {
         (...)
-        "args": {
+        "_db_settings": {
+            (...)
             "onupdate": "{{datetime.datetime.utcnow}}"
         }
     },
@@ -153,32 +240,32 @@ You can set an update default value for your field by setting the ``onupdate`` p
 List Fields
 -----------
 
-You can list the accepted values of any ``list`` or ``choice`` fields by setting the ``choices`` property under ``args``.
+You can list the accepted values of any ``list`` or ``choice`` fields by setting the ``choices`` property under ``_db_settings``.
 
 .. code-block:: json
 
     "field": {
         (...)
-        "type": "choice",
-        "args": {
+        "_db_settings": {
+            "type": "choice",
             "choices": ["choice1", "choice2", "choice3"],
             "default": "choice1"
         }
     }
 
-You can also provide the list/choice items' ``type``.
+You can also provide the list/choice items' ``item_type``.
 
 .. code-block:: json
 
     "field": {
         (...)
-        "type": "list",
-        "args": {
+        "_db_settings": {
+            "type": "list",
             "item_type": "string"
         }
     }
 
-Other ``args``
---------------
+Other ``_db_settings``
+----------------------
 
-Note that you can pass any engine-specific arguments to your fields by defining such arguments in ``args``.
+Note that you can pass any engine-specific arguments to your fields by defining such arguments in ``_db_settings``.

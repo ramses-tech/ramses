@@ -1,7 +1,7 @@
 Getting started
 ===============
 
-1. Create your project in a virtualenv directory (see the `virtualenv documentation <https://virtualenv.pypa.io>`_ if you've never done that before)
+1. Create your project in a virtualenv directory (see the `virtualenv documentation <https://virtualenv.pypa.io>`_)
 
 .. code-block:: shell
 
@@ -13,6 +13,15 @@ Getting started
     $ pserve local.ini
 
 2. Tada! Start editing api.raml to modify the API and items.json for the schema.
+
+
+Requirements
+------------
+
+* Python 2.7, 3.3 or 3.4
+* Elasticsearch (data is automatically indexed for near real-time search)
+* Postgres or Mongodb
+
 
 Tutorials
 ---------

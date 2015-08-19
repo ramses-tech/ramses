@@ -66,6 +66,13 @@ class TestUtils(object):
         assert part_name == 'stories_default_id'
         get_children.assert_called_once_with(resource)
 
+    def test_extract_dynamic_part(self):
+        assert utils.extract_dynamic_part('/stories/{id}/foo') == 'id'
+        assert utils.extract_dynamic_part('/stories/{id}') == 'id'
+
+    def test_extract_dynamic_part_fail(self):
+        assert utils.extract_dynamic_part('/stories/id') is None
+
     def _get_mock_method_resources(self, *methods):
         return [Mock(method=meth) for meth in methods]
 
@@ -244,7 +251,9 @@ class TestUtils(object):
         mock_schema.return_value = {
             'properties': {
                 'route_name': {
-                    'type': 'string'
+                    '_db_settings': {
+                        'type': 'string'
+                    }
                 }
             }
         }
@@ -260,10 +269,14 @@ class TestUtils(object):
         mock_schema.return_value = {
             'properties': {
                 'route_name': {
-                    'type': 'dict'
+                    '_db_settings': {
+                        'type': 'dict'
+                    }
                 },
                 'route_name2': {
-                    'type': 'list'
+                    '_db_settings': {
+                        'type': 'list'
+                    }
                 }
             }
         }
@@ -297,7 +310,9 @@ class TestUtils(object):
         mock_schema.return_value = {
             'properties': {
                 'route_name': {
-                    'type': 'string'
+                    '_db_settings': {
+                        'type': 'string'
+                    }
                 }
             }
         }
@@ -313,8 +328,10 @@ class TestUtils(object):
         mock_schema.return_value = {
             'properties': {
                 'route_name': {
-                    'type': 'relationship',
-                    'args': {'uselist': False}
+                    '_db_settings': {
+                        'type': 'relationship',
+                        'uselist': False
+                    }
                 },
             }
         }
