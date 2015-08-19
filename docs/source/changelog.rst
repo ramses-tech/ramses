@@ -1,7 +1,7 @@
 Changelog
 =========
 
-* :release:`0.4.0 <2015-08-x>`
+* :release:`0.4.0 <2015-08-19>`
 * :support:`-` Added support for JSON schema draft 04
 * :support:`-` RAML is now parsed using ramlfications instead of pyraml-parser
 * :feature:`-` Boolean values in RAML don't have to be strings anymore (previous limitation of pyraml-parser)
