@@ -15,6 +15,7 @@ Table of Contents
    raml
    schemas
    fields
+   relationships
    processors
    changelog
 
