@@ -7,8 +7,8 @@
         "id": {
             "type": ["integer", "null"],
             "_db_settings": {
-                "required": true,
                 "type": "id_field",
+                "required": true,
                 "primary_key": true
             }
         },
@@ -22,8 +22,7 @@
         "description": {
             "type": ["string", "null"],
             "_db_settings": {
-                "type": "text",
-                "required": false
+                "type": "text"
             }
         }
     }

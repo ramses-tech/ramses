@@ -21,7 +21,6 @@ relationship
 
 Must be defined on *One* side of OneToOne or OneToMany relationship (``User`` in our example). Relationships are created as OneToMany by default. To create OneToOne relationships, specify ``"uselist": false`` in ``_db_settings`` of this field.
 
-
 Example of using ``relationship`` field:
 
 .. code-block:: json
@@ -86,8 +85,54 @@ Example of using ``foreign_key`` field:
     String. Ramses field type of ``ref_document`` model's primary key column specified in ``ref_column`` parameter. In our example this is ``"string"`` because ``User.username`` is ``"type": "string"``.
 
 
+Multiple relationships
+----------------------
 
+**Note: This part is only valid(required) for nefertari_sqla engine, as nefertari_mongodb engine does not use foreign_key fields.**
 
+If we were to define multiple relationships from model A to model B, each relationship must have corresponding ``foreign_key`` defined. Also you must use ``foreign_keys`` parameter on ``relationship`` to specify which ``foreign_key`` this ``relationship`` must use.
+
+E.g. if we were to add new relationship field ``User.assigned_stories``, relationship fields on ``User`` would have to be defined like this:
+
+.. code-block:: json
+
+    "stories": {
+        "_db_settings": {
+            "type": "relationship",
+            "document": "Story",
+            "backref_name": "owner",
+            "foreign_keys": "Story.owner_id"
+        }
+    },
+    "assigned_stories": {
+        "_db_settings": {
+            "type": "relationship",
+            "document": "Story",
+            "backref_name": "assignee",
+            "foreign_keys": "Story.assignee_id"
+        }
+    }
+
+And fields on ``Story`` like so:
+
+.. code-block:: json
+
+    "owner_id": {
+        "_db_settings": {
+            "type": "foreign_key",
+            "ref_document": "User",
+            "ref_column": "user.username",
+            "ref_column_type": "string"
+        }
+    },
+    "assignee_id": {
+        "_db_settings": {
+            "type": "foreign_key",
+            "ref_document": "User",
+            "ref_column": "user.username",
+            "ref_column_type": "string"
+        }
+    }
 
 
 Complete example

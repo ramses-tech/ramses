@@ -1,10 +1,18 @@
 Changelog
 =========
 
-* :release:`0.4.0 <2015-08-x>`
-* :support:`-` Ramses now parses RAML using spotify/ramlfications
-* :feature:`-` Renamed authentication setting `ramses.auth` to `auth`
-* :feature:`-` Added 'field' name and 'request' object to processors' arguments
+* :release:`0.4.0 <2015-08-19>`
+* :support:`-` Added support for JSON schema draft 04
+* :support:`-` RAML is now parsed using ramlfications instead of pyraml-parser
+* :feature:`-` Boolean values in RAML don't have to be strings anymore (previous limitation of pyraml-parser)
+* :feature:`-` Renamed setting `ramses.auth` to `auth`
+* :feature:`-` Renamed setting `debug` to `enable_get_tunneling`
+* :feature:`-` Field name and request object are now passed to field processors under 'field' and 'request' kwargs respectively
+* :feature:`-` Added support for relationship processors and backref relationship processors ('backref_after_validation'/'backref_before_validation')
+* :feature:`-` Renamed schema's 'args' property to '_db_settings'
+* :feature:`-` Properties 'type' and 'required' are now under '_db_settings'
+* :feature:`-` Prefixed all Ramses schema properties by an underscore: '_auth_fields', '_public_fields', '_nested_relationships', '_auth_model', '_db_settings'
+* :feature:`-` Error response bodies are now returned as JSON
 * :bug:`- major` Fixed processors not applied on fields of type 'list' and type 'dict'
 * :bug:`- major` Fixed a limitation preventing collection names to use nouns that do not have plural forms
 
