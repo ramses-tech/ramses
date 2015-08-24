@@ -19,9 +19,9 @@ Example code is the very minimum needed to explain the subject. We will be refer
 relationship
 ------------
 
-Must be defined on *One* side of OneToOne or OneToMany relationship (``User`` in our example). Relationships are created as OneToMany by default. To create OneToOne relationships, specify ``"uselist": false`` in ``_db_settings`` of this field.
+Must be defined on *One* side of OneToOne or OneToMany relationship (``User`` in our example). Relationships are created as OneToMany by default.
 
-Example of using ``relationship`` field:
+Example of using ``relationship`` field (defined on ``User`` model in our example):
 
 .. code-block:: json
 
@@ -48,7 +48,7 @@ Example of using ``relationship`` field:
 foreign_key
 -----------
 
-Must be defined on *Many* side of OneToMany or on the opposite side from ``relationship`` in OneToOne (``Story`` in our example). This represents a Foreign Key constraint in SQL and is required when using ``nefertari_sqla`` engine.
+This represents a Foreign Key constraint in SQL and is only required when using ``nefertari_sqla`` engine. It is used in conjunction with the relationship field, but is used on the model that ``relationship`` refers to. For example, if the User model contained the ``relationship`` field, than the Story model would need a ``foreign_key`` field.
 
 **Notes:**
 
@@ -57,7 +57,7 @@ Must be defined on *Many* side of OneToMany or on the opposite side from ``relat
     * This field **MUST NOT** be used to change relationships. This field only exists because it is required by SQLAlchemy.
 
 
-Example of using ``foreign_key`` field:
+Example of using ``foreign_key`` field (defined on ``Story`` model in our example):
 
 .. code-block:: json
 
@@ -83,6 +83,41 @@ Example of using ``foreign_key`` field:
 
 **ref_column_type**
     String. Ramses field type of ``ref_document`` model's primary key column specified in ``ref_column`` parameter. In our example this is ``"string"`` because ``User.username`` is ``"type": "string"``.
+
+
+One to One relationship
+-----------------------
+
+To create OneToOne relationships, specify ``"uselist": false`` in ``_db_settings`` of ``relationship`` field. When setting up One-to-One relationship, it doesn't matter which side defines the ``relationship`` field.
+
+E.g. if we had ``Profile`` model and we wanted to set up One-to-One relationship between ``Profile`` and ``User``, we would have to define a regular ``foreign_key`` field on ``Profile``:
+
+.. code-block:: json
+
+    "user_id": {
+        "_db_settings": {
+            "type": "foreign_key",
+            "ref_document": "User",
+            "ref_column": "user.username",
+            "ref_column_type": "string"
+        }
+    }
+
+and ``relationship`` field with ``"uselist": false`` on ``User``:
+
+.. code-block:: json
+
+    "profile": {
+        "_db_settings": {
+            "type": "relationship",
+            "document": "Profile",
+            "backref_name": "user",
+            "uselist": false
+        }
+    }
+
+
+This relationship be defined the other way but with the same result: ``foreign_key`` field on ``User`` and ``relationship`` field on ``Profile`` pointing to ``User``.
 
 
 Multiple relationships
