@@ -10,8 +10,11 @@ Relationships in Ramses are used to represent One-To-Many(o2m) and One-To-One(o2
 To set up relationships fields of types ``foreign_key`` and ``relationship`` are used. ``foreign_key`` field is not required when using ``nefertari_mongodb`` engine and is ignored.
 
 
-For this tutorial we are going to use example of users and stories. In this example we have OneToMany relationships betweed User and Story: One user may have many stories but story has only one owner.
-Check the end of the tutorial for a complete example of RAML file and schemas.
+For this tutorial we are going to use the example of users and
+stories. In this example we have a OneToMany relationship betweed ``User``
+and ``Story``. One user may have many stories but each story has only one
+owner.  Check the end of the tutorial for the complete example RAML
+file and schemas.
 
 Example code is the very minimum needed to explain the subject. We will be referring to the examples along all the tutorial.
 
@@ -19,7 +22,9 @@ Example code is the very minimum needed to explain the subject. We will be refer
 relationship
 ------------
 
-Must be defined on *One* side of OneToOne or OneToMany relationship (``User`` in our example). Relationships are created as OneToMany by default.
+Must be defined on the *One* side of OneToOne or OneToMany
+relationship (``User`` in our example). Relationships are created as
+OneToMany by default.
 
 Example of using ``relationship`` field (defined on ``User`` model in our example):
 
@@ -48,7 +53,12 @@ Example of using ``relationship`` field (defined on ``User`` model in our exampl
 foreign_key
 -----------
 
-This represents a Foreign Key constraint in SQL and is only required when using ``nefertari_sqla`` engine. It is used in conjunction with the relationship field, but is used on the model that ``relationship`` refers to. For example, if the User model contained the ``relationship`` field, than the Story model would need a ``foreign_key`` field.
+This represents a Foreign Key constraint in SQL and is only required
+when using ``nefertari_sqla`` engine. It is used in conjunction with
+the relationship field, but is used on the model that ``relationship``
+refers to. For example, if the ``User`` model contained the
+``relationship`` field, than the ``Story`` model would need a
+``foreign_key`` field.
 
 **Notes:**
 
@@ -79,7 +89,9 @@ Example of using ``foreign_key`` field (defined on ``Story`` model in our exampl
     String. Exact name of model class to which foreign key is set up. To find out the name of model use singularized uppercased version of route name. E.g. if we want to set up foreign key to objects of ``/user`` then the ``ref_document`` arg will be ``User``.
 
 *ref_column*
-    String. Dotted name/path to ``ref_document`` model's primary key column. ``ref_column`` is a lowercased name of model we reffer in ``ref_document`` joined by doth with an exact name if ``ref_document`` model's primary key column. In our example this is ``"user.username"``.
+    String. Dotted name/path to ``ref_document`` model's primary key
+    column. ``ref_column`` is the lowercased name of model we refer to in
+    ``ref_document`` joined by a dot with the exact name of its primary key column. In our example this is ``"user.username"``.
 
 **ref_column_type**
     String. Ramses field type of ``ref_document`` model's primary key column specified in ``ref_column`` parameter. In our example this is ``"string"`` because ``User.username`` is ``"type": "string"``.
@@ -117,7 +129,7 @@ and ``relationship`` field with ``"uselist": false`` on ``User``:
     }
 
 
-This relationship be defined the other way but with the same result: ``foreign_key`` field on ``User`` and ``relationship`` field on ``Profile`` pointing to ``User``.
+This relationship could also be defined the other way but with the same result: ``foreign_key`` field on ``User`` and ``relationship`` field on ``Profile`` pointing to ``User``.
 
 
 Multiple relationships
@@ -125,7 +137,11 @@ Multiple relationships
 
 **Note: This part is only valid(required) for nefertari_sqla engine, as nefertari_mongodb engine does not use foreign_key fields.**
 
-If we were to define multiple relationships from model A to model B, each relationship must have corresponding ``foreign_key`` defined. Also you must use ``foreign_keys`` parameter on ``relationship`` to specify which ``foreign_key`` this ``relationship`` must use.
+If we were to define multiple relationships from model A to model B,
+each relationship must have a corresponding ``foreign_key``
+defined. Also you must use a ``foreign_keys`` parameter on each
+``relationship`` field to specify which ``foreign_key`` each
+``relationship`` uses.
 
 E.g. if we were to add new relationship field ``User.assigned_stories``, relationship fields on ``User`` would have to be defined like this:
 
