@@ -24,9 +24,9 @@ class TestACLHelpers(object):
 
     def test_methods_to_perms(self):
         perms = acl.methods_to_perms('get', self.methods_map)
-        assert perms == ['index']
+        assert perms == ['view']
         perms = acl.methods_to_perms('get,post', self.methods_map)
-        assert sorted(perms) == ['create', 'index']
+        assert sorted(perms) == ['create', 'view']
 
     def test_parse_acl_no_string(self):
         perms = acl.parse_acl('', self.methods_map)
@@ -199,7 +199,7 @@ class TestBaseACL(object):
             acl=[(Deny, principal, ALL_PERMISSIONS)],
             methods_map=acl.item_methods,
         )
-        assert new_acl == [(Allow, Everyone, ['show'])]
+        assert new_acl == [(Allow, Everyone, ['view'])]
 
     def test_magic_acl(self):
         obj = acl.BaseACL('req')

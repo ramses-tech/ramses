@@ -6,6 +6,7 @@ from pyramid.security import (
     Everyone, Authenticated,
     ALL_PERMISSIONS)
 from nefertari.acl import CollectionACL
+from nefertari.resource import PERMISSIONS
 from nefertari.elasticsearch import ES
 
 from .views import collection_methods, item_methods
@@ -31,8 +32,7 @@ def methods_to_perms(perms, methods_map):
     the keyword 'all' into a set of valid Pyramid permissions.
 
     :param perms: List or comma-separated string of HTTP methods, or 'all'
-    :param methods_map: Map of HTTP methods to permission names (nefertari view
-        methods)
+    :param methods_map: Map of HTTP methods to nefertari view methods
     """
     if isinstance(perms, six.string_types):
         perms = perms.split(',')
@@ -41,8 +41,7 @@ def methods_to_perms(perms, methods_map):
         return ALL_PERMISSIONS
     else:
         try:
-            # XXX this gives method names not actual perms
-            return [methods_map[p] for p in perms]
+            return [PERMISSIONS[methods_map[p]] for p in perms]
         except KeyError:
             raise ValueError(
                 'Unknown method name in permissions: {}. Valid methods: '

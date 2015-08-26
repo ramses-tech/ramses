@@ -162,7 +162,7 @@ class TestBaseView(ViewTestBase):
 
     def test_reload_context(self):
         class Factory(dict):
-            __context_class__ = None
+            item_model = None
 
             def __getitem__(self, key):
                 return key
