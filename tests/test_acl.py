@@ -85,12 +85,12 @@ class TestGenerateACL(object):
             model_cls='Foo',
             raml_resource=Mock(security_schemes=[]),
             es_based=True)
-        assert acl_cls.__context_class__ == 'Foo'
+        assert acl_cls.item_model == 'Foo'
         assert issubclass(acl_cls, acl.BaseACL)
         instance = acl_cls(request=None)
         assert instance.es_based
-        assert instance.collection_acl == [acl.ALLOW_ALL]
-        assert instance.item_acl == [acl.ALLOW_ALL]
+        assert instance._collection_acl == [acl.ALLOW_ALL]
+        assert instance._item_acl == [acl.ALLOW_ALL]
         assert not mock_parse.called
 
     def test_wrong_security_scheme_type(self, mock_parse):
@@ -102,12 +102,12 @@ class TestGenerateACL(object):
             raml_resource=raml_resource,
             es_based=False)
         assert not mock_parse.called
-        assert acl_cls.__context_class__ == 'Foo'
+        assert acl_cls.item_model == 'Foo'
         assert issubclass(acl_cls, acl.BaseACL)
         instance = acl_cls(request=None)
         assert not instance.es_based
-        assert instance.collection_acl == [acl.ALLOW_ALL]
-        assert instance.item_acl == [acl.ALLOW_ALL]
+        assert instance._collection_acl == [acl.ALLOW_ALL]
+        assert instance._item_acl == [acl.ALLOW_ALL]
 
     def test_correct_security_scheme(self, mock_parse):
         raml_resource = Mock(security_schemes=[
@@ -122,8 +122,8 @@ class TestGenerateACL(object):
             call(acl_string=7, methods_map=acl.item_methods),
         ])
         instance = acl_cls(request=None)
-        assert instance.collection_acl == mock_parse()
-        assert instance.item_acl == mock_parse()
+        assert instance._collection_acl == mock_parse()
+        assert instance._item_acl == mock_parse()
         assert not instance.es_based
 
 
@@ -131,9 +131,9 @@ class TestBaseACL(object):
 
     def test_init(self):
         obj = acl.BaseACL(request='Foo')
-        assert obj.__context_class__ is None
-        assert obj.collection_acl is None
-        assert obj.item_acl is None
+        assert obj.item_model is None
+        assert obj._collection_acl == (acl.ALLOW_ALL,)
+        assert obj._item_acl == (acl.ALLOW_ALL,)
         assert obj.request == 'Foo'
 
     def test_apply_callables_no_callables(self):
@@ -203,7 +203,7 @@ class TestBaseACL(object):
 
     def test_magic_acl(self):
         obj = acl.BaseACL('req')
-        obj.collection_acl = [(1, 2, 3)]
+        obj._collection_acl = [(1, 2, 3)]
         obj._apply_callables = Mock()
         result = obj.__acl__()
         obj._apply_callables.assert_called_once_with(
@@ -212,11 +212,11 @@ class TestBaseACL(object):
         )
         assert result == obj._apply_callables()
 
-    def test_context_acl(self):
+    def test_item_acl(self):
         obj = acl.BaseACL('req')
-        obj.item_acl = [(1, 2, 3)]
+        obj._item_acl = [(1, 2, 3)]
         obj._apply_callables = Mock()
-        result = obj.context_acl(obj='foobar')
+        result = obj.item_acl('foobar')
         obj._apply_callables.assert_called_once_with(
             acl=[(1, 2, 3)],
             methods_map=acl.item_methods,
@@ -226,50 +226,50 @@ class TestBaseACL(object):
 
     def test_magic_getitem_es_based(self):
         obj = acl.BaseACL('req')
-        obj.resolve_self_key = Mock()
+        obj.item_db_id = Mock(return_value=42)
         obj.getitem_es = Mock()
         obj.es_based = True
         obj.__getitem__(1)
-        obj.resolve_self_key.assert_called_once_with(1)
-        obj.getitem_es.assert_called_once_with(key=obj.resolve_self_key())
+        obj.item_db_id.assert_called_once_with(1)
+        obj.getitem_es.assert_called_once_with(42)
 
     def test_magic_getitem_db_based(self):
         obj = acl.BaseACL('req')
-        obj.resolve_self_key = Mock()
-        obj.getitem_db = Mock()
+        obj.item_db_id = Mock(return_value = 42)
+        obj.item_model = Mock()
+        obj.item_model.pk_field.return_value = 'id'
         obj.es_based = False
         obj.__getitem__(1)
-        obj.resolve_self_key.assert_called_once_with(1)
-        obj.getitem_db.assert_called_once_with(key=obj.resolve_self_key())
+        obj.item_db_id.assert_called_once_with(1)
 
     def test_getitem_db(self):
         obj = acl.BaseACL('req')
-        obj.__context_class__ = Mock()
-        obj.__context_class__.pk_field.return_value = 'myname'
-        obj.context_acl = Mock()
-        value = obj.getitem_db(key='varvar')
-        obj.__context_class__.get_resource.assert_called_once_with(
-            myname='varvar')
-        obj.context_acl.assert_called_once_with(
-            obj.__context_class__.get_resource())
-        assert value.__acl__ == obj.context_acl()
+        obj.item_model = Mock()
+        obj.item_model.pk_field.return_value = 'myname'
+        obj.item_acl = Mock()
+        value = obj['varvar']
+        obj.item_model.get.assert_called_once_with(
+            __raise=True, myname='varvar')
+        obj.item_acl.assert_called_once_with(
+            obj.item_model.get())
+        assert value.__acl__ == obj.item_acl()
         assert value.__parent__ is obj
         assert value.__name__ == 'varvar'
 
-    @patch('nefertari.elasticsearch.ES')
+    @patch('ramses.acl.ES')
     def test_getitem_es(self, mock_es):
         found_obj = Mock()
         es_obj = Mock()
         es_obj.get_resource.return_value = found_obj
         mock_es.return_value = es_obj
         obj = acl.BaseACL('req')
-        obj.__context_class__ = Mock(__name__='Foo')
-        obj.__context_class__.pk_field.return_value = 'myname'
-        obj.context_acl = Mock()
+        obj.item_model = Mock(__name__='Foo')
+        obj.item_model.pk_field.return_value = 'myname'
+        obj.item_acl = Mock()
         value = obj.getitem_es(key='varvar')
         mock_es.assert_called_with('Foo')
         es_obj.get_resource.assert_called_once_with(id='varvar')
-        obj.context_acl.assert_called_once_with(found_obj)
-        assert value.__acl__ == obj.context_acl()
+        obj.item_acl.assert_called_once_with(found_obj)
+        assert value.__acl__ == obj.item_acl()
         assert value.__parent__ is obj
         assert value.__name__ == 'varvar'
