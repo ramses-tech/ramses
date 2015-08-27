@@ -42,8 +42,7 @@ def generate_resource(config, raml_resource, parent_resource):
         /stories -> /stories/mystories/{id}. Latter route will be generated
         at /stories/{id}.
 
-    :param raml_resource: Instance of Instance of
-        ramlfications.raml.ResourceNode.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
     :param parent_resource: Parent nefertari resource object.
     """
     from .models import get_existing_model
