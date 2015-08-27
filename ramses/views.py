@@ -148,8 +148,8 @@ class BaseView(NefertariBaseView):
             kwargs['es_based'] = es_based
 
         acl = self._factory(**kwargs)
-        if acl.__context_class__ is None:
-            acl.__context_class__ = self.Model
+        if acl.item_model is None:
+            acl.item_model = self.Model
 
         self.context = acl[key]
 
