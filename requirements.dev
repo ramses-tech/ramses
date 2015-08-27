@@ -1,8 +1,8 @@
-sphinx
-releases
+mock
 pytest
 pytest-cov
-mock
+releases
+sphinx
 
 git+https://github.com/brandicted/nefertari.git@develop#egg=nefertari
 -e .
