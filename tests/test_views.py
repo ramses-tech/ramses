@@ -140,7 +140,7 @@ class TestBaseView(ViewTestBase):
         view_cls._json_encoder = 'foo'
 
         request = Mock(
-            registry={'foo': 'bar'},
+            registry=Mock(),
             path='/foo/foo',
             matchdict={'username': 'user12', 'prof_id': 4},
             accept=[''], method='GET'
@@ -286,7 +286,7 @@ class TestESBaseView(ViewTestBase):
         view_cls._json_encoder = 'foo'
 
         request = Mock(
-            registry={'foo': 'bar'},
+            registry=Mock(),
             path='/foo/foo',
             matchdict={'username': 'user12', 'prof_id': 4},
             accept=[''], method='GET'
