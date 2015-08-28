@@ -5,7 +5,9 @@ from pyramid.security import (
     Allow, Deny,
     Everyone, Authenticated,
     ALL_PERMISSIONS)
-from nefertari.acl import SelfParamMixin
+from nefertari.acl import CollectionACL
+from nefertari.resource import PERMISSIONS
+from nefertari.elasticsearch import ES
 
 from .views import collection_methods, item_methods
 from .utils import resolve_to_callable, is_callable_tag
@@ -30,8 +32,7 @@ def methods_to_perms(perms, methods_map):
     the keyword 'all' into a set of valid Pyramid permissions.
 
     :param perms: List or comma-separated string of HTTP methods, or 'all'
-    :param methods_map: Map of HTTP methods to permission names (nefertari view
-        methods)
+    :param methods_map: Map of HTTP methods to nefertari view methods
     """
     if isinstance(perms, six.string_types):
         perms = perms.split(',')
@@ -40,7 +41,7 @@ def methods_to_perms(perms, methods_map):
         return ALL_PERMISSIONS
     else:
         try:
-            return [methods_map[p] for p in perms]
+            return [PERMISSIONS[methods_map[p]] for p in perms]
         except KeyError:
             raise ValueError(
                 'Unknown method name in permissions: {}. Valid methods: '
@@ -96,15 +97,12 @@ def parse_acl(acl_string, methods_map):
     return result_acl
 
 
-class BaseACL(SelfParamMixin):
+class BaseACL(CollectionACL):
     """ ACL Base class. """
-    __context_class__ = None
-    collection_acl = None
-    item_acl = None
 
-    def __init__(self, request):
-        super(BaseACL, self).__init__()
-        self.request = request
+    es_based = False
+    _collection_acl = (ALLOW_ALL, )
+    _item_acl = (ALLOW_ALL, )
 
     def _apply_callables(self, acl, methods_map, obj=None):
         """ Iterate over ACEs from :acl: and apply callable principals if any.
@@ -138,42 +136,37 @@ class BaseACL(SelfParamMixin):
         return new_acl
 
     def __acl__(self):
-        """ Apply callables to `self.collection_acl` and return result. """
+        """ Apply callables to `self._collection_acl` and return result. """
         return self._apply_callables(
-            acl=self.collection_acl,
+            acl=self._collection_acl,
             methods_map=collection_methods)
 
-    def context_acl(self, obj):
-        """ Apply callables to `self.item_acl` and return result. """
+    def item_acl(self, item):
+        """ Apply callables to `self._item_acl` and return result. """
         return self._apply_callables(
-            acl=self.item_acl,
+            acl=self._item_acl,
             methods_map=item_methods,
-            obj=obj)
+            obj=item)
+
+    def item_db_id(self, key):
+        # ``self`` can be used for current authenticated user key
+        if key != 'self':
+            return key
+        user = getattr(self.request, 'user', None)
+        if user is None or not isinstance(user, self.item_model):
+            return key
+        return getattr(user, user.pk_field())
 
     def __getitem__(self, key):
         """ Get item using method depending on value of `self.es_based` """
-        key = self.resolve_self_key(key)
-        if self.es_based:
-            return self.getitem_es(key=key)
-        else:
-            return self.getitem_db(key=key)
-
-    def getitem_db(self, key):
-        """ Get item with ID of :key: from database """
-        pk_field = self.__context_class__.pk_field()
-        obj = self.__context_class__.get_resource(
-            **{pk_field: key})
-        obj.__acl__ = self.context_acl(obj)
-        obj.__parent__ = self
-        obj.__name__ = key
-        return obj
+        if not self.es_based:
+            return super(BaseACL, self).__getitem__(key)
+        return self.getitem_es(self.item_db_id(key))
 
     def getitem_es(self, key):
-        """ Get item with ID of :key: from elasticsearch """
-        from nefertari.elasticsearch import ES
-        es = ES(self.__context_class__.__name__)
+        es = ES(self.item_model.__name__)
         obj = es.get_resource(id=key)
-        obj.__acl__ = self.context_acl(obj)
+        obj.__acl__ = self.item_acl(obj)
         obj.__parent__ = self
         obj.__name__ = key
         return obj
@@ -182,7 +175,7 @@ class BaseACL(SelfParamMixin):
 def generate_acl(model_cls, raml_resource, es_based=True):
     """ Generate an ACL.
 
-    Generated ACL class has a `__context_class__` attribute set to
+    Generated ACL class has a `item_model` attribute set to
     :model_cls:.
 
     ACLs used for collection and item access control are generated from a
@@ -216,12 +209,12 @@ def generate_acl(model_cls, raml_resource, es_based=True):
             methods_map=item_methods)
 
     class GeneratedACL(BaseACL):
-        __context_class__ = model_cls
+        item_model = model_cls
 
         def __init__(self, request, es_based=es_based):
             super(GeneratedACL, self).__init__(request=request)
             self.es_based = es_based
-            self.collection_acl = collection_acl
-            self.item_acl = item_acl
+            self._collection_acl = collection_acl
+            self._item_acl = item_acl
 
     return GeneratedACL
