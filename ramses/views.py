@@ -243,23 +243,15 @@ class ESBaseView(BaseView):
         queryset, thus filtering out objects that don't belong to the parent
         object.
         """
-        from nefertari.elasticsearch import ES
-        es = ES(self.Model.__name__)
         objects_ids = self._parent_queryset_es()
 
         if objects_ids is not None:
             objects_ids = self.get_es_object_ids(objects_ids)
-
             if not objects_ids:
                 return []
             self._query_params['id'] = objects_ids
 
-        params = self._query_params.copy()
-
-        if ES.settings.asbool('acl_filtering'):
-            params['_identifiers'] = self.request.effective_principals
-
-        return es.get_collection(**params)
+        return super(ESBaseView, self).get_collection_es(**kwargs)
 
     def get_item_es(self, **kwargs):
         """ Get ES collection item taking into account generated queryset
