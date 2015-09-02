@@ -135,7 +135,7 @@ class BaseACL(CollectionACL):
             else:
                 ace = [ace]
             new_acl += ace
-        return new_acl
+        return tuple(new_acl)
 
     def __acl__(self):
         """ Apply callables to `self._collection_acl` and return result. """
@@ -144,10 +144,13 @@ class BaseACL(CollectionACL):
             methods_map=collection_methods)
 
     def generate_item_acl(self, item):
-        return self._apply_callables(
+        acl = self._apply_callables(
             acl=self._item_acl,
             methods_map=item_methods,
             obj=item)
+        if acl is None:
+            acl = self.__acl__()
+        return acl
 
     def item_acl(self, item):
         """ Apply callables to `self._item_acl` and return result. """
