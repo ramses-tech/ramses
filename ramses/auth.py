@@ -187,21 +187,23 @@ def setup_auth_policies(config, raml_root):
 
 def create_system_user(config):
     log.info('Creating system user')
-    from pyramid.security import Allow, ALL_PERMISSIONS
     settings = config.registry.settings
     try:
         auth_model = config.registry.auth_model
         s_user = settings['system.user']
         s_pass = settings['system.password']
         s_email = settings['system.email']
+        defaults = dict(
+            password=s_pass,
+            email=s_email,
+            groups=['admin'],
+        )
+        if config.registry.database_acls:
+            from pyramid.security import Allow, ALL_PERMISSIONS
+            defaults['_acl'] = [(Allow, 'g:admin', ALL_PERMISSIONS)]
+
         user, created = auth_model.get_or_create(
-            username=s_user,
-            defaults=dict(
-                password=s_pass,
-                email=s_email,
-                groups=['admin'],
-                _acl=[(Allow, 'g:admin', ALL_PERMISSIONS)],
-            ))
+            username=s_user, defaults=defaults)
         if created:
             transaction.commit()
     except KeyError as e:

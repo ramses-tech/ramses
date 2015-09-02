@@ -485,7 +485,7 @@ def generate_rest_view(config, model_cls, attrs=None, es_based=True,
 
     if config.registry.database_acls:
         from nefertari_guards.view import ACLFilterViewMixin
-        bases += [SetObjectACLMixin, ACLFilterViewMixin]
+        bases = [SetObjectACLMixin] + bases + [ACLFilterViewMixin]
     bases.append(NefertariBaseView)
 
     RESTView = type('RESTView', tuple(bases), {'Model': model_cls})
