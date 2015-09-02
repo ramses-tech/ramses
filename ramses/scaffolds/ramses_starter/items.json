@@ -1,22 +1,29 @@
 {
     "type": "object",
     "title": "Item schema",
-    "$schema": "http://json-schema.org/draft-03/schema",
+    "$schema": "http://json-schema.org/draft-04/schema",
+    "required": ["id", "name"],
     "properties": {
         "id": {
-            "required": true,
-            "type": "id_field",
-            "args": {
+            "type": ["integer", "null"],
+            "_db_settings": {
+                "type": "id_field",
+                "required": true,
                 "primary_key": true
             }
         },
         "name": {
-            "required": true,
-            "type": "string"
+            "type": "string",
+            "_db_settings": {
+                "type": "string",
+                "required": true
+            }
         },
         "description": {
-            "required": false,
-            "type": "text"
+            "type": ["string", "null"],
+            "_db_settings": {
+                "type": "text"
+            }
         }
     }
 }

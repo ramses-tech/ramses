@@ -12,7 +12,7 @@ requires = [
     'inflection',
     'transaction',
     'six',
-    'nefertari>=0.4.1',
+    'nefertari>=0.5.0',
 ]
 
 setup(name='ramses',

@@ -1,15 +1,17 @@
 Field Processors
 ================
 
+.. _writing-processors:
+
 Writing Processors
 ------------------
 
-You can write custom functions inside your ``__init__.py`` file, then simply add the ``@registry.add`` decorator before the functions that you'd like to turn into processors. You can conviniently use Nefertari's `Wrapper API <https://nefertari.readthedocs.org/en/stable/database_backends.html#id1>`_ by importing the engine module: ``from nefertari import engine``.
+You can write custom functions inside your ``__init__.py`` file, then add the ``@registry.add`` decorator before the functions that you'd like to turn into processors.
 
 A processor receives a number of keyword arguments:
 
 * ``kwargs['instance']`` is the object instance being created or updated
-* ``kwargs['new_value']`` is the new value being set
+* ``kwargs['new_value']`` is the new value being set, or the value returned by the previous processor if there are multiple processors on the same field
 * ``kwargs['field']`` is the name of the field
 * ``kwargs['request']`` is the request object which includes the user object `request.user`
 
@@ -19,21 +21,14 @@ E.g.
 
     @registry.add
     def lowercase(**kwargs):
-        """ This processor lowercases the new value of a field """
+        """ This processor lowercases the value of a field """
         return (kwargs['new_value'] or '').lower()
 
-To apply this processor on a field, you can list the name of the method in the ``before_validation`` property of that field's ``args``.
 
-.. code-block:: json
+To apply processors to your fields, see the :ref:`Field Processors documentation<field-processors>`. Note that you can use Nefertari's `Wrapper API <https://nefertari.readthedocs.org/en/stable/models.html#wrapper-api>`_ by importing the engine module: ``from nefertari import engine``.
 
-    "field": {
-        (...)
-        "args": {
-            "before_validation": ["lowercase"]
-        }
-    }
 
-Other things You Can Do
+Other Things You Can Do
 -----------------------
 
 You can update another field's value, for example, increment a counter E.g.

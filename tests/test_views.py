@@ -27,6 +27,18 @@ class ViewTestBase(object):
         return View(request=request, **self.view_kwargs)
 
 
+class TestSetObjectACLMixin(object):
+    def test_set_object_acl(self):
+        view = views.SetObjectACLMixin()
+        view.request = 'foo'
+        view._factory = Mock()
+        obj = Mock(_acl=None)
+        view.set_object_acl(obj)
+        view._factory.assert_called_once_with(view.request)
+        view._factory().generate_item_acl.assert_called_once_with(obj)
+        assert obj._acl == view._factory().generate_item_acl()
+
+
 class TestBaseView(ViewTestBase):
     view_cls = views.BaseView
 
@@ -40,15 +52,6 @@ class TestBaseView(ViewTestBase):
         assert view.clean_id_name == 'foo'
         view._resource = Mock(id_name='foo_bar')
         assert view.clean_id_name == 'bar'
-
-    def test_set_object_acl(self):
-        view = self._test_view()
-        view._factory = Mock()
-        obj = Mock(_acl=None)
-        view.set_object_acl(obj)
-        view._factory.assert_called_once_with(view.request)
-        view._factory().context_acl.assert_called_once_with(obj)
-        assert obj._acl == view._factory().context_acl()
 
     def test_resolve_kw(self):
         view = self._test_view()
@@ -149,7 +152,7 @@ class TestBaseView(ViewTestBase):
         view_cls._json_encoder = 'foo'
 
         request = Mock(
-            registry={'foo': 'bar'},
+            registry=Mock(),
             path='/foo/foo',
             matchdict={'username': 'user12', 'prof_id': 4},
             accept=[''], method='GET'
@@ -171,7 +174,7 @@ class TestBaseView(ViewTestBase):
 
     def test_reload_context(self):
         class Factory(dict):
-            __context_class__ = None
+            item_model = None
 
             def __getitem__(self, key):
                 return key
@@ -297,7 +300,7 @@ class TestESBaseView(ViewTestBase):
         view_cls._json_encoder = 'foo'
 
         request = Mock(
-            registry={'foo': 'bar'},
+            registry=Mock(),
             path='/foo/foo',
             matchdict={'username': 'user12', 'prof_id': 4},
             accept=[''], method='GET'
@@ -329,7 +332,7 @@ class TestESBaseView(ViewTestBase):
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=None)
         view.Model = Mock(__name__='Foo')
-        view.get_collection_es(arg=1)
+        view.get_collection_es()
         mock_es.assert_called_once_with('Foo')
         mock_es().get_collection.assert_called_once_with(
             _limit=20, foo='bar')
@@ -341,7 +344,7 @@ class TestESBaseView(ViewTestBase):
         view._parent_queryset_es = Mock(return_value=[1, 2])
         view.Model = Mock(__name__='Foo')
         view.get_es_object_ids = Mock(return_value=None)
-        result = view.get_collection_es(arg=1)
+        result = view.get_collection_es()
         assert not mock_es().get_collection.called
         assert result == []
 
@@ -352,7 +355,7 @@ class TestESBaseView(ViewTestBase):
         view._parent_queryset_es = Mock(return_value=['obj1', 'obj2'])
         view.Model = Mock(__name__='Foo')
         view.get_es_object_ids = Mock(return_value=[1, 2])
-        view.get_collection_es(arg=7)
+        view.get_collection_es()
         view.get_es_object_ids.assert_called_once_with(['obj1', 'obj2'])
         mock_es().get_collection.assert_called_once_with(
             _limit=20, foo='bar', id=[1, 2])
@@ -415,7 +418,7 @@ class TestESCollectionView(ViewTestBase):
         view.aggregate = Mock(side_effect=KeyError)
         view.get_collection_es = Mock()
         resp = view.index(foo=1)
-        view.get_collection_es.assert_called_once_with(foo=1)
+        view.get_collection_es.assert_called_once_with()
         assert resp == view.get_collection_es()
 
     def test_show(self):
@@ -450,7 +453,7 @@ class TestESCollectionView(ViewTestBase):
         view.get_collection_es = Mock(return_value=[1, 2])
         view.Model = Mock()
         result = view.get_dbcollection_with_es(foo='bar')
-        view.get_collection_es.assert_called_once_with(foo='bar')
+        view.get_collection_es.assert_called_once_with()
         view.Model.filter_objects.assert_called_once_with([1, 2])
         assert result == view.Model.filter_objects()
 

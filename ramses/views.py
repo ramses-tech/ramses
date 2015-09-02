@@ -31,6 +31,13 @@ item_methods = {
 }
 
 
+class SetObjectACLMixin(object):
+    def set_object_acl(self, obj):
+        """ Set object ACL on creation if not already present. """
+        if not obj._acl:
+            obj._acl = self._factory(self.request).generate_item_acl(obj)
+
+
 class BaseView(NefertariBaseView):
     """ Base view class for other all views that defines few helper methods.
 
@@ -46,9 +53,7 @@ class BaseView(NefertariBaseView):
             return id_name
 
     def set_object_acl(self, obj):
-        """ Set object ACL on creation if not already present. """
-        if not obj._acl:
-            obj._acl = self._factory(self.request).context_acl(obj)
+        pass
 
     def resolve_kw(self, kwargs):
         """ Resolve :kwargs: like `story_id: 1` to the form of `id: 1`.
@@ -153,8 +158,8 @@ class BaseView(NefertariBaseView):
             kwargs['es_based'] = es_based
 
         acl = self._factory(**kwargs)
-        if acl.__context_class__ is None:
-            acl.__context_class__ = self.Model
+        if acl.item_model is None:
+            acl.item_model = self.Model
 
         self.context = acl[key]
 
@@ -234,7 +239,7 @@ class ESBaseView(BaseView):
         ids = [getattr(obj, id_field, obj) for obj in objects]
         return list(set(str(id_) for id_ in ids))
 
-    def get_collection_es(self, **kwargs):
+    def get_collection_es(self):
         """ Get ES objects collection taking into account the generated
         queryset of parent view.
 
@@ -251,7 +256,7 @@ class ESBaseView(BaseView):
                 return []
             self._query_params['id'] = objects_ids
 
-        return super(ESBaseView, self).get_collection_es(**kwargs)
+        return super(ESBaseView, self).get_collection_es()
 
     def get_item_es(self, **kwargs):
         """ Get ES collection item taking into account generated queryset
@@ -285,7 +290,7 @@ class ESCollectionView(ESBaseView, CollectionView):
     Write operations are inherited from :CollectionView:
     """
     def index(self, **kwargs):
-        return self.get_collection_es(**kwargs)
+        return self.get_collection_es()
 
     def show(self, **kwargs):
         return self.get_item_es(**kwargs)
@@ -306,7 +311,7 @@ class ESCollectionView(ESBaseView, CollectionView):
 
     def get_dbcollection_with_es(self, **kwargs):
         """ Get DB objects collection by first querying ES. """
-        es_objects = self.get_collection_es(**kwargs)
+        es_objects = self.get_collection_es()
         db_objects = self.Model.filter_objects(es_objects)
         return db_objects
 

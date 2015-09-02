@@ -1,6 +1,6 @@
 import logging
 
-from inflection import pluralize, singularize
+from inflection import singularize
 
 from .views import generate_rest_view
 from .acl import generate_acl
@@ -108,7 +108,7 @@ def generate_resource(raml_resource, parent_resource):
     resource_args = (singularize(clean_uri),)
 
     if not is_singular:
-        resource_args += (pluralize(clean_uri),)
+        resource_args += (clean_uri,)
 
     return parent_resource.add(*resource_args, **resource_kwargs)
 
