@@ -189,8 +189,9 @@ class DatabaseACLMixin(object):
         """
         if self.es_based:
             from nefertari_guards import engine as guards_engine
+            acl = getattr(item, '_acl', ())
             return guards_engine.ACLField.objectify_acl([
-                ace._data for ace in item._acl])
+                ace._data for ace in acl])
         return item.get_acl()
 
 
