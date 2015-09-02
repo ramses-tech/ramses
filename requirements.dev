@@ -5,4 +5,5 @@ releases
 sphinx
 
 git+https://github.com/brandicted/nefertari.git@acls_in_db#egg=nefertari
+
 -e .

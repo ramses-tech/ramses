@@ -131,6 +131,24 @@ class TestGenerateACL(object):
         assert instance._item_acl == mock_parse()
         assert not instance.es_based
 
+    def test_database_acls_option(self, mock_parse):
+        from ramses.acl import DatabaseACLMixin
+        raml_resource = Mock(security_schemes=[
+            Mock(type='x-ACL', settings={'collection': 4, 'item': 7})
+        ])
+        kwargs = dict(
+            model_cls='Foo',
+            raml_resource=raml_resource,
+            es_based=False,
+        )
+        config = config_mock()
+        config.registry.database_acls = False
+        acl_cls = acl.generate_acl(config, **kwargs)
+        assert not issubclass(acl_cls, DatabaseACLMixin)
+        config.registry.database_acls = True
+        acl_cls = acl.generate_acl(config, **kwargs)
+        assert issubclass(acl_cls, DatabaseACLMixin)
+
 
 class TestBaseACL(object):
 
