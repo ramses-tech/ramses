@@ -3,8 +3,10 @@ from mock import Mock, patch
 
 from nefertari.json_httpexceptions import (
     JHTTPNotFound, JHTTPMethodNotAllowed)
+from nefertari.view import BaseView
 
 from ramses import views
+from .fixtures import config_mock
 
 
 class ViewTestBase(object):
@@ -20,7 +22,7 @@ class ViewTestBase(object):
     )
 
     def _test_view(self):
-        class View(self.view_cls):
+        class View(self.view_cls, BaseView):
             _json_encoder = 'foo'
 
         request = Mock(**self.request_kwargs)
@@ -142,12 +144,16 @@ class TestBaseView(ViewTestBase):
         config = Configurator()
         config.include('nefertari')
         root = config.get_root_resource()
+
+        class View(self.view_cls, BaseView):
+            _json_encoder = 'foo'
+
         user = root.add(
             'user', 'users', id_name='username',
-            view=views.BaseView, factory=BaseACL)
+            view=View, factory=BaseACL)
         user.add(
             'story', 'stories', id_name='prof_id',
-            view=views.BaseView, factory=BaseACL)
+            view=View, factory=BaseACL)
         view_cls = root.resource_map['user:story'].view
         view_cls._json_encoder = 'foo'
 
@@ -287,15 +293,19 @@ class TestESBaseView(ViewTestBase):
     def test_parent_queryset_es(self):
         from pyramid.config import Configurator
         from ramses.acl import BaseACL
+
+        class View(self.view_cls, BaseView):
+            _json_encoder = 'foo'
+
         config = Configurator()
         config.include('nefertari')
         root = config.get_root_resource()
         user = root.add(
             'user', 'users', id_name='username',
-            view=views.ESBaseView, factory=BaseACL)
+            view=View, factory=BaseACL)
         user.add(
             'story', 'stories', id_name='prof_id',
-            view=views.ESBaseView, factory=BaseACL)
+            view=View, factory=BaseACL)
         view_cls = root.resource_map['user:story'].view
         view_cls._json_encoder = 'foo'
 
@@ -618,10 +628,11 @@ class TestItemSingularView(ViewTestBase):
 
 class TestRestViewGeneration(object):
 
-    @patch('ramses.views.ESCollectionView._run_init_actions')
+    @patch('ramses.views.NefertariBaseView._run_init_actions')
     def test_only_provided_attrs_are_available(self, run_init):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show', 'foobar'],
+            config, model_cls='foo', attrs=['show', 'foobar'],
             es_based=True, attr_view=False, singular=False)
         view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ESCollectionView)
@@ -647,38 +658,43 @@ class TestRestViewGeneration(object):
             view.index()
 
     def test_singular_view(self):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show'],
+            config, model_cls='foo', attrs=['show'],
             es_based=True, attr_view=False, singular=True)
         view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ItemSingularView)
 
     def test_attribute_view(self):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show'],
+            config, model_cls='foo', attrs=['show'],
             es_based=True, attr_view=True, singular=False)
         view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ItemAttributeView)
 
     def test_escollection_view(self):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show'],
+            config, model_cls='foo', attrs=['show'],
             es_based=True, attr_view=False, singular=False)
         view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)
 
     def test_dbcollection_view(self):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show'],
+            config, model_cls='foo', attrs=['show'],
             es_based=False, attr_view=False, singular=False)
         view_cls._json_encoder = 'foo'
         assert not issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)
 
     def test_default_values(self):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show'])
+            config, model_cls='foo', attrs=['show'])
         view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)

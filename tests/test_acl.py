@@ -7,6 +7,8 @@ from pyramid.security import (
 
 from ramses import acl
 
+from .fixtures import config_mock
+
 
 class TestACLHelpers(object):
     methods_map = {'get': 'index', 'post': 'create'}
@@ -81,8 +83,9 @@ class TestACLHelpers(object):
 class TestGenerateACL(object):
 
     def test_no_security(self, mock_parse):
+        config = config_mock()
         acl_cls = acl.generate_acl(
-            model_cls='Foo',
+            config, model_cls='Foo',
             raml_resource=Mock(security_schemes=[]),
             es_based=True)
         assert acl_cls.item_model == 'Foo'
@@ -97,8 +100,9 @@ class TestGenerateACL(object):
         raml_resource = Mock(security_schemes=[
             Mock(type='x-Foo', settings={'collection': 4, 'item': 7})
         ])
+        config = config_mock()
         acl_cls = acl.generate_acl(
-            model_cls='Foo',
+            config, model_cls='Foo',
             raml_resource=raml_resource,
             es_based=False)
         assert not mock_parse.called
@@ -113,8 +117,9 @@ class TestGenerateACL(object):
         raml_resource = Mock(security_schemes=[
             Mock(type='x-ACL', settings={'collection': 4, 'item': 7})
         ])
+        config = config_mock()
         acl_cls = acl.generate_acl(
-            model_cls='Foo',
+            config, model_cls='Foo',
             raml_resource=raml_resource,
             es_based=False)
         mock_parse.assert_has_calls([
@@ -142,7 +147,7 @@ class TestBaseACL(object):
             acl=[('foo', 'bar', 'baz')],
             methods_map={'zoo': 1},
             obj='obj')
-        assert new_acl == [('foo', 'bar', 'baz')]
+        assert new_acl == (('foo', 'bar', 'baz'),)
 
     @patch.object(acl, 'methods_to_perms')
     def test_apply_callables(self, mock_meth):
@@ -153,7 +158,7 @@ class TestBaseACL(object):
             acl=[('foo', principal, 'bar')],
             methods_map={'zoo': 1},
             obj='obj')
-        assert new_acl == [(7, 8, '123')]
+        assert new_acl == ((7, 8, '123'),)
         principal.assert_called_once_with(
             ace=('foo', principal, 'bar'),
             request='req',
@@ -169,7 +174,7 @@ class TestBaseACL(object):
             acl=[('foo', principal, 'bar')],
             methods_map={'zoo': 1},
             obj='obj')
-        assert new_acl == []
+        assert new_acl == ()
         principal.assert_called_once_with(
             ace=('foo', principal, 'bar'),
             request='req',
@@ -185,7 +190,7 @@ class TestBaseACL(object):
             acl=[('foo', principal, 'bar')],
             methods_map={'zoo': 1},
             obj='obj')
-        assert new_acl == [(7, 8, '123')]
+        assert new_acl == ((7, 8, '123'),)
         principal.assert_called_once_with(
             ace=('foo', principal, 'bar'),
             request='req',
@@ -199,7 +204,7 @@ class TestBaseACL(object):
             acl=[(Deny, principal, ALL_PERMISSIONS)],
             methods_map=acl.item_methods,
         )
-        assert new_acl == [(Allow, Everyone, ['view'])]
+        assert new_acl == ((Allow, Everyone, ['view']),)
 
     def test_magic_acl(self):
         obj = acl.BaseACL('req')

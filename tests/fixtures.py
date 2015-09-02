@@ -28,3 +28,10 @@ def engine_mock(request):
     request.addfinalizer(clear)
 
     return nefertari.engine
+
+
+def config_mock():
+    from mock import Mock
+    config = Mock()
+    config.registry.database_acls = False
+    return config
