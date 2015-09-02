@@ -6,7 +6,7 @@ from nefertari.json_httpexceptions import (
 from nefertari.view import BaseView
 
 from ramses import views
-from .fixtures import config_mock
+from .fixtures import config_mock, guards_engine_mock
 
 
 class ViewTestBase(object):
@@ -699,3 +699,23 @@ class TestRestViewGeneration(object):
         assert issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)
         assert view_cls.Model == 'foo'
+
+    def test_database_acls_option(self):
+        from nefertari_guards.view import ACLFilterViewMixin
+        config = config_mock()
+
+        config.registry.database_acls = False
+        view_cls = views.generate_rest_view(
+            config, model_cls='foo', attrs=['show'],
+            es_based=False, attr_view=False, singular=False)
+        assert not issubclass(
+            view_cls, ACLFilterViewMixin)
+        assert not issubclass(
+            view_cls, views.SetObjectACLMixin)
+
+        config.registry.database_acls = True
+        view_cls = views.generate_rest_view(
+            config, model_cls='foo', attrs=['show'],
+            es_based=False, attr_view=False, singular=False)
+        assert issubclass(view_cls, views.SetObjectACLMixin)
+        assert issubclass(view_cls, ACLFilterViewMixin)

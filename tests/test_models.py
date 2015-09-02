@@ -1,7 +1,7 @@
 import pytest
 from mock import Mock, patch, call
 
-from .fixtures import engine_mock, config_mock
+from .fixtures import engine_mock, config_mock, guards_engine_mock
 
 
 @pytest.mark.usefixtures('engine_mock')
@@ -207,6 +207,26 @@ class TestGenerateModelCls(object):
             raml_resource=None)
         assert auth_model
         assert issubclass(model_cls, AuthModelMethodsMixin)
+
+    def test_database_acls_option(self, mock_reg, guards_engine_mock):
+        from ramses import models
+        schema = self._test_schema()
+        schema['properties']['progress'] = {'_db_settings': {}}
+        schema['_auth_model'] = True
+        mock_reg.mget.return_value = {'foo': 'bar'}
+        config = config_mock()
+
+        config.registry.database_acls = False
+        model_cls, auth_model = models.generate_model_cls(
+            config, schema=schema, model_name='Story1',
+            raml_resource=None)
+        assert not issubclass(model_cls, guards_engine_mock.DocumentACLMixin)
+
+        config.registry.database_acls = True
+        model_cls, auth_model = models.generate_model_cls(
+            config, schema=schema, model_name='Story2',
+            raml_resource=None)
+        assert issubclass(model_cls, guards_engine_mock.DocumentACLMixin)
 
     def test_db_based_model(self, mock_reg):
         from nefertari.authentication.models import AuthModelMethodsMixin
