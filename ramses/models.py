@@ -54,7 +54,7 @@ def get_existing_model(model_name):
         log.debug('Model `{}` does not exist'.format(model_name))
 
 
-def prepare_relationship(field_name, model_name, raml_resource):
+def prepare_relationship(config, field_name, model_name, raml_resource):
     """ Create referenced model if it doesn't exist.
 
     When preparing a relationship, we check to see if the model that will be
@@ -76,10 +76,11 @@ def prepare_relationship(field_name, model_name, raml_resource):
         else:
             raise ValueError('Model `{}` used in relationship `{}` is not '
                              'defined'.format(model_name, field_name))
-        setup_data_model(res, model_name)
+        setup_data_model(config, res, model_name)
 
 
-def generate_model_cls(schema, model_name, raml_resource, es_based=True):
+def generate_model_cls(config, schema, model_name, raml_resource,
+                       es_based=True):
     """ Generate model class.
 
     Engine DB field types are determined using `type_fields` and only those
@@ -98,10 +99,15 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     model_name = str(model_name)
     metaclass = type(base_cls)
     auth_model = schema.get('_auth_model', False)
+
+    bases = []
+    if config.registry.database_acls:
+        from nefertari_guards import engine as guards_engine
+        bases.append(guards_engine.DocumentACLMixin)
     if auth_model:
-        bases = (AuthModelMethodsMixin, base_cls)
-    else:
-        bases = (base_cls,)
+        bases.append(AuthModelMethodsMixin)
+    bases.append(base_cls)
+
     attrs = {
         '__tablename__': model_name.lower(),
         '_public_fields': schema.get('_public_fields') or [],
@@ -144,7 +150,8 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
 
         if field_cls is engine.Relationship:
             prepare_relationship(
-                field_name, field_kwargs['document'], raml_resource)
+                config, field_name, field_kwargs['document'],
+                raml_resource)
         if field_cls is engine.ForeignKeyField:
             key = 'ref_column_type'
             field_kwargs[key] = type_fields[field_kwargs[key]]
@@ -158,10 +165,10 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     attrs.update(registry.mget(model_name))
 
     # Generate new model class
-    return metaclass(model_name, bases, attrs), auth_model
+    return metaclass(model_name, tuple(bases), attrs), auth_model
 
 
-def setup_data_model(raml_resource, model_name):
+def setup_data_model(config, raml_resource, model_name):
     """ Setup storage/data model and return generated model class.
 
     Process follows these steps:
@@ -172,7 +179,6 @@ def setup_data_model(raml_resource, model_name):
     :param raml_resource: Instance of ramlfications.raml.ResourceNode.
     :param model_name: String representing model name.
     """
-    from .models import generate_model_cls, get_existing_model
     model_cls = get_existing_model(model_name)
     if model_cls is not None:
         return model_cls, False
@@ -183,13 +189,14 @@ def setup_data_model(raml_resource, model_name):
 
     log.info('Generating model class `{}`'.format(model_name))
     return generate_model_cls(
+        config,
         schema=schema,
         model_name=model_name,
         raml_resource=raml_resource,
     )
 
 
-def handle_model_generation(raml_resource, route_name):
+def handle_model_generation(config, raml_resource, route_name):
     """ Generates model name and runs `setup_data_model` to get
     or generate actual model class.
 
@@ -198,6 +205,6 @@ def handle_model_generation(raml_resource, route_name):
     """
     model_name = generate_model_name(route_name)
     try:
-        return setup_data_model(raml_resource, model_name)
+        return setup_data_model(config, raml_resource, model_name)
     except ValueError as ex:
         raise ValueError('{}: {}'.format(model_name, str(ex)))

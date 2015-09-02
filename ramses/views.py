@@ -38,7 +38,7 @@ class SetObjectACLMixin(object):
             obj._acl = self._factory(self.request).generate_item_acl(obj)
 
 
-class BaseView(NefertariBaseView):
+class BaseView(object):
     """ Base view class for other all views that defines few helper methods.
 
     Use `self.get_collection` and `self.get_item` to get access to set of
@@ -452,7 +452,7 @@ class ItemSingularView(ItemSubresourceBaseView):
         obj.delete(self.request)
 
 
-def generate_rest_view(model_cls, attrs=None, es_based=True,
+def generate_rest_view(config, model_cls, attrs=None, es_based=True,
                        attr_view=False, singular=False):
     """ Generate REST view for a model class.
 
@@ -475,19 +475,23 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
     missing_attrs = set(valid_attrs) - set(attrs)
 
     if singular:
-        base_view_cls = ItemSingularView
+        bases = [ItemSingularView]
     elif attr_view:
-        base_view_cls = ItemAttributeView
+        bases = [ItemAttributeView]
     elif es_based:
-        base_view_cls = ESCollectionView
+        bases = [ESCollectionView]
     else:
-        base_view_cls = CollectionView
+        bases = [CollectionView]
+
+    if config.registry.database_acls:
+        from nefertari_guards.view import ACLFilterViewMixin
+        bases += [SetObjectACLMixin, ACLFilterViewMixin]
+    bases.append(NefertariBaseView)
+
+    RESTView = type('RESTView', tuple(bases), {'Model': model_cls})
 
     def _attr_error(*args, **kwargs):
         raise AttributeError
-
-    class RESTView(base_view_cls):
-        Model = model_cls
 
     for attr in missing_attrs:
         setattr(RESTView, attr, property(_attr_error))

@@ -194,7 +194,7 @@ class DatabaseACLMixin(object):
         return item.get_acl()
 
 
-def generate_acl(model_cls, raml_resource, es_based=True):
+def generate_acl(config, model_cls, raml_resource, es_based=True):
     """ Generate an ACL.
 
     Generated ACL class has a `item_model` attribute set to
@@ -230,13 +230,18 @@ def generate_acl(model_cls, raml_resource, es_based=True):
             acl_string=settings.get('item'),
             methods_map=item_methods)
 
-    class GeneratedACL(BaseACL):
+    class GeneratedACLBase(object):
         item_model = model_cls
 
         def __init__(self, request, es_based=es_based):
-            super(GeneratedACL, self).__init__(request=request)
+            super(GeneratedACLBase, self).__init__(request=request)
             self.es_based = es_based
             self._collection_acl = collection_acl
             self._item_acl = item_acl
 
-    return GeneratedACL
+    bases = [GeneratedACLBase]
+    if config.registry.database_acls:
+        bases.append(DatabaseACLMixin)
+    bases.append(BaseACL)
+
+    return type('GeneratedACL', tuple(bases), {})
