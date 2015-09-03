@@ -4,7 +4,8 @@ from nefertari import engine
 
 from .utils import (
     resolve_to_callable, is_callable_tag,
-    resource_schema, generate_model_name)
+    resource_schema, generate_model_name,
+    get_events_map)
 from . import registry
 
 
@@ -54,7 +55,7 @@ def get_existing_model(model_name):
         log.debug('Model `{}` does not exist'.format(model_name))
 
 
-def prepare_relationship(field_name, model_name, raml_resource):
+def prepare_relationship(config, field_name, model_name, raml_resource):
     """ Create referenced model if it doesn't exist.
 
     When preparing a relationship, we check to see if the model that will be
@@ -76,10 +77,11 @@ def prepare_relationship(field_name, model_name, raml_resource):
         else:
             raise ValueError('Model `{}` used in relationship `{}` is not '
                              'defined'.format(model_name, field_name))
-        setup_data_model(res, model_name)
+        setup_data_model(config, res, model_name)
 
 
-def generate_model_cls(schema, model_name, raml_resource, es_based=True):
+def generate_model_cls(config, schema, model_name, raml_resource,
+                       es_based=True):
     """ Generate model class.
 
     Engine DB field types are determined using `type_fields` and only those
@@ -126,15 +128,6 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
             if is_callable_tag(value):
                 field_kwargs[default_attr_key] = resolve_to_callable(value)
 
-        for processor_key in ('before_validation',
-                              'after_validation',
-                              'backref_before_validation',
-                              'backref_after_validation'):
-            if processor_key in field_kwargs:
-                processors = field_kwargs.get(processor_key, [])
-                field_kwargs[processor_key] = [
-                    resolve_to_callable(name) for name in processors]
-
         type_name = (
             field_kwargs.pop('type', 'string') or 'string').lower()
         if type_name not in type_fields:
@@ -144,7 +137,8 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
 
         if field_cls is engine.Relationship:
             prepare_relationship(
-                field_name, field_kwargs['document'], raml_resource)
+                config, field_name, field_kwargs['document'],
+                raml_resource)
         if field_cls is engine.ForeignKeyField:
             key = 'ref_column_type'
             field_kwargs[key] = type_fields[field_kwargs[key]]
@@ -158,10 +152,12 @@ def generate_model_cls(schema, model_name, raml_resource, es_based=True):
     attrs.update(registry.mget(model_name))
 
     # Generate new model class
-    return metaclass(model_name, bases, attrs), auth_model
+    model_cls = metaclass(model_name, bases, attrs)
+    setup_event_subscribers(config, model_cls, schema)
+    return model_cls, auth_model
 
 
-def setup_data_model(raml_resource, model_name):
+def setup_data_model(config, raml_resource, model_name):
     """ Setup storage/data model and return generated model class.
 
     Process follows these steps:
@@ -183,13 +179,14 @@ def setup_data_model(raml_resource, model_name):
 
     log.info('Generating model class `{}`'.format(model_name))
     return generate_model_cls(
+        config,
         schema=schema,
         model_name=model_name,
         raml_resource=raml_resource,
     )
 
 
-def handle_model_generation(raml_resource, route_name):
+def handle_model_generation(config, raml_resource, route_name):
     """ Generates model name and runs `setup_data_model` to get
     or generate actual model class.
 
@@ -198,6 +195,54 @@ def handle_model_generation(raml_resource, route_name):
     """
     model_name = generate_model_name(route_name)
     try:
-        return setup_data_model(raml_resource, model_name)
+        return setup_data_model(config, raml_resource, model_name)
     except ValueError as ex:
         raise ValueError('{}: {}'.format(model_name, str(ex)))
+
+
+def _connect_subscribers(config, events_map, events_schema, event_kwargs):
+    """ Performs the actual subscribers set up.
+
+    :param config: Pyramid Configurator instance.
+    :param events_map: Dict returned by `get_events_map`.
+    :param events_schema: Dict of {event_tag: [handler1, ...]}
+    :param event_kwargs: Dict of kwargs to be used when subscribing
+        to event.
+    """
+    for event_tag, subscribers in events_schema.items():
+        type_, action = event_tag.split('_')
+        event_objects = events_map[type_][action]
+
+        if not isinstance(event_objects, list):
+            event_objects = [event_objects]
+
+        for sub_name in subscribers:
+            sub_func = resolve_to_callable(sub_name)
+            config.subscribe_to_events(
+                sub_func, event_objects, **event_kwargs)
+
+
+def setup_event_subscribers(config, model_cls, schema):
+    """ High level function to set up event subscribers.
+
+    :param config: Pyramid Configurator instance.
+    :param model_cls: Model class for which handlers should be connected.
+    :param schema: Dict of model JSON schema.
+    """
+    events_map = get_events_map()
+
+    # Model events
+    model_events = schema.get('_event_handlers', {})
+    event_kwargs = {'model': model_cls}
+    _connect_subscribers(config, events_map, model_events, event_kwargs)
+
+    # Field events
+    properties = schema.get('properties', {})
+    for field_name, props in properties.items():
+
+        if not props or '_event_handlers' not in props:
+            continue
+
+        field_events = props.get('_event_handlers', {})
+        event_kwargs = {'model': model_cls, 'field': field_name}
+        _connect_subscribers(config, events_map, field_events, event_kwargs)
