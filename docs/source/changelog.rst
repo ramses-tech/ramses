@@ -1,6 +1,9 @@
 Changelog
 =========
 
+* :release:`0.4.1 <2015-09-02>`
+* :bug:`-` Simplified ACLs (refactoring)
+
 * :release:`0.4.0 <2015-08-19>`
 * :support:`-` Added support for JSON schema draft 04
 * :support:`-` RAML is now parsed using ramlfications instead of pyraml-parser
