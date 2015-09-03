@@ -117,7 +117,7 @@ To set up subscribers per-modelfield, define ``_event_handlers`` param in JSON s
 Other Things You Can Do
 -----------------------
 
-You can update another field's value, for example, increment a counter. E.g. in per-field subscriber connected to item enpoint:
+You can update another field's value, for example, increment a counter. E.g. in subscriber connected to item enpoint:
 
 .. code-block:: python
 
