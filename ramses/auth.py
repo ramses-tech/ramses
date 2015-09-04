@@ -15,6 +15,7 @@ import logging
 import transaction
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
+from pyramid.security import Allow, ALL_PERMISSIONS
 
 from nefertari.utils import dictset
 from nefertari.json_httpexceptions import *
@@ -199,7 +200,6 @@ def create_system_user(config):
             groups=['admin'],
         )
         if config.registry.database_acls:
-            from pyramid.security import Allow, ALL_PERMISSIONS
             defaults['_acl'] = [(Allow, 'g:admin', ALL_PERMISSIONS)]
 
         user, created = auth_model.get_or_create(
