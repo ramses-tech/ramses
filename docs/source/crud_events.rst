@@ -3,7 +3,6 @@ CRUD Events
 
 Ramses supports Nefertari CRUD events. Following documentation describes how to define and connect them.
 
-
 Writing Processors
 ------------------
 
@@ -50,12 +49,16 @@ And one special action:
     * **set** - includes actions ``create``, ``update``, ``replace``, ``update_many``
 
 
-E.g. following connects ``lower_strip_processor`` subscriber to ``after_index`` event and the subscriber will be run after collection GET request is processed.
+E.g. following connects ``lower_strip_processor`` subscriber to ``before_set`` event and the subscriber will run before any of following requests are processed:
+    * Collection POST
+    * Item PATCH
+    * Item PUT
+    * Collection PATCH/PUT
 
 .. code-block:: json
 
     "_event_handlers": {
-        "after_index": ["lower_strip_processor"]
+        "before_set": ["lower_strip_processor"]
     }
 
 
@@ -69,6 +72,19 @@ We will use following subscriber to demo how to connect subscribers to events. T
     @registry.add
     def log_request(event):
         log.debug(event.request.body)
+
+
+Using before/after events
+-------------------------
+
+``before`` events should be used to:
+    * Transform input
+    * Perform validation
+    * Apply changes to object that is being affected by request using ``event.set_field_value`` method.
+
+And ``after`` events to:
+    * Change DB objects which are not affected by request.
+    * Perform notifications/logging.
 
 
 Per-model subscribers
@@ -92,8 +108,21 @@ To set up subscribers per-model, define ``_event_handlers`` param at the root of
 Per-modelfield subscribers
 --------------------------
 
-To set up subscribers per-modelfield, define ``_event_handlers`` param in JSON schema of model field you want to set up subscriber for(at the same level with ``_db_settings``). Following JSON schema example connects ``after_create`` for field ``User.username``. When connected this way, subscriber will only run when ``User`` collection POST request finishes and request body contains ``username`` field.
+To set up subscribers per-modelfield, define ``_event_handlers`` param in JSON schema of model field you want to set up subscriber for(at the same level with ``_db_settings``).
 
+E.g. if our model ``User`` has fields ``username`` we might want to make sure ``username`` is not a reserved word/name. If ``username`` is a reserved work, we want to raise an exception to interrupt request processing. To do so we define a subscriber:
+
+.. code-block:: python
+
+    @registry.add
+    def check_username(event):
+        reserved = ('admin', 'cat', 'system')
+        username = event.field.new_value
+        if username in reserved:
+            raise ValueError('Reserved username: {}'.format(username))
+
+
+Following JSON schema connects ``before_set`` for field ``User.username``. When connected this way, ``check_username`` subscriber will only run before any requests to ``User`` collection which have field ``username`` in request body are processed:
 
 .. code-block:: json
 
@@ -105,7 +134,7 @@ To set up subscribers per-modelfield, define ``_event_handlers`` param in JSON s
             "username": {
                 "_db_settings": {...},
                 "_event_handlers": {
-                    "after_create": ["log_request"]
+                    "before_set": ["check_username"]
                 }
             }
         }
