@@ -51,10 +51,10 @@ In your ``securitySchemes``, you can add as many ACLs as you need. Then you can 
             settings:
                 collection: |
                     allow admin all
-                    allow authenticated get
+                    allow authenticated view
                 item: |
                     allow admin all
-                    allow authenticated get
+                    allow authenticated view
     (...)
     /items:
         securedBy: [read_only_users]
