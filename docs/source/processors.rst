@@ -12,7 +12,8 @@ A processor receives a number of keyword arguments:
 
 * ``kwargs['instance']`` is the object instance being created or updated
 * ``kwargs['new_value']`` is the new value being set, or the value returned by the previous processor if there are multiple processors on the same field
-* ``kwargs['field']`` is the name of the field
+* ``kwargs['field'].name`` is the name of the field
+* ``kwargs['field'].params`` is the object containing the database field params, e.g. `min_length`
 * ``kwargs['request']`` is the request object which includes the user object `request.user`
 
 E.g.

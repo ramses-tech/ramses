@@ -26,7 +26,7 @@ This is a list of all available types:
 * decimal
 * dict
 * float
-* foreign_key (ignored/not required when using mongodb)
+* foreign_key
 * id_field
 * integer
 * interval
@@ -135,62 +135,6 @@ For 'relationship' fields, you can also add processors to your backref field by 
     }
 
 To learn more about writing custom processors, see the :ref:`Writing Processors documentation<writing-processors>`.
-
-
-Relationship Fields
--------------------
-
-You can define the name of your relation model by setting the ``document`` property under ``_db_settings`` in a relationship field. You can also set the ``backref_name`` which will automatically add a field of that name to the relation model.
-
-The example below will create a one-to-one relationship.
-
-.. code-block:: json
-
-    "capital": {
-        (...)
-        "_db_settings": {
-            "type": "relationship",
-            "document": "City",
-            "backref_name": "country",
-            "uselist": false
-        }
-    }
-
-The example below will create a one-to-many relationship.
-
-.. code-block:: json
-
-    "cities": {
-        (...)
-        "_db_settings": {
-            "type": "relationship",
-            "document": "City",
-            "backref_name": "country"
-        }
-    }
-
-The example below will create both relationships above.
-
-.. code-block:: json
-
-    "capital": {
-        (...)
-        "_db_settings": {
-            "type": "relationship",
-            "document": "City",
-            "uselist": false
-        }
-    },
-    "cities": {
-        (...)
-        "_db_settings": {
-            "type": "relationship",
-            "document": "City",
-            "backref_name": "country"
-        }
-    }
-
-Note that when using SQLA, you must add a ``foreign_keys`` property to your relation model in order to have multiple foreign keys pointing to the same model.
 
 
 Default Value

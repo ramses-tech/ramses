@@ -253,21 +253,11 @@ class TestCollectionView(ViewTestBase):
             view.request)
         assert resp is None
 
-    def test_delete_many_needs_confirm(self):
-        view = self._test_view()
-        view.Model = Mock()
-        view.get_collection = Mock()
-        view.needs_confirmation = Mock(return_value=True)
-        resp = view.delete_many(foo=1)
-        view.get_collection.assert_called_once_with()
-        assert resp == view.get_collection()
-
     def test_delete_many(self):
         view = self._test_view()
         view.Model = Mock(__name__='Mock')
         view.Model._delete_many.return_value = 123
         view.get_collection = Mock()
-        view.needs_confirmation = Mock(return_value=False)
         resp = view.delete_many(foo=1)
         view.get_collection.assert_called_once_with()
         view.Model._delete_many.assert_called_once_with(
@@ -467,19 +457,8 @@ class TestESCollectionView(ViewTestBase):
         view.Model.filter_objects.assert_called_once_with([1, 2])
         assert result == view.Model.filter_objects()
 
-    def test_delete_many_need_confirmation(self):
-        view = self._test_view()
-        view.needs_confirmation = Mock(return_value=True)
-        view.Model = Mock()
-        view.get_dbcollection_with_es = Mock()
-        result = view.delete_many(foo=1)
-        view.get_dbcollection_with_es.assert_called_once_with(foo=1)
-        assert result == view.get_dbcollection_with_es()
-        assert not view.Model._delete_many.called
-
     def test_delete_many(self):
         view = self._test_view()
-        view.needs_confirmation = Mock(return_value=False)
         view.Model = Mock(__name__='Foo')
         view.Model._delete_many.return_value = 123
         view.get_dbcollection_with_es = Mock()
@@ -491,7 +470,6 @@ class TestESCollectionView(ViewTestBase):
 
     def test_update_many(self):
         view = self._test_view()
-        view.needs_confirmation = Mock(return_value=False)
         view.Model = Mock(__name__='Foo')
         view.Model._update_many.return_value = 123
         view.get_dbcollection_with_es = Mock()
