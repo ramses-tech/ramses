@@ -382,15 +382,15 @@ class TestUtils(object):
             before.keys())
         assert sorted(events.AFTER_EVENTS.keys()) == sorted(
             after.keys())
-        assert sorted(after_set) == sorted([
+        assert after_set == [
             events.AfterCreate,
             events.AfterUpdate,
             events.AfterReplace,
             events.AfterUpdateMany,
-        ])
-        assert sorted(before_set) == sorted([
+        ]
+        assert before_set == [
             events.BeforeCreate,
             events.BeforeUpdate,
             events.BeforeReplace,
             events.BeforeUpdateMany,
-        ])
+        ]
