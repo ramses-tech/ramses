@@ -1,13 +1,12 @@
 CRUD Events
 ===========
 
-Ramses supports Nefertari CRUD events. Following documentation describes how to define and connect them.
+Ramses supports Nefertari CRUD events. The following documentation describes how to define and connect them.
 
 Writing Processors
 ------------------
 
-You can write custom functions inside your ``__init__.py`` file, then add the ``@registry.add`` decorator before the functions that you'd like to turn into CRUD event subscriber.
-CRUD event subscribers must have the same API as Nefertari CRUD event subscribers. Check Nefertari CRUD Events doc on more details on events API.
+You can write custom functions inside your ``__init__.py`` file, then add the ``@registry.add`` decorator before the functions that you'd like to turn into CRUD event subscribers. Ramses CRUD event subscribers has the same API as Nefertari CRUD event subscribers. Check Nefertari CRUD Events doc for more details on events API.
 
 E.g.
 
@@ -23,10 +22,9 @@ E.g.
 Connecting event subscribers
 ----------------------------
 
-When you defined event subscribers in your ``__init__.py`` as described above, you can connect them per-model or per-modelfield.
+When you define event subscribers in your ``__init__.py`` as described above, you can apply them on either a per-model or a per-field basis.
 
-In general subscribers are set up using ``_event_handlers`` param. Value of this param is an object, keys of which are so called "event tags" and values are list of subscriber names.
-Event tags are constructed of two parts: ``<type>_<action>`` where:
+Subscribers are defined using the ``_event_handlers`` property. This property is an object, keys of which are called "event tags" and values are lists of subscriber names. Event tags are constructed of two parts: ``<type>_<action>`` whereby:
 
 **type**
     Is either ``before`` or ``after``, depending on when subscriber should run - before view method call or after respectively.
@@ -46,23 +44,23 @@ Complete list of actions:
     * **item_options** - Item OPTIONS
 
 And one special action:
-    * **set** - includes actions ``create``, ``update``, ``replace``, ``update_many``
+    * **set** - triggers on either of the following actions: ``create``, ``update``, ``replace`` and ``update_many``
 
-
-E.g. following connects ``lower_strip_processor`` subscriber to ``before_set`` event and the subscriber will run before any of following requests are processed:
+E.g. The following example connects the ``lowercase`` subscriber to the ``before_set`` event and the subscriber will run before any of the following requests are processed:
     * Collection POST
     * Item PATCH
     * Item PUT
-    * Collection PATCH/PUT
+    * Collection PATCH
+    * Collection PUT
 
 .. code-block:: json
 
     "_event_handlers": {
-        "before_set": ["lower_strip_processor"]
+        "before_set": ["lowercase"]
     }
 
 
-We will use following subscriber to demo how to connect subscribers to events. This subscriber logs request.body.
+We will use the following subscriber to demonstrate how to connect subscribers to events. This subscriber logs request.body.
 
 .. code-block:: python
 
@@ -80,18 +78,17 @@ Using before/after events
 ``before`` events should be used to:
     * Transform input
     * Perform validation
-    * Apply changes to object that is being affected by request using ``event.set_field_value`` method.
+    * Apply changes to object that is being affected by the request using the ``event.set_field_value`` method
 
-And ``after`` events to:
-    * Change DB objects which are not affected by request.
-    * Perform notifications/logging.
+``after`` events should be used to:
+    * Change DB objects which are not affected by the request
+    * Perform notifications/logging
 
 
 Per-model subscribers
 ---------------------
 
-To set up subscribers per-model, define ``_event_handlers`` param at the root of your model's JSON schema. In example if we have JSON schema for model ``User`` and we want to log all collection GET request to ``User`` model after they were processed (using ``log_request`` subscriber), we connect subscriber in json schema like so:
-
+To register subscribers on a per-model basis, you can define the ``_event_handlers`` property at the root of your model's JSON schema. For example, if we have a JSON schema for the model ``User`` and we want to log all collection GET requests to the ``User`` model after they were processed (using the ``log_request`` subscriber), we can register the subscriber in the JSON schema like this:
 
 .. code-block:: json
 
@@ -105,12 +102,13 @@ To set up subscribers per-model, define ``_event_handlers`` param at the root of
         ...
     }
 
-Per-modelfield subscribers
---------------------------
 
-To set up subscribers per-modelfield, define ``_event_handlers`` param in JSON schema of model field you want to set up subscriber for(at the same level with ``_db_settings``).
+Per-field subscribers
+---------------------
 
-E.g. if our model ``User`` has fields ``username`` we might want to make sure ``username`` is not a reserved word/name. If ``username`` is a reserved work, we want to raise an exception to interrupt request processing. To do so we define a subscriber:
+To register subscribers on a per-field basis, you can define the ``_event_handlers`` property inside the fields of your JSON schema (same level as ``_db_settings``).
+
+E.g. if our model ``User`` has a field ``username`` we might want to make sure that ``username`` is not a reserved name. If ``username`` is a reserved name, we want to raise an exception to interrupt the request.
 
 .. code-block:: python
 
@@ -122,7 +120,7 @@ E.g. if our model ``User`` has fields ``username`` we might want to make sure ``
             raise ValueError('Reserved username: {}'.format(username))
 
 
-Following JSON schema connects ``before_set`` for field ``User.username``. When connected this way, ``check_username`` subscriber will only run before any requests to ``User`` collection which have field ``username`` in request body are processed:
+The following JSON schema registers ``before_set`` on the field ``User.username``. When connected this way, the ``check_username`` subscriber will only be executed if the request has the field ``username`` passed to it:
 
 .. code-block:: json
 
@@ -142,11 +140,10 @@ Following JSON schema connects ``before_set`` for field ``User.username``. When 
     }
 
 
-
 Other Things You Can Do
 -----------------------
 
-You can update another field's value, for example, increment a counter. E.g. in subscriber connected to item enpoint:
+You can update another field's value, for example, increment a counter:
 
 .. code-block:: python
 
@@ -157,7 +154,7 @@ You can update another field's value, for example, increment a counter. E.g. in 
         event.set_field_value(incremented, 'counter')
 
 
-You can transform the value of a field, for example, encrypt a password before saving it. E.g. in subscriber that is connected per-field to ``password`` field:
+You can transform the value of a field, for example, encrypt a password before saving it:
 
 .. code-block:: python
 
@@ -172,7 +169,7 @@ You can transform the value of a field, for example, encrypt a password before s
             event.set_field_value(encrypted)
 
 
-You can update other collections (or filtered collections), for example, mark sub-tasks as completed whenever a task is completed. E.g. in per-field subscriber connected to item endpoint:
+You can update other collections (or filtered collections), for example, mark sub-tasks as completed whenever a task is completed:
 
 .. code-block:: python
 
@@ -189,7 +186,7 @@ You can update other collections (or filtered collections), for example, mark su
             subtask_model._update_many(subtasks, {'completed': True})
 
 
-You can perform more complex queries using ElasticSearch. E.g. in per-field subscriber connected to item endpoint:
+You can perform more complex queries using ElasticSearch:
 
 .. code-block:: python
 
