@@ -16,6 +16,7 @@ Table of Contents
    schemas
    fields
    crud_events
+   relationships
    changelog
 
 .. image:: ramses.jpg

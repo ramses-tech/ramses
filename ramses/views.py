@@ -182,10 +182,6 @@ class CollectionView(BaseView):
 
     def delete_many(self, **kwargs):
         objects = self.get_collection()
-
-        if self.needs_confirmation():
-            return objects
-
         return self.Model._delete_many(objects, self.request)
 
     def update_many(self, **kwargs):
@@ -314,10 +310,6 @@ class ESCollectionView(ESBaseView, CollectionView):
         by ES in the 'index' method (so user deletes what he saw).
         """
         db_objects = self.get_dbcollection_with_es(**kwargs)
-
-        if self.needs_confirmation():
-            return db_objects
-
         return self.Model._delete_many(db_objects, self.request)
 
     def update_many(self, **kwargs):
