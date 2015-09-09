@@ -15,6 +15,7 @@ import logging
 import transaction
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
+import cryptacular.bcrypt
 
 from nefertari.utils import dictset
 from nefertari.json_httpexceptions import *
@@ -187,11 +188,12 @@ def setup_auth_policies(config, raml_root):
 
 def create_system_user(config):
     log.info('Creating system user')
+    crypt = cryptacular.bcrypt.BCRYPTPasswordManager()
     settings = config.registry.settings
     try:
         auth_model = config.registry.auth_model
         s_user = settings['system.user']
-        s_pass = settings['system.password']
+        s_pass = str(crypt.encode(settings['system.password']))
         s_email = settings['system.email']
         user, created = auth_model.get_or_create(
             username=s_user,

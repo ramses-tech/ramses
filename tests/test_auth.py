@@ -190,8 +190,11 @@ class TestHelperFunctions(object):
         assert not config.registry.auth_model.get_or_create.called
 
     @patch('ramses.auth.transaction')
-    def test_create_system_user_exists(self, mock_trans):
+    @patch('ramses.auth.cryptacular')
+    def test_create_system_user_exists(self, mock_crypt, mock_trans):
         from ramses import auth
+        encoder = mock_crypt.bcrypt.BCRYPTPasswordManager()
+        encoder.encode.return_value = '654321'
         config = Mock()
         config.registry.settings = {
             'system.user': 'user12',
@@ -201,18 +204,22 @@ class TestHelperFunctions(object):
         config.registry.auth_model.get_or_create.return_value = (1, False)
         auth.create_system_user(config)
         assert not mock_trans.commit.called
+        encoder.encode.assert_called_once_with('123456')
         config.registry.auth_model.get_or_create.assert_called_once_with(
             username='user12',
             defaults={
-                'password': '123456',
+                'password': '654321',
                 'email': 'user12@example.com',
                 'groups': ['admin']
             }
         )
 
     @patch('ramses.auth.transaction')
-    def test_create_system_user_created(self, mock_trans):
+    @patch('ramses.auth.cryptacular')
+    def test_create_system_user_created(self, mock_crypt, mock_trans):
         from ramses import auth
+        encoder = mock_crypt.bcrypt.BCRYPTPasswordManager()
+        encoder.encode.return_value = '654321'
         config = Mock()
         config.registry.settings = {
             'system.user': 'user12',
@@ -223,10 +230,11 @@ class TestHelperFunctions(object):
             Mock(), True)
         auth.create_system_user(config)
         mock_trans.commit.assert_called_once_with()
+        encoder.encode.assert_called_once_with('123456')
         config.registry.auth_model.get_or_create.assert_called_once_with(
             username='user12',
             defaults={
-                'password': '123456',
+                'password': '654321',
                 'email': 'user12@example.com',
                 'groups': ['admin']
             }
