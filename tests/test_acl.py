@@ -7,6 +7,8 @@ from pyramid.security import (
 
 from ramses import acl
 
+from .fixtures import config_mock
+
 
 class TestACLHelpers(object):
     def test_parse_permissions_all_permissions(self):
@@ -59,7 +61,7 @@ class TestACLHelpers(object):
     @patch.object(acl, 'parse_permissions')
     def test_parse_acl_group_principal(self, mock_perms):
         mock_perms.return_value = 'Foo'
-        perms = acl.parse_acl('allow admin all')
+        perms = acl.parse_acl('allow g:admin all')
         mock_perms.assert_called_once_with(['all'])
         assert perms == [(Allow, 'g:admin', 'Foo')]
 
@@ -78,8 +80,9 @@ class TestACLHelpers(object):
 class TestGenerateACL(object):
 
     def test_no_security(self, mock_parse):
+        config = config_mock()
         acl_cls = acl.generate_acl(
-            model_cls='Foo',
+            config, model_cls='Foo',
             raml_resource=Mock(security_schemes=[]),
             es_based=True)
         assert acl_cls.item_model == 'Foo'
@@ -94,8 +97,9 @@ class TestGenerateACL(object):
         raml_resource = Mock(security_schemes=[
             Mock(type='x-Foo', settings={'collection': 4, 'item': 7})
         ])
+        config = config_mock()
         acl_cls = acl.generate_acl(
-            model_cls='Foo',
+            config, model_cls='Foo',
             raml_resource=raml_resource,
             es_based=False)
         assert not mock_parse.called
@@ -110,8 +114,9 @@ class TestGenerateACL(object):
         raml_resource = Mock(security_schemes=[
             Mock(type='x-ACL', settings={'collection': 4, 'item': 7})
         ])
+        config = config_mock()
         acl_cls = acl.generate_acl(
-            model_cls='Foo',
+            config, model_cls='Foo',
             raml_resource=raml_resource,
             es_based=False)
         mock_parse.assert_has_calls([
@@ -122,6 +127,24 @@ class TestGenerateACL(object):
         assert instance._collection_acl == mock_parse()
         assert instance._item_acl == mock_parse()
         assert not instance.es_based
+
+    def test_database_acls_option(self, mock_parse):
+        from ramses.acl import DatabaseACLMixin
+        raml_resource = Mock(security_schemes=[
+            Mock(type='x-ACL', settings={'collection': 4, 'item': 7})
+        ])
+        kwargs = dict(
+            model_cls='Foo',
+            raml_resource=raml_resource,
+            es_based=False,
+        )
+        config = config_mock()
+        config.registry.database_acls = False
+        acl_cls = acl.generate_acl(config, **kwargs)
+        assert not issubclass(acl_cls, DatabaseACLMixin)
+        config.registry.database_acls = True
+        acl_cls = acl.generate_acl(config, **kwargs)
+        assert issubclass(acl_cls, DatabaseACLMixin)
 
 
 class TestBaseACL(object):
@@ -138,7 +161,7 @@ class TestBaseACL(object):
         new_acl = obj._apply_callables(
             acl=[('foo', 'bar', 'baz')],
             obj='obj')
-        assert new_acl == [('foo', 'bar', 'baz')]
+        assert new_acl == (('foo', 'bar', 'baz'),)
 
     @patch.object(acl, 'parse_permissions')
     def test_apply_callables(self, mock_meth):
@@ -148,7 +171,7 @@ class TestBaseACL(object):
         new_acl = obj._apply_callables(
             acl=[('foo', principal, 'bar')],
             obj='obj')
-        assert new_acl == [(7, 8, '123')]
+        assert new_acl == ((7, 8, '123'),)
         principal.assert_called_once_with(
             ace=('foo', principal, 'bar'),
             request='req',
@@ -163,7 +186,7 @@ class TestBaseACL(object):
         new_acl = obj._apply_callables(
             acl=[('foo', principal, 'bar')],
             obj='obj')
-        assert new_acl == []
+        assert new_acl == ()
         principal.assert_called_once_with(
             ace=('foo', principal, 'bar'),
             request='req',
@@ -178,7 +201,7 @@ class TestBaseACL(object):
         new_acl = obj._apply_callables(
             acl=[('foo', principal, 'bar')],
             obj='obj')
-        assert new_acl == [(7, 8, '123')]
+        assert new_acl == ((7, 8, '123'),)
         principal.assert_called_once_with(
             ace=('foo', principal, 'bar'),
             request='req',
@@ -191,7 +214,7 @@ class TestBaseACL(object):
         new_acl = obj._apply_callables(
             acl=[(Deny, principal, ALL_PERMISSIONS)],
         )
-        assert new_acl == [(Allow, Everyone, ['view'])]
+        assert new_acl == ((Allow, Everyone, ['view']),)
 
     def test_magic_acl(self):
         obj = acl.BaseACL('req')
@@ -231,20 +254,6 @@ class TestBaseACL(object):
         obj.es_based = False
         obj.__getitem__(1)
         obj.item_db_id.assert_called_once_with(1)
-
-    def test_getitem_db(self):
-        obj = acl.BaseACL('req')
-        obj.item_model = Mock()
-        obj.item_model.pk_field.return_value = 'myname'
-        obj.item_acl = Mock()
-        value = obj['varvar']
-        obj.item_model.get.assert_called_once_with(
-            __raise=True, myname='varvar')
-        obj.item_acl.assert_called_once_with(
-            obj.item_model.get())
-        assert value.__acl__ == obj.item_acl()
-        assert value.__parent__ is obj
-        assert value.__name__ == 'varvar'
 
     @patch('ramses.acl.ES')
     def test_getitem_es(self, mock_es):

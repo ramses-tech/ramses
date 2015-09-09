@@ -1,7 +1,7 @@
 import pytest
 from mock import Mock, patch, call
 
-from .fixtures import engine_mock
+from .fixtures import engine_mock, config_mock, guards_engine_mock
 
 
 @pytest.mark.usefixtures('engine_mock')
@@ -27,7 +27,7 @@ class TestHelperFunctions(object):
     @patch('ramses.models.get_existing_model')
     def test_prepare_relationship_model_exists(self, mock_get, mock_set):
         from ramses import models
-        models.prepare_relationship('foobar', 'Story', 'raml_resource')
+        models.prepare_relationship(None, 'foobar', 'Story', 'raml_resource')
         mock_get.assert_called_once_with('Story')
         assert not mock_set.called
 
@@ -41,7 +41,7 @@ class TestHelperFunctions(object):
         ]))
         mock_get.return_value = None
         with pytest.raises(ValueError) as ex:
-            models.prepare_relationship('stories', 'Story', resource)
+            models.prepare_relationship(None, 'stories', 'Story', resource)
         expected = ('Model `Story` used in relationship `stories` '
                     'is not defined')
         assert str(ex.value) == expected
@@ -58,14 +58,15 @@ class TestHelperFunctions(object):
             Mock(method='post', path='/items'),
         ]))
         mock_get.return_value = None
-        models.prepare_relationship('stories', 'Story', resource)
-        mock_set.assert_called_once_with(matching_res, 'Story')
+        config = config_mock()
+        models.prepare_relationship(config, 'stories', 'Story', resource)
+        mock_set.assert_called_once_with(config, matching_res, 'Story')
 
     @patch('ramses.models.get_existing_model')
     def test_setup_data_model_existing_model(self, mock_get):
         from ramses import models
         mock_get.return_value = 1
-        model, auth_model = models.setup_data_model('foo', 'Bar')
+        model, auth_model = models.setup_data_model(None, 'foo', 'Bar')
         assert not auth_model
         assert model == 1
         mock_get.assert_called_once_with('Bar')
@@ -77,7 +78,7 @@ class TestHelperFunctions(object):
         mock_get.return_value = None
         mock_schema.return_value = None
         with pytest.raises(Exception) as ex:
-            models.setup_data_model('foo', 'Bar')
+            models.setup_data_model(None, 'foo', 'Bar')
         assert str(ex.value) == 'Missing schema for model `Bar`'
         mock_get.assert_called_once_with('Bar')
         mock_schema.assert_called_once_with('foo')
@@ -89,10 +90,12 @@ class TestHelperFunctions(object):
         from ramses import models
         mock_get.return_value = None
         mock_schema.return_value = {'field1': 'val1'}
-        model = models.setup_data_model('foo', 'Bar')
+        config = config_mock()
+        model = models.setup_data_model(config, 'foo', 'Bar')
         mock_get.assert_called_once_with('Bar')
         mock_schema.assert_called_once_with('foo')
         mock_gen.assert_called_once_with(
+            config,
             schema={'field1': 'val1'},
             model_name='Bar',
             raml_resource='foo')
@@ -102,18 +105,20 @@ class TestHelperFunctions(object):
     def test_handle_model_generation_value_err(self, mock_set):
         from ramses import models
         mock_set.side_effect = ValueError('strange error')
+        config = config_mock()
         with pytest.raises(ValueError) as ex:
-            models.handle_model_generation('foo', '/stories')
+            models.handle_model_generation(config, 'foo', '/stories')
         assert str(ex.value) == 'Story: strange error'
-        mock_set.assert_called_once_with('foo', 'Story')
+        mock_set.assert_called_once_with(config, 'foo', 'Story')
 
     @patch('ramses.models.setup_data_model')
     def test_handle_model_generation(self, mock_set):
         from ramses import models
         mock_set.return_value = ('Foo1', True)
+        config = config_mock()
         model, auth_model = models.handle_model_generation(
-            'foo', '/stories')
-        mock_set.assert_called_once_with('foo', 'Story')
+            config, 'foo', '/stories')
+        mock_set.assert_called_once_with(config, 'foo', 'Story')
         assert model == 'Foo1'
         assert auth_model
 
@@ -151,7 +156,8 @@ class TestGenerateModelCls(object):
         mock_res.return_value = 1
         mock_reg.mget.return_value = {'foo': 'bar'}
         model_cls, auth_model = models.generate_model_cls(
-            schema=schema, model_name='Story', raml_resource=None)
+            config_mock(), schema=schema, model_name='Story',
+            raml_resource=None)
         assert not auth_model
         assert model_cls.__name__ == 'Story'
         assert hasattr(model_cls, 'progress')
@@ -182,7 +188,8 @@ class TestGenerateModelCls(object):
         }
         mock_res.return_value = 1
         model_cls, auth_model = models.generate_model_cls(
-            schema=schema, model_name='Story', raml_resource=None)
+            config_mock(), schema=schema, model_name='Story',
+            raml_resource=None)
         models.engine.FloatField.assert_called_with(
             default=1, required=False)
         mock_res.assert_called_once_with('{{foobar}}')
@@ -196,9 +203,30 @@ class TestGenerateModelCls(object):
         mock_reg.mget.return_value = {'foo': 'bar'}
 
         model_cls, auth_model = models.generate_model_cls(
-            schema=schema, model_name='Story', raml_resource=None)
+            config_mock(), schema=schema, model_name='Story',
+            raml_resource=None)
         assert auth_model
         assert issubclass(model_cls, AuthModelMethodsMixin)
+
+    def test_database_acls_option(self, mock_reg, guards_engine_mock):
+        from ramses import models
+        schema = self._test_schema()
+        schema['properties']['progress'] = {'_db_settings': {}}
+        schema['_auth_model'] = True
+        mock_reg.mget.return_value = {'foo': 'bar'}
+        config = config_mock()
+
+        config.registry.database_acls = False
+        model_cls, auth_model = models.generate_model_cls(
+            config, schema=schema, model_name='Story1',
+            raml_resource=None)
+        assert not issubclass(model_cls, guards_engine_mock.DocumentACLMixin)
+
+        config.registry.database_acls = True
+        model_cls, auth_model = models.generate_model_cls(
+            config, schema=schema, model_name='Story2',
+            raml_resource=None)
+        assert issubclass(model_cls, guards_engine_mock.DocumentACLMixin)
 
     def test_db_based_model(self, mock_reg):
         from nefertari.authentication.models import AuthModelMethodsMixin
@@ -208,8 +236,8 @@ class TestGenerateModelCls(object):
         mock_reg.mget.return_value = {'foo': 'bar'}
 
         model_cls, auth_model = models.generate_model_cls(
-            schema=schema, model_name='Story', raml_resource=None,
-            es_based=False)
+            config_mock(), schema=schema, model_name='Story',
+            raml_resource=None, es_based=False)
         assert issubclass(model_cls, models.engine.BaseDocument)
         assert not issubclass(model_cls, models.engine.ESBaseDocument)
         assert not issubclass(model_cls, AuthModelMethodsMixin)
@@ -221,8 +249,8 @@ class TestGenerateModelCls(object):
         mock_reg.mget.return_value = {'foo': 'bar'}
 
         model_cls, auth_model = models.generate_model_cls(
-            schema=schema, model_name='Story', raml_resource=None,
-            es_based=False)
+            config_mock(), schema=schema, model_name='Story',
+            raml_resource=None, es_based=False)
         assert not models.engine.PickleField.called
 
     def test_unknown_field_type(self, mock_reg):
@@ -234,7 +262,8 @@ class TestGenerateModelCls(object):
 
         with pytest.raises(ValueError) as ex:
             models.generate_model_cls(
-                schema=schema, model_name='Story', raml_resource=None)
+                config_mock(), schema=schema, model_name='Story',
+                raml_resource=None)
         assert str(ex.value) == 'Unknown type: foobar'
 
     @patch('ramses.models.prepare_relationship')
@@ -248,9 +277,11 @@ class TestGenerateModelCls(object):
             }
         }
         mock_reg.mget.return_value = {'foo': 'bar'}
+        config = config_mock()
         models.generate_model_cls(
-            schema=schema, model_name='Story', raml_resource=1)
-        mock_prep.assert_called_once_with('progress', 'FooBar', 1)
+            config, schema=schema, model_name='Story',
+            raml_resource=1)
+        mock_prep.assert_called_once_with(config, 'progress', 'FooBar', 1)
 
     def test_foreignkey_field(self, mock_reg):
         from ramses import models
@@ -263,7 +294,8 @@ class TestGenerateModelCls(object):
         }
         mock_reg.mget.return_value = {'foo': 'bar'}
         models.generate_model_cls(
-            schema=schema, model_name='Story', raml_resource=1)
+            config_mock(), schema=schema, model_name='Story',
+            raml_resource=1)
         models.engine.ForeignKeyField.assert_called_once_with(
             required=False, ref_column_type=models.engine.StringField)
 
@@ -278,7 +310,8 @@ class TestGenerateModelCls(object):
         }
         mock_reg.mget.return_value = {'foo': 'bar'}
         models.generate_model_cls(
-            schema=schema, model_name='Story', raml_resource=1)
+            config_mock(), schema=schema, model_name='Story',
+            raml_resource=1)
         models.engine.ListField.assert_called_once_with(
             required=False, item_type=models.engine.IntegerField)
 
@@ -289,5 +322,6 @@ class TestGenerateModelCls(object):
             '_db_settings': {'type': 'interval'}}
         mock_reg.mget.return_value = {'foo': 'bar'}
         models.generate_model_cls(
-            schema=schema, model_name='Story', raml_resource=1)
+            config_mock(), schema=schema, model_name='Story',
+            raml_resource=1)
         assert not models.engine.IntervalField.called

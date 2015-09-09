@@ -28,3 +28,30 @@ def engine_mock(request):
     request.addfinalizer(clear)
 
     return nefertari.engine
+
+
+@pytest.fixture
+def guards_engine_mock(request):
+    import nefertari_guards
+    from nefertari_guards import engine
+    from mock import Mock
+
+    class DocumentACLMixin(object):
+        pass
+
+    original_engine = engine
+    nefertari_guards.engine = Mock()
+    nefertari_guards.engine.DocumentACLMixin = DocumentACLMixin
+
+    def clear():
+        nefertari_guards.engine = original_engine
+    request.addfinalizer(clear)
+
+    return nefertari_guards.engine
+
+
+def config_mock():
+    from mock import Mock
+    config = Mock()
+    config.registry.database_acls = False
+    return config

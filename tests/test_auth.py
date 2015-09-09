@@ -2,6 +2,7 @@ import pytest
 from mock import Mock, patch
 
 from nefertari.utils import dictset
+from pyramid.security import Allow, ALL_PERMISSIONS
 
 from .fixtures import engine_mock
 
@@ -206,7 +207,8 @@ class TestHelperFunctions(object):
             defaults={
                 'password': '123456',
                 'email': 'user12@example.com',
-                'groups': ['admin']
+                'groups': ['admin'],
+                '_acl': [(Allow, 'g:admin', ALL_PERMISSIONS)],
             }
         )
 
@@ -228,7 +230,8 @@ class TestHelperFunctions(object):
             defaults={
                 'password': '123456',
                 'email': 'user12@example.com',
-                'groups': ['admin']
+                'groups': ['admin'],
+                '_acl': [(Allow, 'g:admin', ALL_PERMISSIONS)],
             }
         )
 

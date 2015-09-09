@@ -31,7 +31,14 @@ item_methods = {
 }
 
 
-class BaseView(NefertariBaseView):
+class SetObjectACLMixin(object):
+    def set_object_acl(self, obj):
+        """ Set object ACL on creation if not already present. """
+        if not obj._acl:
+            obj._acl = self._factory(self.request).generate_item_acl(obj)
+
+
+class BaseView(object):
     """ Base view class for other all views that defines few helper methods.
 
     Use `self.get_collection` and `self.get_item` to get access to set of
@@ -44,6 +51,9 @@ class BaseView(NefertariBaseView):
             return id_name.split('_', 1)[1]
         else:
             return id_name
+
+    def set_object_acl(self, obj):
+        pass
 
     def resolve_kw(self, kwargs):
         """ Resolve :kwargs: like `story_id: 1` to the form of `id: 1`.
@@ -167,6 +177,7 @@ class CollectionView(BaseView):
 
     def create(self, **kwargs):
         obj = self.Model(**self._json_params)
+        self.set_object_acl(obj)
         return obj.save(self.request)
 
     def update(self, **kwargs):
@@ -224,7 +235,7 @@ class ESBaseView(BaseView):
         ids = [getattr(obj, id_field, obj) for obj in objects]
         return list(set(str(id_) for id_ in ids))
 
-    def get_collection_es(self, **kwargs):
+    def get_collection_es(self):
         """ Get ES objects collection taking into account the generated
         queryset of parent view.
 
@@ -233,17 +244,15 @@ class ESBaseView(BaseView):
         queryset, thus filtering out objects that don't belong to the parent
         object.
         """
-        from nefertari.elasticsearch import ES
-        es = ES(self.Model.__name__)
         objects_ids = self._parent_queryset_es()
 
         if objects_ids is not None:
             objects_ids = self.get_es_object_ids(objects_ids)
-
             if not objects_ids:
                 return []
             self._query_params['id'] = objects_ids
-        return es.get_collection(**self._query_params)
+
+        return super(ESBaseView, self).get_collection_es()
 
     def get_item_es(self, **kwargs):
         """ Get ES collection item taking into account generated queryset
@@ -277,7 +286,7 @@ class ESCollectionView(ESBaseView, CollectionView):
     Write operations are inherited from :CollectionView:
     """
     def index(self, **kwargs):
-        return self.get_collection_es(**kwargs)
+        return self.get_collection_es()
 
     def show(self, **kwargs):
         return self.get_item_es(**kwargs)
@@ -298,7 +307,7 @@ class ESCollectionView(ESBaseView, CollectionView):
 
     def get_dbcollection_with_es(self, **kwargs):
         """ Get DB objects collection by first querying ES. """
-        es_objects = self.get_collection_es(**kwargs)
+        es_objects = self.get_collection_es()
         db_objects = self.Model.filter_objects(es_objects)
         return db_objects
 
@@ -415,6 +424,7 @@ class ItemSingularView(ItemSubresourceBaseView):
     def create(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
         obj = self._singular_model(**self._json_params)
+        self.set_object_acl(obj)
         obj = obj.save(self.request)
         parent_obj.update({self.attr: obj}, self.request)
         return obj
@@ -434,7 +444,7 @@ class ItemSingularView(ItemSubresourceBaseView):
         obj.delete(self.request)
 
 
-def generate_rest_view(model_cls, attrs=None, es_based=True,
+def generate_rest_view(config, model_cls, attrs=None, es_based=True,
                        attr_view=False, singular=False):
     """ Generate REST view for a model class.
 
@@ -457,19 +467,23 @@ def generate_rest_view(model_cls, attrs=None, es_based=True,
     missing_attrs = set(valid_attrs) - set(attrs)
 
     if singular:
-        base_view_cls = ItemSingularView
+        bases = [ItemSingularView]
     elif attr_view:
-        base_view_cls = ItemAttributeView
+        bases = [ItemAttributeView]
     elif es_based:
-        base_view_cls = ESCollectionView
+        bases = [ESCollectionView]
     else:
-        base_view_cls = CollectionView
+        bases = [CollectionView]
+
+    if config.registry.database_acls:
+        from nefertari_guards.view import ACLFilterViewMixin
+        bases = [SetObjectACLMixin] + bases + [ACLFilterViewMixin]
+    bases.append(NefertariBaseView)
+
+    RESTView = type('RESTView', tuple(bases), {'Model': model_cls})
 
     def _attr_error(*args, **kwargs):
         raise AttributeError
-
-    class RESTView(base_view_cls):
-        Model = model_cls
 
     for attr in missing_attrs:
         setattr(RESTView, attr, property(_attr_error))
