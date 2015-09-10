@@ -193,11 +193,12 @@ class DatabaseACLMixin(object):
         return item.get_acl()
 
     def getitem_es(self, key):
+        """ Override to pass principals  """
         from nefertari_guards.elasticsearch import ACLFilterES
         es = ACLFilterES(self.item_model.__name__)
         params = {
             'id': key,
-            '_principals': self.request.effective_principals,
+            'request': self.request,
         }
         obj = es.get_resource(**params)
         obj.__acl__ = self.item_acl(obj)
