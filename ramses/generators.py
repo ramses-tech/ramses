@@ -172,6 +172,6 @@ def generate_models(config, raml_resources):
         if not attr_subresource(raml_resource, route_name):
             log.info('Configuring model for route `{}`'.format(route_name))
             model_cls, is_auth_model = handle_model_generation(
-                raml_resource, route_name)
+                config, raml_resource, route_name)
             if is_auth_model:
                 config.registry.auth_model = model_cls
