@@ -69,7 +69,7 @@ We will use the following subscriber to demonstrate how to connect subscribers t
 
     @registry.add
     def log_request(event):
-        log.debug(event.request.body)
+        log.debug(event.view.request.body)
 
 
 Using before/after events
