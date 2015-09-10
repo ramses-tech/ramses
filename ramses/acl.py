@@ -192,6 +192,19 @@ class DatabaseACLMixin(object):
             return get_es_item_acl(item)
         return item.get_acl()
 
+    def getitem_es(self, key):
+        from nefertari_guards.elasticsearch import ACLFilterES
+        es = ACLFilterES(self.item_model.__name__)
+        params = {
+            'id': key,
+            '_principals': self.request.effective_principals,
+        }
+        obj = es.get_resource(**params)
+        obj.__acl__ = self.item_acl(obj)
+        obj.__parent__ = self
+        obj.__name__ = key
+        return obj
+
 
 def generate_acl(config, model_cls, raml_resource, es_based=True):
     """ Generate an ACL.
