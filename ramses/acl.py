@@ -188,10 +188,8 @@ class DatabaseACLMixin(object):
         db is used.
         """
         if self.es_based:
-            from nefertari_guards import engine as guards_engine
-            acl = getattr(item, '_acl', ())
-            return guards_engine.ACLField.objectify_acl([
-                ace._data for ace in acl])
+            from nefertari_guards.elasticsearch import get_es_item_acl
+            return get_es_item_acl(item)
         return item.get_acl()
 
 
