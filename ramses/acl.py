@@ -193,7 +193,11 @@ class DatabaseACLMixin(object):
         return item.get_acl()
 
     def getitem_es(self, key):
-        """ Override to pass principals  """
+        """ Override to support ACL filtering.
+
+        To do so: passes `self.request` to `get_resource` and uses
+        `ACLFilterES`.
+        """
         from nefertari_guards.elasticsearch import ACLFilterES
         es = ACLFilterES(self.item_model.__name__)
         params = {
