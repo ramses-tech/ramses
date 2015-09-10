@@ -15,8 +15,8 @@ Table of Contents
    raml
    schemas
    fields
+   crud_events
    relationships
-   processors
    changelog
 
 .. image:: ramses.jpg
