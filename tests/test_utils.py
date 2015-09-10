@@ -372,3 +372,25 @@ class TestUtils(object):
         assert func is datetime
         func = utils.resolve_to_callable('datetime.datetime')
         assert func is datetime
+
+    def test_get_events_map(self):
+        from nefertari import events
+        events_map = utils.get_events_map()
+        after, before = events_map['after'], events_map['before']
+        after_set, before_set = after.pop('set'), before.pop('set')
+        assert sorted(events.BEFORE_EVENTS.keys()) == sorted(
+            before.keys())
+        assert sorted(events.AFTER_EVENTS.keys()) == sorted(
+            after.keys())
+        assert after_set == [
+            events.AfterCreate,
+            events.AfterUpdate,
+            events.AfterReplace,
+            events.AfterUpdateMany,
+        ]
+        assert before_set == [
+            events.BeforeCreate,
+            events.BeforeUpdate,
+            events.BeforeReplace,
+            events.BeforeUpdateMany,
+        ]
