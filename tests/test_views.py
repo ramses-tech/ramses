@@ -30,7 +30,7 @@ class ViewTestBase(object):
 
 
 class TestSetObjectACLMixin(object):
-    def test_set_object_acl(self):
+    def test_set_object_acl(self, guards_engine_mock):
         view = views.SetObjectACLMixin()
         view.request = 'foo'
         view._factory = Mock()
@@ -38,7 +38,10 @@ class TestSetObjectACLMixin(object):
         view.set_object_acl(obj)
         view._factory.assert_called_once_with(view.request)
         view._factory().generate_item_acl.assert_called_once_with(obj)
-        assert obj._acl == view._factory().generate_item_acl()
+        field = guards_engine_mock.ACLField
+        field.stringify_acl.assert_called_once_with(
+            view._factory().generate_item_acl())
+        assert obj._acl == field.stringify_acl()
 
 
 class TestBaseView(ViewTestBase):
