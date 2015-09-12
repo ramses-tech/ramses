@@ -60,7 +60,7 @@ E.g. The following example connects the ``lowercase`` subscriber to the ``before
     }
 
 
-We will use the following subscriber to demonstrate how to connect subscribers to events. This subscriber logs request.body.
+We will use the following subscriber to demonstrate how to connect subscribers to events. This subscriber logs ``request``.
 
 .. code-block:: python
 
@@ -69,7 +69,7 @@ We will use the following subscriber to demonstrate how to connect subscribers t
 
     @registry.add
     def log_request(event):
-        log.debug(event.view.request.body)
+        log.debug(event.view.request)
 
 
 Using before/after events
