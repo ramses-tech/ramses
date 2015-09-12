@@ -180,11 +180,27 @@ class DatabaseACLMixin(object):
         db is used.
         """
         if self.es_based:
-            from nefertari_guards import engine as guards_engine
-            acl = getattr(item, '_acl', ())
-            return guards_engine.ACLField.objectify_acl([
-                ace._data for ace in acl])
+            from nefertari_guards.elasticsearch import get_es_item_acl
+            return get_es_item_acl(item)
         return item.get_acl()
+
+    def getitem_es(self, key):
+        """ Override to support ACL filtering.
+
+        To do so: passes `self.request` to `get_resource` and uses
+        `ACLFilterES`.
+        """
+        from nefertari_guards.elasticsearch import ACLFilterES
+        es = ACLFilterES(self.item_model.__name__)
+        params = {
+            'id': key,
+            'request': self.request,
+        }
+        obj = es.get_resource(**params)
+        obj.__acl__ = self.item_acl(obj)
+        obj.__parent__ = self
+        obj.__name__ = key
+        return obj
 
 
 def generate_acl(config, model_cls, raml_resource, es_based=True):
