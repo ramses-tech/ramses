@@ -12,6 +12,11 @@ def includeme(config):
     from .generators import generate_server, generate_models
     Settings = dictset(config.registry.settings)
     config.include('nefertari.engine')
+
+    config.registry.database_acls = Settings.asbool('database_acls')
+    if config.registry.database_acls:
+        config.include('nefertari_guards')
+
     config.include('nefertari')
     config.include('nefertari.view')
     config.include('nefertari.json_httpexceptions')

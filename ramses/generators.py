@@ -22,7 +22,7 @@ def _get_nefertari_parent_resource(
     return default
 
 
-def generate_resource(raml_resource, parent_resource):
+def generate_resource(config, raml_resource, parent_resource):
     """ Perform complete one resource configuration process
 
     This function generates: ACL, view, route, resource, database
@@ -76,6 +76,7 @@ def generate_resource(raml_resource, parent_resource):
     # Generate ACL
     log.info('Generating ACL for `{}`'.format(route_name))
     resource_kwargs['factory'] = generate_acl(
+        config,
         model_cls=model_cls,
         raml_resource=raml_resource)
 
@@ -90,6 +91,7 @@ def generate_resource(raml_resource, parent_resource):
     log.info('Generating view for `{}`'.format(route_name))
     view_attrs = resource_view_attrs(raml_resource, is_singular)
     resource_kwargs['view'] = generate_rest_view(
+        config,
         model_cls=model_cls,
         attrs=view_attrs,
         attr_view=is_attr_res,
@@ -136,7 +138,8 @@ def generate_server(raml_root, config):
             raml_resource, generated_resources, root_resource)
 
         # Get generated resource and store it
-        new_resource = generate_resource(raml_resource, parent_resource)
+        new_resource = generate_resource(
+            config, raml_resource, parent_resource)
         if new_resource is not None:
             generated_resources[raml_resource.path] = new_resource
 

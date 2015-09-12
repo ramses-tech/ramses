@@ -100,10 +100,15 @@ def generate_model_cls(config, schema, model_name, raml_resource,
     model_name = str(model_name)
     metaclass = type(base_cls)
     auth_model = schema.get('_auth_model', False)
+
+    bases = []
+    if config.registry.database_acls:
+        from nefertari_guards import engine as guards_engine
+        bases.append(guards_engine.DocumentACLMixin)
     if auth_model:
-        bases = (AuthModelMethodsMixin, base_cls)
-    else:
-        bases = (base_cls,)
+        bases.append(AuthModelMethodsMixin)
+    bases.append(base_cls)
+
     attrs = {
         '__tablename__': model_name.lower(),
         '_public_fields': schema.get('_public_fields') or [],
@@ -152,7 +157,7 @@ def generate_model_cls(config, schema, model_name, raml_resource,
     attrs.update(registry.mget(model_name))
 
     # Generate new model class
-    model_cls = metaclass(model_name, bases, attrs)
+    model_cls = metaclass(model_name, tuple(bases), attrs)
     setup_event_subscribers(config, model_cls, schema)
     return model_cls, auth_model
 
@@ -168,7 +173,6 @@ def setup_data_model(config, raml_resource, model_name):
     :param raml_resource: Instance of ramlfications.raml.ResourceNode.
     :param model_name: String representing model name.
     """
-    from .models import generate_model_cls, get_existing_model
     model_cls = get_existing_model(model_name)
     if model_cls is not None:
         return model_cls, False

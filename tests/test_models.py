@@ -1,7 +1,7 @@
 import pytest
 from mock import Mock, patch, call
 
-from .fixtures import engine_mock
+from .fixtures import engine_mock, config_mock, guards_engine_mock
 
 
 @pytest.mark.usefixtures('engine_mock')
@@ -63,8 +63,8 @@ class TestHelperFunctions(object):
             Mock(method='post', path='/items'),
         ]))
         mock_get.return_value = None
-        models.prepare_relationship(
-            config, 'stories', 'Story', resource)
+        config = config_mock()
+        models.prepare_relationship(config, 'stories', 'Story', resource)
         mock_set.assert_called_once_with(config, matching_res, 'Story')
 
     @patch('ramses.models.get_existing_model')
@@ -95,9 +95,9 @@ class TestHelperFunctions(object):
     @patch('ramses.models.get_existing_model')
     def test_setup_data_model_success(self, mock_get, mock_gen, mock_schema):
         from ramses import models
-        config = Mock()
         mock_get.return_value = None
         mock_schema.return_value = {'field1': 'val1'}
+        config = config_mock()
         model = models.setup_data_model(config, 'foo', 'Bar')
         mock_get.assert_called_once_with('Bar')
         mock_schema.assert_called_once_with('foo')
@@ -113,6 +113,7 @@ class TestHelperFunctions(object):
         from ramses import models
         config = Mock()
         mock_set.side_effect = ValueError('strange error')
+        config = config_mock()
         with pytest.raises(ValueError) as ex:
             models.handle_model_generation(config, 'foo', '/stories')
         assert str(ex.value) == 'Story: strange error'
@@ -123,6 +124,7 @@ class TestHelperFunctions(object):
         from ramses import models
         config = Mock()
         mock_set.return_value = ('Foo1', True)
+        config = config_mock()
         model, auth_model = models.handle_model_generation(
             config, 'foo', '/stories')
         mock_set.assert_called_once_with(config, 'foo', 'Story')
@@ -148,7 +150,7 @@ class TestGenerateModelCls(object):
     def test_simple_case(self, mock_res, mock_reg, mock_subscribers):
         from nefertari.authentication.models import AuthModelMethodsMixin
         from ramses import models
-        config = Mock()
+        config = config_mock()
         models.engine.FloatField.reset_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {
@@ -181,7 +183,7 @@ class TestGenerateModelCls(object):
     @patch('ramses.models.resolve_to_callable')
     def test_callable_default(self, mock_res, mock_reg, mock_subscribers):
         from ramses import models
-        config = Mock()
+        config = config_mock()
         models.engine.FloatField.reset_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {
@@ -201,7 +203,7 @@ class TestGenerateModelCls(object):
     def test_auth_model(self, mock_reg, mock_subscribers):
         from nefertari.authentication.models import AuthModelMethodsMixin
         from ramses import models
-        config = Mock()
+        config = config_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {'_db_settings': {}}
         schema['_auth_model'] = True
@@ -213,10 +215,31 @@ class TestGenerateModelCls(object):
         assert auth_model
         assert issubclass(model_cls, AuthModelMethodsMixin)
 
+    def test_database_acls_option(
+            self, mock_reg, mock_subscribers, guards_engine_mock):
+        from ramses import models
+        schema = self._test_schema()
+        schema['properties']['progress'] = {'_db_settings': {}}
+        schema['_auth_model'] = True
+        mock_reg.mget.return_value = {'foo': 'bar'}
+        config = config_mock()
+
+        config.registry.database_acls = False
+        model_cls, auth_model = models.generate_model_cls(
+            config, schema=schema, model_name='Story1',
+            raml_resource=None)
+        assert not issubclass(model_cls, guards_engine_mock.DocumentACLMixin)
+
+        config.registry.database_acls = True
+        model_cls, auth_model = models.generate_model_cls(
+            config, schema=schema, model_name='Story2',
+            raml_resource=None)
+        assert issubclass(model_cls, guards_engine_mock.DocumentACLMixin)
+
     def test_db_based_model(self, mock_reg, mock_subscribers):
         from nefertari.authentication.models import AuthModelMethodsMixin
         from ramses import models
-        config = Mock()
+        config = config_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {'_db_settings': {}}
         mock_reg.mget.return_value = {'foo': 'bar'}
@@ -230,7 +253,7 @@ class TestGenerateModelCls(object):
 
     def test_no_db_settings(self, mock_reg, mock_subscribers):
         from ramses import models
-        config = Mock()
+        config = config_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {'type': 'pickle'}
         mock_reg.mget.return_value = {'foo': 'bar'}
@@ -242,7 +265,7 @@ class TestGenerateModelCls(object):
 
     def test_unknown_field_type(self, mock_reg, mock_subscribers):
         from ramses import models
-        config = Mock()
+        config = config_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {
             '_db_settings': {'type': 'foobar'}}
@@ -267,6 +290,7 @@ class TestGenerateModelCls(object):
             }
         }
         mock_reg.mget.return_value = {'foo': 'bar'}
+        config = config_mock()
         models.generate_model_cls(
             config, schema=schema, model_name='Story',
             raml_resource=1)
@@ -275,7 +299,7 @@ class TestGenerateModelCls(object):
 
     def test_foreignkey_field(self, mock_reg, mock_subscribers):
         from ramses import models
-        config = Mock()
+        config = config_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {
             "_db_settings": {
@@ -292,7 +316,7 @@ class TestGenerateModelCls(object):
 
     def test_list_field(self, mock_reg, mock_subscribers):
         from ramses import models
-        config = Mock()
+        config = config_mock()
         schema = self._test_schema()
         schema['properties']['progress'] = {
             "_db_settings": {
@@ -309,7 +333,7 @@ class TestGenerateModelCls(object):
 
     def test_duplicate_field_name(self, mock_reg, mock_subscribers):
         from ramses import models
-        config = Mock()
+        config = config_mock()
         schema = self._test_schema()
         schema['properties']['_public_fields'] = {
             '_db_settings': {'type': 'interval'}}

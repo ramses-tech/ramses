@@ -77,8 +77,9 @@ def parse_acl(acl_string, methods_map):
         action_str = action_str.strip().lower()
         action = actions.get(action_str)
         if action is None:
-            raise ValueError('Unknown ACL action: {}. Valid actions: {}'.format(
-                action_str, list(actions.keys())))
+            raise ValueError(
+                'Unknown ACL action: {}. Valid actions: {}'.format(
+                    action_str, list(actions.keys())))
 
         # Process principal
         princ_str = princ_str.strip().lower()
@@ -87,7 +88,7 @@ def parse_acl(acl_string, methods_map):
         elif is_callable_tag(princ_str):
             principal = resolve_to_callable(princ_str)
         else:
-            principal = 'g:' + princ_str
+            principal = princ_str
 
         # Process permissions
         permissions = methods_to_perms(perms, methods_map)
@@ -105,7 +106,8 @@ class BaseACL(CollectionACL):
     _item_acl = (ALLOW_ALL, )
 
     def _apply_callables(self, acl, methods_map, obj=None):
-        """ Iterate over ACEs from :acl: and apply callable principals if any.
+        """ Iterate over ACEs from :acl: and apply callable principals
+        if any.
 
         Principals are passed 3 arguments on call:
             :ace: Single ACE object that looks like (action, callable,
@@ -133,7 +135,7 @@ class BaseACL(CollectionACL):
             else:
                 ace = [ace]
             new_acl += ace
-        return new_acl
+        return tuple(new_acl)
 
     def __acl__(self):
         """ Apply callables to `self._collection_acl` and return result. """
@@ -141,12 +143,18 @@ class BaseACL(CollectionACL):
             acl=self._collection_acl,
             methods_map=collection_methods)
 
-    def item_acl(self, item):
-        """ Apply callables to `self._item_acl` and return result. """
-        return self._apply_callables(
+    def generate_item_acl(self, item):
+        acl = self._apply_callables(
             acl=self._item_acl,
             methods_map=item_methods,
             obj=item)
+        if acl is None:
+            acl = self.__acl__()
+        return acl
+
+    def item_acl(self, item):
+        """ Apply callables to `self._item_acl` and return result. """
+        return self.generate_item_acl(item)
 
     def item_db_id(self, key):
         # ``self`` can be used for current authenticated user key
@@ -172,7 +180,22 @@ class BaseACL(CollectionACL):
         return obj
 
 
-def generate_acl(model_cls, raml_resource, es_based=True):
+class DatabaseACLMixin(object):
+    """ Mixin to be used when ACLs are stored in database. """
+
+    def item_acl(self, item):
+        """ Objectify ACL if ES is used or call item.get_acl() if
+        db is used.
+        """
+        if self.es_based:
+            from nefertari_guards import engine as guards_engine
+            acl = getattr(item, '_acl', ())
+            return guards_engine.ACLField.objectify_acl([
+                ace._data for ace in acl])
+        return item.get_acl()
+
+
+def generate_acl(config, model_cls, raml_resource, es_based=True):
     """ Generate an ACL.
 
     Generated ACL class has a `item_model` attribute set to
@@ -208,13 +231,18 @@ def generate_acl(model_cls, raml_resource, es_based=True):
             acl_string=settings.get('item'),
             methods_map=item_methods)
 
-    class GeneratedACL(BaseACL):
+    class GeneratedACLBase(object):
         item_model = model_cls
 
         def __init__(self, request, es_based=es_based):
-            super(GeneratedACL, self).__init__(request=request)
+            super(GeneratedACLBase, self).__init__(request=request)
             self.es_based = es_based
             self._collection_acl = collection_acl
             self._item_acl = item_acl
 
-    return GeneratedACL
+    bases = [GeneratedACLBase]
+    if config.registry.database_acls:
+        bases.append(DatabaseACLMixin)
+    bases.append(BaseACL)
+
+    return type('GeneratedACL', tuple(bases), {})

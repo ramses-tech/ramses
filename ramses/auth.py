@@ -15,6 +15,7 @@ import logging
 import transaction
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
+from pyramid.security import Allow, ALL_PERMISSIONS
 import cryptacular.bcrypt
 
 from nefertari.utils import dictset
@@ -195,13 +196,16 @@ def create_system_user(config):
         s_user = settings['system.user']
         s_pass = str(crypt.encode(settings['system.password']))
         s_email = settings['system.email']
+        defaults = dict(
+            password=s_pass,
+            email=s_email,
+            groups=['admin'],
+        )
+        if config.registry.database_acls:
+            defaults['_acl'] = [(Allow, 'g:admin', ALL_PERMISSIONS)]
+
         user, created = auth_model.get_or_create(
-            username=s_user,
-            defaults=dict(
-                password=s_pass,
-                email=s_email,
-                groups=['admin']
-            ))
+            username=s_user, defaults=defaults)
         if created:
             transaction.commit()
     except KeyError as e:

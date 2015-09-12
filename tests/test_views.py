@@ -3,8 +3,10 @@ from mock import Mock, patch
 
 from nefertari.json_httpexceptions import (
     JHTTPNotFound, JHTTPMethodNotAllowed)
+from nefertari.view import BaseView
 
 from ramses import views
+from .fixtures import config_mock, guards_engine_mock
 
 
 class ViewTestBase(object):
@@ -20,11 +22,23 @@ class ViewTestBase(object):
     )
 
     def _test_view(self):
-        class View(self.view_cls):
+        class View(self.view_cls, BaseView):
             _json_encoder = 'foo'
 
         request = Mock(**self.request_kwargs)
         return View(request=request, **self.view_kwargs)
+
+
+class TestSetObjectACLMixin(object):
+    def test_set_object_acl(self):
+        view = views.SetObjectACLMixin()
+        view.request = 'foo'
+        view._factory = Mock()
+        obj = Mock(_acl=None)
+        view.set_object_acl(obj)
+        view._factory.assert_called_once_with(view.request)
+        view._factory().generate_item_acl.assert_called_once_with(obj)
+        assert obj._acl == view._factory().generate_item_acl()
 
 
 class TestBaseView(ViewTestBase):
@@ -130,12 +144,16 @@ class TestBaseView(ViewTestBase):
         config = Configurator()
         config.include('nefertari')
         root = config.get_root_resource()
+
+        class View(self.view_cls, BaseView):
+            _json_encoder = 'foo'
+
         user = root.add(
             'user', 'users', id_name='username',
-            view=views.BaseView, factory=BaseACL)
+            view=View, factory=BaseACL)
         user.add(
             'story', 'stories', id_name='prof_id',
-            view=views.BaseView, factory=BaseACL)
+            view=View, factory=BaseACL)
         view_cls = root.resource_map['user:story'].view
         view_cls._json_encoder = 'foo'
 
@@ -194,6 +212,7 @@ class TestCollectionView(ViewTestBase):
 
     def test_create(self):
         view = self._test_view()
+        view.set_object_acl = Mock()
         view.request.registry._root_resources = {
             'foo': Mock(auth=False)
         }
@@ -205,6 +224,7 @@ class TestCollectionView(ViewTestBase):
         resp = view.create(foo='bar')
         view.Model.assert_called_with(foo2='bar2')
         view.Model().save.assert_called_with(view.request)
+        assert view.set_object_acl.call_count == 1
         assert resp == view.Model().save()
 
     def test_update(self):
@@ -263,15 +283,19 @@ class TestESBaseView(ViewTestBase):
     def test_parent_queryset_es(self):
         from pyramid.config import Configurator
         from ramses.acl import BaseACL
+
+        class View(self.view_cls, BaseView):
+            _json_encoder = 'foo'
+
         config = Configurator()
         config.include('nefertari')
         root = config.get_root_resource()
         user = root.add(
             'user', 'users', id_name='username',
-            view=views.ESBaseView, factory=BaseACL)
+            view=View, factory=BaseACL)
         user.add(
             'story', 'stories', id_name='prof_id',
-            view=views.ESBaseView, factory=BaseACL)
+            view=View, factory=BaseACL)
         view_cls = root.resource_map['user:story'].view
         view_cls._json_encoder = 'foo'
 
@@ -304,31 +328,34 @@ class TestESBaseView(ViewTestBase):
 
     @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_no_parent(self, mock_es):
+        mock_es.settings.asbool.return_value = False
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=None)
         view.Model = Mock(__name__='Foo')
-        view.get_collection_es(arg=1)
+        view.get_collection_es()
         mock_es.assert_called_once_with('Foo')
         mock_es().get_collection.assert_called_once_with(
             _limit=20, foo='bar')
 
     @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_parent_no_obj_ids(self, mock_es):
+        mock_es.settings.asbool.return_value = False
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=[1, 2])
         view.Model = Mock(__name__='Foo')
         view.get_es_object_ids = Mock(return_value=None)
-        result = view.get_collection_es(arg=1)
+        result = view.get_collection_es()
         assert not mock_es().get_collection.called
         assert result == []
 
     @patch('nefertari.elasticsearch.ES')
     def test_get_collection_es_parent_with_ids(self, mock_es):
+        mock_es.settings.asbool.return_value = False
         view = self._test_view()
         view._parent_queryset_es = Mock(return_value=['obj1', 'obj2'])
         view.Model = Mock(__name__='Foo')
         view.get_es_object_ids = Mock(return_value=[1, 2])
-        view.get_collection_es(arg=7)
+        view.get_collection_es()
         view.get_es_object_ids.assert_called_once_with(['obj1', 'obj2'])
         mock_es().get_collection.assert_called_once_with(
             _limit=20, foo='bar', id=[1, 2])
@@ -391,7 +418,7 @@ class TestESCollectionView(ViewTestBase):
         view.aggregate = Mock(side_effect=KeyError)
         view.get_collection_es = Mock()
         resp = view.index(foo=1)
-        view.get_collection_es.assert_called_once_with(foo=1)
+        view.get_collection_es.assert_called_once_with()
         assert resp == view.get_collection_es()
 
     def test_show(self):
@@ -426,7 +453,7 @@ class TestESCollectionView(ViewTestBase):
         view.get_collection_es = Mock(return_value=[1, 2])
         view.Model = Mock()
         result = view.get_dbcollection_with_es(foo='bar')
-        view.get_collection_es.assert_called_once_with(foo='bar')
+        view.get_collection_es.assert_called_once_with()
         view.Model.filter_objects.assert_called_once_with([1, 2])
         assert result == view.Model.filter_objects()
 
@@ -531,6 +558,7 @@ class TestItemSingularView(ViewTestBase):
 
     def test_create(self):
         view = self._test_view()
+        view.set_object_acl = Mock()
         view.request.registry._root_resources = {
             'foo': Mock(auth=False)
         }
@@ -544,6 +572,7 @@ class TestItemSingularView(ViewTestBase):
         parent = view.get_item()
         parent.update.assert_called_once_with(
             {'profile': child.save()}, view.request)
+        assert view.set_object_acl.call_count == 1
         assert resp == child.save()
 
     def test_update(self):
@@ -577,10 +606,11 @@ class TestItemSingularView(ViewTestBase):
 
 class TestRestViewGeneration(object):
 
-    @patch('ramses.views.ESCollectionView._run_init_actions')
+    @patch('ramses.views.NefertariBaseView._run_init_actions')
     def test_only_provided_attrs_are_available(self, run_init):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show', 'foobar'],
+            config, model_cls='foo', attrs=['show', 'foobar'],
             es_based=True, attr_view=False, singular=False)
         view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ESCollectionView)
@@ -606,39 +636,64 @@ class TestRestViewGeneration(object):
             view.index()
 
     def test_singular_view(self):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show'],
+            config, model_cls='foo', attrs=['show'],
             es_based=True, attr_view=False, singular=True)
         view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ItemSingularView)
 
     def test_attribute_view(self):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show'],
+            config, model_cls='foo', attrs=['show'],
             es_based=True, attr_view=True, singular=False)
         view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ItemAttributeView)
 
     def test_escollection_view(self):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show'],
+            config, model_cls='foo', attrs=['show'],
             es_based=True, attr_view=False, singular=False)
         view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)
 
     def test_dbcollection_view(self):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show'],
+            config, model_cls='foo', attrs=['show'],
             es_based=False, attr_view=False, singular=False)
         view_cls._json_encoder = 'foo'
         assert not issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)
 
     def test_default_values(self):
+        config = config_mock()
         view_cls = views.generate_rest_view(
-            model_cls='foo', attrs=['show'])
+            config, model_cls='foo', attrs=['show'])
         view_cls._json_encoder = 'foo'
         assert issubclass(view_cls, views.ESCollectionView)
         assert issubclass(view_cls, views.CollectionView)
         assert view_cls.Model == 'foo'
+
+    def test_database_acls_option(self):
+        from nefertari_guards.view import ACLFilterViewMixin
+        config = config_mock()
+
+        config.registry.database_acls = False
+        view_cls = views.generate_rest_view(
+            config, model_cls='foo', attrs=['show'],
+            es_based=False, attr_view=False, singular=False)
+        assert not issubclass(
+            view_cls, ACLFilterViewMixin)
+        assert not issubclass(
+            view_cls, views.SetObjectACLMixin)
+
+        config.registry.database_acls = True
+        view_cls = views.generate_rest_view(
+            config, model_cls='foo', attrs=['show'],
+            es_based=False, attr_view=False, singular=False)
+        assert issubclass(view_cls, views.SetObjectACLMixin)
+        assert issubclass(view_cls, ACLFilterViewMixin)
