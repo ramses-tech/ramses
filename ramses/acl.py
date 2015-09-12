@@ -9,7 +9,6 @@ from nefertari.acl import CollectionACL
 from nefertari.resource import PERMISSIONS
 from nefertari.elasticsearch import ES
 
-from .views import collection_methods, item_methods
 from .utils import resolve_to_callable, is_callable_tag
 
 
@@ -27,12 +26,12 @@ special_principals = {
 ALLOW_ALL = (Allow, Everyone, ALL_PERMISSIONS)
 
 
-def methods_to_perms(perms, methods_map):
-    """ Convert permissions ("perms") which are either HTTP methods or
-    the keyword 'all' into a set of valid Pyramid permissions.
+def parse_permissions(perms):
+    """ Parse permissions ("perms") which are either exact permission
+    names or the keyword 'all'.
 
-    :param perms: List or comma-separated string of HTTP methods, or 'all'
-    :param methods_map: Map of HTTP methods to nefertari view methods
+    :param perms: List or comma-separated string of nefertari permission
+        names, or 'all'
     """
     if isinstance(perms, six.string_types):
         perms = perms.split(',')
@@ -40,15 +39,15 @@ def methods_to_perms(perms, methods_map):
     if 'all' in perms:
         return ALL_PERMISSIONS
     else:
-        try:
-            return [PERMISSIONS[methods_map[p]] for p in perms]
-        except KeyError:
+        valid_perms = set(PERMISSIONS.values())
+        if set(perms) - valid_perms:
             raise ValueError(
-                'Unknown method name in permissions: {}. Valid methods: '
-                '{}'.format(perms, list(methods_map.keys())))
+                'Invalid ACL permission names. Valid permissions '
+                'are: {}'.format(', '.join(valid_perms)))
+        return perms
 
 
-def parse_acl(acl_string, methods_map):
+def parse_acl(acl_string):
     """ Parse raw string :acl_string: of RAML-defined ACLs.
 
     If :acl_string: is blank or None, all permissions are given.
@@ -59,10 +58,9 @@ def parse_acl(acl_string, methods_map):
     ACEs in :acl_string: may be separated by newlines or semicolons.
     Action, principal and permission lists must be separated by spaces.
     Permissions must be comma-separated.
-    E.g. 'allow everyone get,post,patch' and 'deny authenticated delete'
+    E.g. 'allow everyone view,create,update' and 'deny authenticated delete'
 
     :param acl_string: Raw RAML string containing defined ACEs.
-    :param methods_map: Map of HTTP methods to nefertari method handler names.
     """
     if not acl_string:
         return [ALLOW_ALL]
@@ -91,7 +89,7 @@ def parse_acl(acl_string, methods_map):
             principal = princ_str
 
         # Process permissions
-        permissions = methods_to_perms(perms, methods_map)
+        permissions = parse_permissions(perms)
 
         result_acl.append((action, principal, permissions))
 
@@ -105,7 +103,7 @@ class BaseACL(CollectionACL):
     _collection_acl = (ALLOW_ALL, )
     _item_acl = (ALLOW_ALL, )
 
-    def _apply_callables(self, acl, methods_map, obj=None):
+    def _apply_callables(self, acl, obj=None):
         """ Iterate over ACEs from :acl: and apply callable principals
         if any.
 
@@ -117,8 +115,6 @@ class BaseACL(CollectionACL):
         Principals must return a single ACE or a list of ACEs.
 
         :param acl: Sequence of valid Pyramid ACEs which will be processed
-        :param methods_map: Map of HTTP methods to nefertari view method names
-            (permissions)
         :param obj: Object to be accessed via the ACL
         """
         new_acl = []
@@ -130,8 +126,7 @@ class BaseACL(CollectionACL):
                     continue
                 if not isinstance(ace[0], (list, tuple)):
                     ace = [ace]
-                ace = [(a, b, methods_to_perms(c, methods_map))
-                       for a, b, c in ace]
+                ace = [(a, b, parse_permissions(c)) for a, b, c in ace]
             else:
                 ace = [ace]
             new_acl += ace
@@ -139,14 +134,11 @@ class BaseACL(CollectionACL):
 
     def __acl__(self):
         """ Apply callables to `self._collection_acl` and return result. """
-        return self._apply_callables(
-            acl=self._collection_acl,
-            methods_map=collection_methods)
+        return self._apply_callables(acl=self._collection_acl)
 
     def generate_item_acl(self, item):
         acl = self._apply_callables(
             acl=self._item_acl,
-            methods_map=item_methods,
             obj=item)
         if acl is None:
             acl = self.__acl__()
@@ -224,12 +216,8 @@ def generate_acl(config, model_cls, raml_resource, es_based=True):
         sec_scheme = schemes[0]
         log.debug('{} ACL scheme applied'.format(sec_scheme.name))
         settings = sec_scheme.settings or {}
-        collection_acl = parse_acl(
-            acl_string=settings.get('collection'),
-            methods_map=collection_methods)
-        item_acl = parse_acl(
-            acl_string=settings.get('item'),
-            methods_map=item_methods)
+        collection_acl = parse_acl(acl_string=settings.get('collection'))
+        item_acl = parse_acl(acl_string=settings.get('item'))
 
     class GeneratedACLBase(object):
         item_model = model_cls

@@ -11,70 +11,67 @@ from .fixtures import config_mock
 
 
 class TestACLHelpers(object):
-    methods_map = {'get': 'index', 'post': 'create'}
-
-    def test_methods_to_perms_all_permissions(self):
-        perms = acl.methods_to_perms('all,get,post', self.methods_map)
+    def test_parse_permissions_all_permissions(self):
+        perms = acl.parse_permissions('all,view,create')
         assert perms is ALL_PERMISSIONS
 
-    def test_methods_to_perms_invalid_perm_name(self):
+    def test_parse_permissions_invalid_perm_name(self):
         with pytest.raises(ValueError) as ex:
-            acl.methods_to_perms('foo,post', self.methods_map)
-        expected = ("Unknown method name in permissions: "
-                    "['foo', 'post']")
+            acl.parse_permissions('foo,create')
+        expected = ('Invalid ACL permission names. Valid '
+                    'permissions are: ')
         assert expected in str(ex.value)
 
-    def test_methods_to_perms(self):
-        perms = acl.methods_to_perms('get', self.methods_map)
+    def test_parse_permissions(self):
+        perms = acl.parse_permissions('view')
         assert perms == ['view']
-        perms = acl.methods_to_perms('get,post', self.methods_map)
+        perms = acl.parse_permissions('view,create')
         assert sorted(perms) == ['create', 'view']
 
     def test_parse_acl_no_string(self):
-        perms = acl.parse_acl('', self.methods_map)
+        perms = acl.parse_acl('')
         assert perms == [acl.ALLOW_ALL]
 
     def test_parse_acl_unknown_action(self):
         with pytest.raises(ValueError) as ex:
-            acl.parse_acl('foobar admin all', self.methods_map)
+            acl.parse_acl('foobar admin all')
         assert 'Unknown ACL action: foobar' in str(ex.value)
 
-    @patch.object(acl, 'methods_to_perms')
+    @patch.object(acl, 'parse_permissions')
     def test_parse_acl_multiple_values(self, mock_perms):
         mock_perms.return_value = 'Foo'
         perms = acl.parse_acl(
-            'allow everyone read,write;allow authenticated all',
-            self.methods_map)
+            'allow everyone read,write;allow authenticated all')
         mock_perms.assert_has_calls([
-            call(['read', 'write'], self.methods_map),
-            call(['all'], self.methods_map),
+            call(['read', 'write']),
+            call(['all']),
         ])
         assert sorted(perms) == sorted([
             (Allow, Everyone, 'Foo'),
             (Allow, Authenticated, 'Foo'),
         ])
 
-    @patch.object(acl, 'methods_to_perms')
+    @patch.object(acl, 'parse_permissions')
     def test_parse_acl_special_principal(self, mock_perms):
         mock_perms.return_value = 'Foo'
-        perms = acl.parse_acl('allow everyone all', self.methods_map)
-        mock_perms.assert_called_once_with(['all'], self.methods_map)
+        perms = acl.parse_acl('allow everyone all')
+        mock_perms.assert_called_once_with(['all'])
         assert perms == [(Allow, Everyone, 'Foo')]
 
-    @patch.object(acl, 'methods_to_perms')
+    @patch.object(acl, 'parse_permissions')
     def test_parse_acl_group_principal(self, mock_perms):
         mock_perms.return_value = 'Foo'
-        perms = acl.parse_acl('allow g:admin all', self.methods_map)
-        mock_perms.assert_called_once_with(['all'], self.methods_map)
+        perms = acl.parse_acl('allow g:admin all')
+        mock_perms.assert_called_once_with(['all'])
         assert perms == [(Allow, 'g:admin', 'Foo')]
 
     @patch.object(acl, 'resolve_to_callable')
-    @patch.object(acl, 'methods_to_perms')
+    @patch.object(acl, 'parse_permissions')
     def test_parse_acl_callable_principal(self, mock_perms, mock_res):
         mock_perms.return_value = 'Foo'
         mock_res.return_value = 'registry callable'
-        perms = acl.parse_acl('allow {{my_user}} all', self.methods_map)
-        mock_perms.assert_called_once_with(['all'], self.methods_map)
+        perms = acl.parse_acl('allow {{my_user}} all')
+        mock_perms.assert_called_once_with(['all'])
         mock_res.assert_called_once_with('{{my_user}}')
         assert perms == [(Allow, 'registry callable', 'Foo')]
 
@@ -123,8 +120,8 @@ class TestGenerateACL(object):
             raml_resource=raml_resource,
             es_based=False)
         mock_parse.assert_has_calls([
-            call(acl_string=4, methods_map=acl.collection_methods),
-            call(acl_string=7, methods_map=acl.item_methods),
+            call(acl_string=4),
+            call(acl_string=7),
         ])
         instance = acl_cls(request=None)
         assert instance._collection_acl == mock_parse()
@@ -163,34 +160,31 @@ class TestBaseACL(object):
         obj = acl.BaseACL('req')
         new_acl = obj._apply_callables(
             acl=[('foo', 'bar', 'baz')],
-            methods_map={'zoo': 1},
             obj='obj')
         assert new_acl == (('foo', 'bar', 'baz'),)
 
-    @patch.object(acl, 'methods_to_perms')
+    @patch.object(acl, 'parse_permissions')
     def test_apply_callables(self, mock_meth):
         mock_meth.return_value = '123'
         principal = Mock(return_value=(7, 8, 9))
         obj = acl.BaseACL('req')
         new_acl = obj._apply_callables(
             acl=[('foo', principal, 'bar')],
-            methods_map={'zoo': 1},
             obj='obj')
         assert new_acl == ((7, 8, '123'),)
         principal.assert_called_once_with(
             ace=('foo', principal, 'bar'),
             request='req',
             obj='obj')
-        mock_meth.assert_called_once_with(9, {'zoo': 1})
+        mock_meth.assert_called_once_with(9)
 
-    @patch.object(acl, 'methods_to_perms')
+    @patch.object(acl, 'parse_permissions')
     def test_apply_callables_principal_returns_none(self, mock_meth):
         mock_meth.return_value = '123'
         principal = Mock(return_value=None)
         obj = acl.BaseACL('req')
         new_acl = obj._apply_callables(
             acl=[('foo', principal, 'bar')],
-            methods_map={'zoo': 1},
             obj='obj')
         assert new_acl == ()
         principal.assert_called_once_with(
@@ -199,28 +193,26 @@ class TestBaseACL(object):
             obj='obj')
         assert not mock_meth.called
 
-    @patch.object(acl, 'methods_to_perms')
+    @patch.object(acl, 'parse_permissions')
     def test_apply_callables_principal_returns_list(self, mock_meth):
         mock_meth.return_value = '123'
         principal = Mock(return_value=[(7, 8, 9)])
         obj = acl.BaseACL('req')
         new_acl = obj._apply_callables(
             acl=[('foo', principal, 'bar')],
-            methods_map={'zoo': 1},
             obj='obj')
         assert new_acl == ((7, 8, '123'),)
         principal.assert_called_once_with(
             ace=('foo', principal, 'bar'),
             request='req',
             obj='obj')
-        mock_meth.assert_called_once_with(9, {'zoo': 1})
+        mock_meth.assert_called_once_with(9)
 
     def test_apply_callables_functional(self):
         obj = acl.BaseACL('req')
-        principal = lambda ace, request, obj: [(Allow, Everyone, 'get')]
+        principal = lambda ace, request, obj: [(Allow, Everyone, 'view')]
         new_acl = obj._apply_callables(
             acl=[(Deny, principal, ALL_PERMISSIONS)],
-            methods_map=acl.item_methods,
         )
         assert new_acl == ((Allow, Everyone, ['view']),)
 
@@ -231,7 +223,6 @@ class TestBaseACL(object):
         result = obj.__acl__()
         obj._apply_callables.assert_called_once_with(
             acl=[(1, 2, 3)],
-            methods_map=acl.collection_methods
         )
         assert result == obj._apply_callables()
 
@@ -242,7 +233,6 @@ class TestBaseACL(object):
         result = obj.item_acl('foobar')
         obj._apply_callables.assert_called_once_with(
             acl=[(1, 2, 3)],
-            methods_map=acl.item_methods,
             obj='foobar'
         )
         assert result == obj._apply_callables()
