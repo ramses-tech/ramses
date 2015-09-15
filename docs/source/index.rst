@@ -15,7 +15,7 @@ Table of Contents
    raml
    schemas
    fields
-   crud_events
+   event_handlers
    relationships
    changelog
 

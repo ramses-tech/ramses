@@ -7,7 +7,7 @@ You can read the full RAML specs `here <http://raml.org/spec.html>`_.
 Authentication
 --------------
 
-In order to enable authentication, add the ``auth`` paramer to your .ini file:
+In order to enable authentication, add the ``auth`` parameter to your .ini file:
 
 .. code-block:: ini
 

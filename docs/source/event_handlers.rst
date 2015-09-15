@@ -1,12 +1,13 @@
-CRUD Events
-===========
+Event Handlers
+==============
 
-Ramses supports Nefertari CRUD events. The following documentation describes how to define and connect them.
+Ramses supports Nefertari event handlers. The following documentation describes how to define and connect them.
 
-Writing Processors
-------------------
 
-You can write custom functions inside your ``__init__.py`` file, then add the ``@registry.add`` decorator before the functions that you'd like to turn into CRUD event subscribers. Ramses CRUD event subscribers has the same API as Nefertari CRUD event subscribers. Check Nefertari CRUD Events doc for more details on events API.
+Writing Event Handlers
+----------------------
+
+You can write custom functions inside your ``__init__.py`` file, then add the ``@registry.add`` decorator before the functions that you'd like to turn into CRUD event handlers. Ramses CRUD event handlers has the same API as Nefertari CRUD event handlers. Check Nefertari CRUD Events doc for more details on events API.
 
 E.g.
 
@@ -19,19 +20,16 @@ E.g.
         event.set_field_value(value)
 
 
-Connecting event subscribers
-----------------------------
+Connecting Event Handlers
+-------------------------
 
-When you define event subscribers in your ``__init__.py`` as described above, you can apply them on either a per-model or a per-field basis.
-
-Subscribers are defined using the ``_event_handlers`` property. This property is an object, keys of which are called "event tags" and values are lists of subscriber names. Event tags are constructed of two parts: ``<type>_<action>`` whereby:
+When you define event handlers in your ``__init__.py`` as described above, you can apply them on either a per-model or a per-field basis. If multiple handlers are listed, they are executed in the order in which they are listed. Handlers are defined using the ``_event_handlers`` property. This property is an object, keys of which are called "event tags" and values are lists of handler names. Event tags are constructed of two parts: ``<type>_<action>`` whereby:
 
 **type**
-    Is either ``before`` or ``after``, depending on when subscriber should run - before view method call or after respectively.
+    Is either ``before`` or ``after``, depending on when handler should run - before view method call or after respectively.
 **action**
-    Exact name of Nefertari view method that processes the request (action)
+    Exact name of Nefertari view method that processes the request (action).
 
-Complete list of actions:
     * **index** - Collection GET
     * **create** - Collection POST
     * **update_many** - Collection PATCH/PUT
@@ -42,16 +40,9 @@ Complete list of actions:
     * **replace** - Item PUT
     * **delete** - Item DELETE
     * **item_options** - Item OPTIONS
+    * **set** - triggers on all the following actions: ``create``, ``update``, ``replace`` and ``update_many``
 
-And one special action:
-    * **set** - triggers on either of the following actions: ``create``, ``update``, ``replace`` and ``update_many``
-
-E.g. The following example connects the ``lowercase`` subscriber to the ``before_set`` event and the subscriber will run before any of the following requests are processed:
-    * Collection POST
-    * Item PATCH
-    * Item PUT
-    * Collection PATCH
-    * Collection PUT
+E.g. This example connects the ``lowercase`` handler to the ``before_set`` event.
 
 .. code-block:: json
 
@@ -59,8 +50,16 @@ E.g. The following example connects the ``lowercase`` subscriber to the ``before
         "before_set": ["lowercase"]
     }
 
+The ``lowercase`` handler will run before any of the following requests are processed:
 
-We will use the following subscriber to demonstrate how to connect subscribers to events. This subscriber logs ``request``.
+    * Collection POST
+    * Item PATCH
+    * Item PUT
+    * Collection PATCH
+    * Collection PUT
+
+
+We will use the following handler to demonstrate how to connect handlers to events. This handler logs ``request``.
 
 .. code-block:: python
 
@@ -72,23 +71,23 @@ We will use the following subscriber to demonstrate how to connect subscribers t
         log.debug(event.view.request)
 
 
-Using before/after events
--------------------------
+Before vs After
+---------------
 
-``before`` events should be used to:
+``Before`` events should be used to:
     * Transform input
     * Perform validation
     * Apply changes to object that is being affected by the request using the ``event.set_field_value`` method
 
-``after`` events should be used to:
+``After`` events should be used to:
     * Change DB objects which are not affected by the request
     * Perform notifications/logging
 
 
-Per-model subscribers
----------------------
+Per-model Handlers
+------------------
 
-To register subscribers on a per-model basis, you can define the ``_event_handlers`` property at the root of your model's JSON schema. For example, if we have a JSON schema for the model ``User`` and we want to log all collection GET requests to the ``User`` model after they were processed (using the ``log_request`` subscriber), we can register the subscriber in the JSON schema like this:
+To register handlers on a per-model basis, you can define the ``_event_handlers`` property at the root of your model's JSON schema. For example, if we have a JSON schema for the model ``User`` and we want to log all collection GET requests to the ``User`` model after they were processed (using the ``log_request`` handler), we can register the handler in the JSON schema like this:
 
 .. code-block:: json
 
@@ -103,12 +102,12 @@ To register subscribers on a per-model basis, you can define the ``_event_handle
     }
 
 
-Per-field subscribers
----------------------
+Per-field Handlers
+------------------
 
-To register subscribers on a per-field basis, you can define the ``_event_handlers`` property inside the fields of your JSON schema (same level as ``_db_settings``).
+To register handlers on a per-field basis, you can define the ``_event_handlers`` property inside the fields of your JSON schema (same level as ``_db_settings``).
 
-E.g. if our model ``User`` has a field ``username`` we might want to make sure that ``username`` is not a reserved name. If ``username`` is a reserved name, we want to raise an exception to interrupt the request.
+E.g. if our model ``User`` has a field ``username``, we might want to make sure that ``username`` is not a reserved name. If ``username`` is a reserved name, we want to raise an exception to interrupt the request.
 
 .. code-block:: python
 
@@ -120,7 +119,7 @@ E.g. if our model ``User`` has a field ``username`` we might want to make sure t
             raise ValueError('Reserved username: {}'.format(username))
 
 
-The following JSON schema registers ``before_set`` on the field ``User.username``. When connected this way, the ``check_username`` subscriber will only be executed if the request has the field ``username`` passed to it:
+The following JSON schema registers ``before_set`` on the field ``User.username``. When connected this way, the ``check_username`` handler will only be executed if the request has the field ``username`` passed to it:
 
 .. code-block:: json
 

@@ -101,41 +101,6 @@ You can set a minimum and/or maximum length of your field by setting the ``min_l
         }
     }
 
-.. _field-processors:
-
-Field Processors
-----------------
-
-Field processors are custom functions that are called upon validation of a field. You can write those functions inside your ``__init__.py``. You can reference processors in the ``before_validation`` and ``after_validation`` properties under ``_db_settings``. The `before_` and `after_` prefixes refer to when those processors are executed, either before or after database validation. You can define more than one processor in each of those arguments in a comma-separated list. If multiple processors are listed, they are executed in the order in which they are listed.
-
-.. code-block:: json
-
-    "password": {
-        (...)
-        "_db_settings": {
-            (...)
-            "before_validation": ["validate_password_format", "crypt"],
-            "after_validation": ["email_password_changed"]
-        }
-    }
-
-For 'relationship' fields, you can also add processors to your backref field by adding the ``backref_`` prefix.
-
-.. code-block:: json
-
-    "parents": {
-        (...)
-        "_db_settings": {
-            "type": "relationship",
-            "document": "Parent",
-            "backref_name": "child",
-            "backref_before_validation": ["verify_filiation"],
-            "backref_after_validation": ["copy_parents_lastname"]
-        }
-    }
-
-To learn more about writing custom processors, see the :ref:`Writing Processors documentation<writing-processors>`.
-
 
 Default Value
 -------------

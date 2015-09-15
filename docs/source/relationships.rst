@@ -19,8 +19,8 @@ file and schemas.
 Example code is the very minimum needed to explain the subject. We will be referring to the examples along all the tutorial.
 
 
-relationship
-------------
+Field "type": "relationship"
+----------------------------
 
 Must be defined on the *One* side of OneToOne or OneToMany
 relationship (``User`` in our example). Relationships are created as
@@ -50,8 +50,8 @@ Example of using ``relationship`` field (defined on ``User`` model in our exampl
     String. Name of *back reference* field. This field will be auto-generated on model we set up relationship to and will hold the instance of model we are defining. In our example, field ``Story.owner`` will be generated and it will hold instance of ``User`` model to which story instance belongs. **Use this field to change relationships between objects.**
 
 
-foreign_key
------------
+Field "type": "foreign_key"
+---------------------------
 
 This represents a Foreign Key constraint in SQL and is only required
 when using ``nefertari_sqla`` engine. It is used in conjunction with
