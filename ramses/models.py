@@ -113,6 +113,7 @@ def generate_model_cls(config, schema, model_name, raml_resource,
         '__tablename__': model_name.lower(),
         '_public_fields': schema.get('_public_fields') or [],
         '_auth_fields': schema.get('_auth_fields') or [],
+        '_hidden_fields': schema.get('_hidden_fields') or [],
         '_nested_relationships': schema.get('_nested_relationships') or [],
     }
     # Generate fields from properties

@@ -143,6 +143,7 @@ class TestGenerateModelCls(object):
             '_auth_model': False,
             '_public_fields': ['public_field1'],
             '_auth_fields': ['auth_field1'],
+            '_hidden_fields': ['hidden_field1'],
             '_nested_relationships': ['nested_field1']
         }
 
@@ -170,6 +171,7 @@ class TestGenerateModelCls(object):
         assert model_cls.__tablename__ == 'story'
         assert model_cls._public_fields == ['public_field1']
         assert model_cls._auth_fields == ['auth_field1']
+        assert model_cls._hidden_fields == ['hidden_field1']
         assert model_cls._nested_relationships == ['nested_field1']
         assert model_cls.foo == 'bar'
         assert issubclass(model_cls, models.engine.ESBaseDocument)
