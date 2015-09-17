@@ -102,8 +102,9 @@ def generate_resource(config, raml_resource, parent_resource):
     # but we store it on a different view attribute
     if is_singular:
         model_name = generate_model_name(route_name)
-        resource_kwargs['view']._singular_model = get_existing_model(
-            model_name)
+        view_cls = resource_kwargs['view']
+        view_cls._parent_model = view_cls.Model
+        view_cls.Model = get_existing_model(model_name)
 
     # Create new nefertari resource
     log.info('Creating new resource for `{}`'.format(route_name))

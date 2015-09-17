@@ -4,6 +4,8 @@ import six
 from nefertari.view import BaseView as NefertariBaseView
 from nefertari.json_httpexceptions import JHTTPNotFound
 
+from .utils import patch_view_model
+
 
 log = logging.getLogger(__name__)
 
@@ -405,19 +407,15 @@ class ItemSingularView(ItemSubresourceBaseView):
     If you decide to do so, make sure to set `self._singular_model` to a model
     class, instances of which will be processed by this view.
     """
-    _singular_model = None
+    _parent_model = None
 
     def __init__(self, *args, **kw):
         super(ItemSingularView, self).__init__(*args, **kw)
         self.attr = self.request.path.split('/')[-1]
 
-    def fill_null_values(self, model_cls=None):
-        return super(ItemSingularView, self).fill_null_values(
-            model_cls=self._singular_model)
-
-    def convert_ids2objects(self, model_cls=None):
-        return super(ItemSingularView, self).convert_ids2objects(
-            model_cls=self._singular_model)
+    def get_item(self, **kwargs):
+        with patch_view_model(self, self._parent_model):
+            return super(ItemSingularView, self).get_item(**kwargs)
 
     def show(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
@@ -425,7 +423,7 @@ class ItemSingularView(ItemSubresourceBaseView):
 
     def create(self, **kwargs):
         parent_obj = self.get_item(**kwargs)
-        obj = self._singular_model(**self._json_params)
+        obj = self.Model(**self._json_params)
         self.set_object_acl(obj)
         obj = obj.save(self.request)
         parent_obj.update({self.attr: obj}, self.request)

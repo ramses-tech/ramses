@@ -394,3 +394,16 @@ class TestUtils(object):
             events.BeforeReplace,
             events.BeforeUpdateMany,
         ]
+
+    def test_patch_view_model(self):
+        view_cls = Mock()
+        model1 = Mock()
+        model2 = Mock()
+        view_cls.Model = model1
+
+        with utils.patch_view_model(view_cls, model2):
+            view_cls.Model()
+
+        assert view_cls.Model is model1
+        assert not model1.called
+        model2.assert_called_once_with()
