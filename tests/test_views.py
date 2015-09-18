@@ -566,11 +566,11 @@ class TestItemSingularView(ViewTestBase):
             'foo': Mock(auth=False)
         }
         view.get_item = Mock()
-        view._singular_model = Mock()
+        view.Model = Mock()
         resp = view.create(foo=1)
         view.get_item.assert_called_once_with(foo=1)
-        view._singular_model.assert_called_once_with(foo2='bar2')
-        child = view._singular_model()
+        view.Model.assert_called_once_with(foo2='bar2')
+        child = view.Model()
         child.save.assert_called_once_with(view.request)
         parent = view.get_item()
         parent.update.assert_called_once_with(
