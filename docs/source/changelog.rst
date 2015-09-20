@@ -1,6 +1,13 @@
 Changelog
 =========
 
+* :release:`0.5.0 <2015-09-xx>`
+* :support:`-` Added support for Nefertari event handlers and removed support for processors
+* :support:`-` Added support for `'nefertari-guards' <https://nefertari-guards.readthedocs.org/>`_
+* :support:`-` Added support for Nefertari '_hidden_fields'
+* :support:`-` ACL permission names in RAML now match real permission names instead of http methods
+* :bug:`- major` Fixed a bug using 'required' '_db_settings' property on 'relationship' field
+
 * :release:`0.4.1 <2015-09-02>`
 * :bug:`-` Simplified ACLs (refactoring)
 
@@ -8,8 +15,8 @@ Changelog
 * :support:`-` Added support for JSON schema draft 04
 * :support:`-` RAML is now parsed using ramlfications instead of pyraml-parser
 * :feature:`-` Boolean values in RAML don't have to be strings anymore (previous limitation of pyraml-parser)
-* :feature:`-` Renamed setting `ramses.auth` to `auth`
-* :feature:`-` Renamed setting `debug` to `enable_get_tunneling`
+* :feature:`-` Renamed setting 'ramses.auth' to 'auth'
+* :feature:`-` Renamed setting 'debug' to 'enable_get_tunneling'
 * :feature:`-` Field name and request object are now passed to field processors under 'field' and 'request' kwargs respectively
 * :feature:`-` Added support for relationship processors and backref relationship processors ('backref_after_validation'/'backref_before_validation')
 * :feature:`-` Renamed schema's 'args' property to '_db_settings'
