@@ -165,7 +165,7 @@ class BaseACL(CollectionACL):
 
     def getitem_es(self, key):
         es = ES(self.item_model.__name__)
-        obj = es.get_resource(id=key)
+        obj = es.get_item(id=key)
         obj.__acl__ = self.item_acl(obj)
         obj.__parent__ = self
         obj.__name__ = key
@@ -187,7 +187,7 @@ class DatabaseACLMixin(object):
     def getitem_es(self, key):
         """ Override to support ACL filtering.
 
-        To do so: passes `self.request` to `get_resource` and uses
+        To do so: passes `self.request` to `get_item` and uses
         `ACLFilterES`.
         """
         from nefertari_guards.elasticsearch import ACLFilterES
@@ -196,7 +196,7 @@ class DatabaseACLMixin(object):
             'id': key,
             'request': self.request,
         }
-        obj = es.get_resource(**params)
+        obj = es.get_item(**params)
         obj.__acl__ = self.item_acl(obj)
         obj.__parent__ = self
         obj.__name__ = key

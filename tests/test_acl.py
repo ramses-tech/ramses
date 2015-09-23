@@ -258,7 +258,7 @@ class TestBaseACL(object):
     def test_getitem_es(self, mock_es):
         found_obj = Mock()
         es_obj = Mock()
-        es_obj.get_resource.return_value = found_obj
+        es_obj.get_item.return_value = found_obj
         mock_es.return_value = es_obj
         obj = acl.BaseACL('req')
         obj.item_model = Mock(__name__='Foo')
@@ -266,7 +266,7 @@ class TestBaseACL(object):
         obj.item_acl = Mock()
         value = obj.getitem_es(key='varvar')
         mock_es.assert_called_with('Foo')
-        es_obj.get_resource.assert_called_once_with(id='varvar')
+        es_obj.get_item.assert_called_once_with(id='varvar')
         obj.item_acl.assert_called_once_with(found_obj)
         assert value.__acl__ == obj.item_acl()
         assert value.__parent__ is obj
