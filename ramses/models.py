@@ -158,7 +158,8 @@ def generate_model_cls(config, schema, model_name, raml_resource,
 
     # Generate new model class
     model_cls = metaclass(model_name, tuple(bases), attrs)
-    setup_event_subscribers(config, model_cls, schema)
+    setup_model_event_subscribers(config, model_cls, schema)
+    setup_fields_validators(config, model_cls, schema)
     return model_cls, auth_model
 
 
@@ -204,16 +205,18 @@ def handle_model_generation(config, raml_resource, route_name):
         raise ValueError('{}: {}'.format(model_name, str(ex)))
 
 
-def _connect_subscribers(config, events_map, events_schema, event_kwargs):
-    """ Performs the actual subscribers set up.
+def setup_model_event_subscribers(config, model_cls, schema):
+    """ Set up model event subscribers.
 
     :param config: Pyramid Configurator instance.
-    :param events_map: Dict returned by `get_events_map`.
-    :param events_schema: Dict of {event_tag: [handler1, ...]}
-    :param event_kwargs: Dict of kwargs to be used when subscribing
-        to event.
+    :param model_cls: Model class for which handlers should be connected.
+    :param schema: Dict of model JSON schema.
     """
-    for event_tag, subscribers in events_schema.items():
+    events_map = get_events_map()
+    model_events = schema.get('_event_handlers', {})
+    event_kwargs = {'model': model_cls}
+
+    for event_tag, subscribers in model_events.items():
         type_, action = event_tag.split('_')
         event_objects = events_map[type_][action]
 
@@ -226,27 +229,40 @@ def _connect_subscribers(config, events_map, events_schema, event_kwargs):
                 sub_func, event_objects, **event_kwargs)
 
 
-def setup_event_subscribers(config, model_cls, schema):
-    """ High level function to set up event subscribers.
+def setup_fields_validators(config, model_cls, schema):
+    """ Set up model fields' validators.
 
     :param config: Pyramid Configurator instance.
-    :param model_cls: Model class for which handlers should be connected.
+    :param model_cls: Model class for field of which validators should be
+        set up.
     :param schema: Dict of model JSON schema.
     """
-    events_map = get_events_map()
-
-    # Model events
-    model_events = schema.get('_event_handlers', {})
-    event_kwargs = {'model': model_cls}
-    _connect_subscribers(config, events_map, model_events, event_kwargs)
-
-    # Field events
     properties = schema.get('properties', {})
     for field_name, props in properties.items():
-
-        if not props or '_event_handlers' not in props:
+        if not props:
             continue
 
-        field_events = props.get('_event_handlers', {})
-        event_kwargs = {'model': model_cls, 'field': field_name}
-        _connect_subscribers(config, events_map, field_events, event_kwargs)
+        validators = props.get('_validators')
+        backref_validators = props.get('_backref_validators')
+
+        if validators:
+            validators = [resolve_to_callable(val) for val in validators]
+            setup_kwargs = {'model': model_cls, 'field': field_name}
+            config.add_field_processors(validators, **setup_kwargs)
+
+        if backref_validators:
+            db_settings = props.get('_db_settings', {})
+            is_relationship = db_settings.get('type') == 'relationship'
+            document = db_settings.get('document')
+            backref_name = db_settings.get('backref_name')
+            if not (is_relationship and document and backref_name):
+                continue
+
+            backref_validators = [
+                resolve_to_callable(val) for val in backref_validators]
+            setup_kwargs = {
+                'model': engine.get_document_cls(document),
+                'field': backref_name
+            }
+            config.add_field_processors(
+                backref_validators, **setup_kwargs)
