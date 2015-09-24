@@ -16,6 +16,7 @@ Table of Contents
    schemas
    fields
    event_handlers
+   field_validators
    relationships
    changelog
 
