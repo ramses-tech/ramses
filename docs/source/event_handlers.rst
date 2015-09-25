@@ -87,10 +87,10 @@ Before vs After
     * Perform notifications/logging
 
 
-Per-model Handlers
-------------------
+Registering Handlers
+--------------------
 
-To register handlers on a per-model basis, you can define the ``_event_handlers`` property at the root of your model's JSON schema. For example, if we have a JSON schema for the model ``User`` and we want to log all collection GET requests to the ``User`` model after they were processed (using the ``log_request`` handler), we can register the handler in the JSON schema like this:
+To register handlers on a you can define the ``_event_handlers`` property at the root of your model's JSON schema. For example, if we have a JSON schema for the model ``User`` and we want to log all collection GET requests to the ``User`` model after they were processed (using the ``log_request`` handler), we can register the handler in the JSON schema like this:
 
 .. code-block:: json
 

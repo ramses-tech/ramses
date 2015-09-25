@@ -38,6 +38,9 @@ Field validators should expect following kwargs to be passed:
 **model**
     Model class affected by request.
 
+**event**
+    Underlying event object. Should be used to edit other fields of instance using ``event.set_field_value(value, field_name)``.
+
 Processors are called in order they are listed. Each validator must return processed value which is used a input for next validator if present.
 
 
@@ -91,3 +94,18 @@ If we had following validators defined:
 When connected like above:
     * ``validate_stories_exist`` validator will be run when request changes ``User.stories`` value. The validator will make sure all of story IDs from request exist.
     * ``lowercase`` validator will be run when request changes ``Story.owner`` field. The validator will lowercase new value of the ``Story.owner`` field.
+
+To edit other fields of instance, ``event.set_field_value`` method should be used. E.g. if we have fields ``due_date`` and ``days_left`` and we connect validator defined below to field ``due_date``, we can update ``days_left`` from it:
+
+.. code-block:: python
+
+    from .helpers import parse_data
+    from datetime import datetime
+
+    @registry.add
+    def calculate_days_left(**kwargs):
+        parsed_date = parse_data(kwargs['new_value'])
+        days_left = (parsed_date-datetime.now()).days
+        event = kwargs['event']
+        event.set_field_value(days_left, 'days_left')
+        return kwargs['new_value']
