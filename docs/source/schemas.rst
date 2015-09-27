@@ -20,7 +20,7 @@ All Ramses-specific properties are prefixed with an underscore.
 Showing Fields
 --------------
 
-If you've enabled authentication, you can list which fields to return to authenticated users in ``_auth_fields`` and to non-authenticated users in ``_public_fields``.
+If you've enabled authentication, you can list which fields to return to authenticated users in ``_auth_fields`` and to non-authenticated users in ``_public_fields``. Additionaly, you can list fields to be hidden but remain hidden (with proper persmissions) in ``_hidden_fields``.
 
 .. code-block:: json
 
@@ -28,6 +28,7 @@ If you've enabled authentication, you can list which fields to return to authent
         (...)
         "_auth_fields": ["id", "name", "description"],
         "_public_fields": ["name"],
+        "_hidden_fields": ["token"],
         (...)
     }
 
