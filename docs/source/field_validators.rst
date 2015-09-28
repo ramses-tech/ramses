@@ -39,7 +39,7 @@ Field validators should expect following kwargs to be passed:
     Model class affected by request.
 
 **event**
-    Underlying event object. Should be used to edit other fields of instance using ``event.set_field_value(value, field_name)``.
+    Underlying event object. Should be used to edit other fields of instance using ``event.set_field_value(field_name, value)``.
 
 Processors are called in order they are listed. Each validator must return processed value which is used a input for next validator if present.
 
@@ -107,5 +107,5 @@ To edit other fields of instance, ``event.set_field_value`` method should be use
         parsed_date = parse_data(kwargs['new_value'])
         days_left = (parsed_date-datetime.now()).days
         event = kwargs['event']
-        event.set_field_value(days_left, 'days_left')
+        event.set_field_value('days_left', days_left)
         return kwargs['new_value']

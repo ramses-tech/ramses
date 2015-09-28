@@ -116,7 +116,7 @@ You can update another field's value, for example, increment a counter:
     def increment_count(event):
         counter = event.instance.counter
         incremented = counter + 1
-        event.set_field_value(incremented, 'counter')
+        event.set_field_value('counter', incremented)
 
 
 You can update other collections (or filtered collections), for example, mark sub-tasks as completed whenever a task is completed:
