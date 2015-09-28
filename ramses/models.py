@@ -116,6 +116,9 @@ def generate_model_cls(config, schema, model_name, raml_resource,
         '_hidden_fields': schema.get('_hidden_fields') or [],
         '_nested_relationships': schema.get('_nested_relationships') or [],
     }
+    if '_nesting_depth' in schema:
+        attrs['_nesting_depth'] = schema.get('_nesting_depth')
+
     # Generate fields from properties
     properties = schema.get('properties', {})
     for field_name, props in properties.items():
