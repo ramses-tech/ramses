@@ -132,7 +132,8 @@ class TestHelperFunctions(object):
         assert auth_model
 
 
-@patch('ramses.models.setup_event_subscribers')
+@patch('ramses.models.setup_fields_validators')
+@patch('ramses.models.setup_model_event_subscribers')
 @patch('ramses.models.registry')
 @pytest.mark.usefixtures('engine_mock')
 class TestGenerateModelCls(object):
@@ -149,7 +150,8 @@ class TestGenerateModelCls(object):
         }
 
     @patch('ramses.models.resolve_to_callable')
-    def test_simple_case(self, mock_res, mock_reg, mock_subscribers):
+    def test_simple_case(
+            self, mock_res, mock_reg, mock_subscribers, mock_proc):
         from nefertari.authentication.models import AuthModelMethodsMixin
         from ramses import models
         config = config_mock()
@@ -183,9 +185,12 @@ class TestGenerateModelCls(object):
         mock_reg.mget.assert_called_once_with('Story')
         mock_subscribers.assert_called_once_with(
             config, model_cls, schema)
+        mock_proc.assert_called_once_with(
+            config, model_cls, schema)
 
     @patch('ramses.models.resolve_to_callable')
-    def test_callable_default(self, mock_res, mock_reg, mock_subscribers):
+    def test_callable_default(
+            self, mock_res, mock_reg, mock_subscribers, mock_proc):
         from ramses import models
         config = config_mock()
         models.engine.FloatField.reset_mock()
@@ -204,7 +209,7 @@ class TestGenerateModelCls(object):
             default=1, required=False)
         mock_res.assert_called_once_with('{{foobar}}')
 
-    def test_auth_model(self, mock_reg, mock_subscribers):
+    def test_auth_model(self, mock_reg, mock_subscribers, mock_proc):
         from nefertari.authentication.models import AuthModelMethodsMixin
         from ramses import models
         config = config_mock()
@@ -220,7 +225,8 @@ class TestGenerateModelCls(object):
         assert issubclass(model_cls, AuthModelMethodsMixin)
 
     def test_database_acls_option(
-            self, mock_reg, mock_subscribers, guards_engine_mock):
+            self, mock_reg, mock_subscribers, mock_proc,
+            guards_engine_mock):
         from ramses import models
         schema = self._test_schema()
         schema['properties']['progress'] = {'_db_settings': {}}
@@ -240,7 +246,7 @@ class TestGenerateModelCls(object):
             raml_resource=None)
         assert issubclass(model_cls, guards_engine_mock.DocumentACLMixin)
 
-    def test_db_based_model(self, mock_reg, mock_subscribers):
+    def test_db_based_model(self, mock_reg, mock_subscribers, mock_proc):
         from nefertari.authentication.models import AuthModelMethodsMixin
         from ramses import models
         config = config_mock()
@@ -255,7 +261,7 @@ class TestGenerateModelCls(object):
         assert not issubclass(model_cls, models.engine.ESBaseDocument)
         assert not issubclass(model_cls, AuthModelMethodsMixin)
 
-    def test_no_db_settings(self, mock_reg, mock_subscribers):
+    def test_no_db_settings(self, mock_reg, mock_subscribers, mock_proc):
         from ramses import models
         config = config_mock()
         schema = self._test_schema()
@@ -267,7 +273,8 @@ class TestGenerateModelCls(object):
             raml_resource=None, es_based=False)
         assert not models.engine.PickleField.called
 
-    def test_unknown_field_type(self, mock_reg, mock_subscribers):
+    def test_unknown_field_type(
+            self, mock_reg, mock_subscribers, mock_proc):
         from ramses import models
         config = config_mock()
         schema = self._test_schema()
@@ -282,8 +289,8 @@ class TestGenerateModelCls(object):
         assert str(ex.value) == 'Unknown type: foobar'
 
     @patch('ramses.models.prepare_relationship')
-    def test_relationship_field(self, mock_prep, mock_reg,
-                                mock_subscribers):
+    def test_relationship_field(
+            self, mock_prep, mock_reg, mock_subscribers, mock_proc):
         from ramses import models
         config = Mock()
         schema = self._test_schema()
@@ -301,7 +308,8 @@ class TestGenerateModelCls(object):
         mock_prep.assert_called_once_with(
             config, 'progress', 'FooBar', 1)
 
-    def test_foreignkey_field(self, mock_reg, mock_subscribers):
+    def test_foreignkey_field(
+            self, mock_reg, mock_subscribers, mock_proc):
         from ramses import models
         config = config_mock()
         schema = self._test_schema()
@@ -318,7 +326,7 @@ class TestGenerateModelCls(object):
         models.engine.ForeignKeyField.assert_called_once_with(
             required=False, ref_column_type=models.engine.StringField)
 
-    def test_list_field(self, mock_reg, mock_subscribers):
+    def test_list_field(self, mock_reg, mock_subscribers, mock_proc):
         from ramses import models
         config = config_mock()
         schema = self._test_schema()
@@ -335,7 +343,8 @@ class TestGenerateModelCls(object):
         models.engine.ListField.assert_called_once_with(
             required=False, item_type=models.engine.IntegerField)
 
-    def test_duplicate_field_name(self, mock_reg, mock_subscribers):
+    def test_duplicate_field_name(
+            self, mock_reg, mock_subscribers, mock_proc):
         from ramses import models
         config = config_mock()
         schema = self._test_schema()
@@ -350,47 +359,114 @@ class TestGenerateModelCls(object):
 
 class TestSubscribersSetup(object):
 
-    @patch('ramses.models.get_events_map')
-    @patch('ramses.models._connect_subscribers')
-    def test_setup_event_subscribers(self, mock_conn, mock_get):
-        from ramses import models
-        config = Mock()
-        model_cls = 1
-        schema = {
-            '_event_handlers': {
-                'before_index': ['foo']
-            },
-            'properties': {
-                'username': {
-                    '_event_handlers': {
-                        'after_index': ['bar']
-                    }
-                },
-                'password': {}
-            }
-        }
-        models.setup_event_subscribers(config, model_cls, schema)
-        mock_get.assert_called_once_with()
-        mock_conn.assert_has_calls([
-            call(config, mock_get(), {'before_index': ['foo']},
-                 {'model': 1}),
-            call(config, mock_get(), {'after_index': ['bar']},
-                 {'model': 1, 'field': 'username'})
-        ])
-
     @patch('ramses.models.resolve_to_callable')
-    def test_connect_subscribers(self, mock_resolve):
+    @patch('ramses.models.get_events_map')
+    def test_setup_model_event_subscribers(self, mock_get, mock_resolve):
         from ramses import models
+        mock_get.return_value = {'before': {'index': 'eventcls'}}
         mock_resolve.return_value = 1
         config = Mock()
-        events_map = {'before': {'foo': 'eventcls'}}
-        events_schema = {'before_foo': ['func1', 'func2']}
-        event_kwargs = {'model': 'mymodel'}
-        models._connect_subscribers(
-            config, events_map, events_schema, event_kwargs)
+        model_cls = 'mymodel'
+        schema = {
+            '_event_handlers': {
+                'before_index': ['func1', 'func2']
+            }
+        }
+        models.setup_model_event_subscribers(config, model_cls, schema)
+        mock_get.assert_called_once_with()
         mock_resolve.assert_has_calls([call('func1'), call('func2')])
         config.subscribe_to_events.assert_has_calls([
             call(mock_resolve(), ['eventcls'], model='mymodel'),
             call(mock_resolve(), ['eventcls'], model='mymodel'),
         ])
-        assert config.subscribe_to_events.call_count == 2
+
+    @patch('ramses.models.resolve_to_callable')
+    @patch('ramses.models.engine')
+    def test_setup_fields_validators(self, mock_eng, mock_resolve):
+        from ramses import models
+        config = Mock()
+        schema = {
+            'properties': {
+                'stories': {
+                    "_db_settings": {
+                        "type": "relationship",
+                        "document": "Story",
+                        "backref_name": "owner",
+                    },
+                    "_validators": ["lowercase"],
+                    "_backref_validators": ["backref_lowercase"]
+                }
+            }
+        }
+
+        models.setup_fields_validators(config, 'mymodel', schema)
+
+        mock_resolve.assert_has_calls([
+            call('lowercase'), call('backref_lowercase')])
+        mock_eng.get_document_cls.assert_called_once_with('Story')
+        config.add_field_processors.assert_has_calls([
+            call([mock_resolve()], model='mymodel', field='stories'),
+            call([mock_resolve()], model=mock_eng.get_document_cls(),
+                 field='owner'),
+        ])
+
+    @patch('ramses.models.resolve_to_callable')
+    @patch('ramses.models.engine')
+    def test_setup_fields_validators_backref_not_rel(
+            self, mock_eng, mock_resolve):
+        from ramses import models
+        config = Mock()
+        schema = {
+            'properties': {
+                'stories': {
+                    "_db_settings": {
+                        "type": "wqeqweqwe",
+                        "document": "Story",
+                        "backref_name": "owner",
+                    },
+                    "_backref_validators": ["backref_lowercase"]
+                }
+            }
+        }
+        models.setup_fields_validators(config, 'mymodel', schema)
+        assert not config.add_field_processors.called
+
+    @patch('ramses.models.resolve_to_callable')
+    @patch('ramses.models.engine')
+    def test_setup_fields_validators_backref_no_doc(
+            self, mock_eng, mock_resolve):
+        from ramses import models
+        config = Mock()
+        schema = {
+            'properties': {
+                'stories': {
+                    "_db_settings": {
+                        "type": "relationship",
+                        "backref_name": "owner",
+                    },
+                    "_backref_validators": ["backref_lowercase"]
+                }
+            }
+        }
+        models.setup_fields_validators(config, 'mymodel', schema)
+        assert not config.add_field_processors.called
+
+    @patch('ramses.models.resolve_to_callable')
+    @patch('ramses.models.engine')
+    def test_setup_fields_validators_backref_no_backname(
+            self, mock_eng, mock_resolve):
+        from ramses import models
+        config = Mock()
+        schema = {
+            'properties': {
+                'stories': {
+                    "_db_settings": {
+                        "type": "relationship",
+                        "document": "Story",
+                    },
+                    "_backref_validators": ["backref_lowercase"]
+                }
+            }
+        }
+        models.setup_fields_validators(config, 'mymodel', schema)
+        assert not config.add_field_processors.called
