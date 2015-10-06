@@ -80,7 +80,7 @@ Before vs After
 ``Before`` events should be used to:
     * Transform input
     * Perform validation
-    * Apply changes to object that is being affected by the request using the ``event.set_field_value`` method
+    * Apply changes to object that is being affected by the request using the ``event.set_field_value`` method. Note that if field you change by calling ``event.set_field_value`` is not affected by request, it will be added to ``event.fields`` which will makes field processors which are connected to this field to be triggered, if they are run after this method call(connected to events after handler that performs method call).
 
 ``After`` events should be used to:
     * Change DB objects which are not affected by the request
