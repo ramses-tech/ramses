@@ -1,15 +1,15 @@
-Field validators
+Field processors
 ================
 
 Ramses allows users to define functions that accept field data and return modified field value, may perform validation or perform other actions related to field.
 
-These functions are called "field validators". They are set up per-field and are called when request comes into application that modifies the field for which validator is set up (when field is present in request JSON).
+These functions are called "field processors". They are set up per-field and are called when request comes into application that modifies the field for which validator is set up (when field is present in request JSON).
 
 
 Usage basics
 ------------
 
-Field validators are defined in your target project just like event handlers:
+Field processors are defined in your target project just like event handlers:
 
 .. code-block:: python
 
@@ -19,9 +19,9 @@ Field validators are defined in your target project just like event handlers:
         return (kwargs['new_value'] or '').lower().strip()
 
 
-To use this field validator, define ``_validators`` attribute in your field definition (next to ``_db_settings``) which should be an array listing names of validators to apply. You can also use ``_backref_validators`` attribute defined the same way to specify validators for backref field. For backref validators to be set up, ``_db_settings`` must contain attributes ``document``, ``type=relationship`` and ``backref_name``.
+To use this field validator, define ``_processors`` attribute in your field definition (next to ``_db_settings``) which should be an array listing names of processors to apply. You can also use ``_backref_processors`` attribute defined the same way to specify processors for backref field. For backref processors to be set up, ``_db_settings`` must contain attributes ``document``, ``type=relationship`` and ``backref_name``.
 
-Field validators should expect following kwargs to be passed:
+Field processors should expect following kwargs to be passed:
 
 **new_value**
     New value of of field.
@@ -47,7 +47,7 @@ Processors are called in order they are listed. Each validator must return proce
 Examples
 --------
 
-If we had following validators defined:
+If we had following processors defined:
 
 .. code-block:: python
 
@@ -84,8 +84,8 @@ If we had following validators defined:
                     "document": "Story",
                     "backref_name": "owner"
                 },
-                "_validators": ["validate_stories_exist"],
-                "_backref_validators": ["lowercase"]
+                "_processors": ["validate_stories_exist"],
+                "_backref_processors": ["lowercase"]
             },
             ...
         }

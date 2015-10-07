@@ -1,8 +1,9 @@
 Changelog
 =========
 
-* :release:`0.5.0 <2015-09-xx>`
-* :support:`-` Added support for Nefertari event handlers and removed support for processors
+* :release:`0.5.0 <2015-10-xx>`
+* :support:`-` Added support for Nefertari event handlers
+* :support:`-` Simplified field processors, '_before_processors' is now '_processors', removed '_after_processors'
 * :support:`-` Added support for `'nefertari-guards' <https://nefertari-guards.readthedocs.org/>`_
 * :support:`-` Added support for Nefertari '_hidden_fields'
 * :support:`-` ACL permission names in RAML now match real permission names instead of http methods

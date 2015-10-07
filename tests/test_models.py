@@ -132,7 +132,7 @@ class TestHelperFunctions(object):
         assert auth_model
 
 
-@patch('ramses.models.setup_fields_validators')
+@patch('ramses.models.setup_fields_processors')
 @patch('ramses.models.setup_model_event_subscribers')
 @patch('ramses.models.registry')
 @pytest.mark.usefixtures('engine_mock')
@@ -382,7 +382,7 @@ class TestSubscribersSetup(object):
 
     @patch('ramses.models.resolve_to_callable')
     @patch('ramses.models.engine')
-    def test_setup_fields_validators(self, mock_eng, mock_resolve):
+    def test_setup_fields_processors(self, mock_eng, mock_resolve):
         from ramses import models
         config = Mock()
         schema = {
@@ -393,13 +393,13 @@ class TestSubscribersSetup(object):
                         "document": "Story",
                         "backref_name": "owner",
                     },
-                    "_validators": ["lowercase"],
-                    "_backref_validators": ["backref_lowercase"]
+                    "_processors": ["lowercase"],
+                    "_backref_processors": ["backref_lowercase"]
                 }
             }
         }
 
-        models.setup_fields_validators(config, 'mymodel', schema)
+        models.setup_fields_processors(config, 'mymodel', schema)
 
         mock_resolve.assert_has_calls([
             call('lowercase'), call('backref_lowercase')])
@@ -412,7 +412,7 @@ class TestSubscribersSetup(object):
 
     @patch('ramses.models.resolve_to_callable')
     @patch('ramses.models.engine')
-    def test_setup_fields_validators_backref_not_rel(
+    def test_setup_fields_processors_backref_not_rel(
             self, mock_eng, mock_resolve):
         from ramses import models
         config = Mock()
@@ -424,16 +424,16 @@ class TestSubscribersSetup(object):
                         "document": "Story",
                         "backref_name": "owner",
                     },
-                    "_backref_validators": ["backref_lowercase"]
+                    "_backref_processors": ["backref_lowercase"]
                 }
             }
         }
-        models.setup_fields_validators(config, 'mymodel', schema)
+        models.setup_fields_processors(config, 'mymodel', schema)
         assert not config.add_field_processors.called
 
     @patch('ramses.models.resolve_to_callable')
     @patch('ramses.models.engine')
-    def test_setup_fields_validators_backref_no_doc(
+    def test_setup_fields_processors_backref_no_doc(
             self, mock_eng, mock_resolve):
         from ramses import models
         config = Mock()
@@ -444,16 +444,16 @@ class TestSubscribersSetup(object):
                         "type": "relationship",
                         "backref_name": "owner",
                     },
-                    "_backref_validators": ["backref_lowercase"]
+                    "_backref_processors": ["backref_lowercase"]
                 }
             }
         }
-        models.setup_fields_validators(config, 'mymodel', schema)
+        models.setup_fields_processors(config, 'mymodel', schema)
         assert not config.add_field_processors.called
 
     @patch('ramses.models.resolve_to_callable')
     @patch('ramses.models.engine')
-    def test_setup_fields_validators_backref_no_backname(
+    def test_setup_fields_processors_backref_no_backname(
             self, mock_eng, mock_resolve):
         from ramses import models
         config = Mock()
@@ -464,9 +464,9 @@ class TestSubscribersSetup(object):
                         "type": "relationship",
                         "document": "Story",
                     },
-                    "_backref_validators": ["backref_lowercase"]
+                    "_backref_processors": ["backref_lowercase"]
                 }
             }
         }
-        models.setup_fields_validators(config, 'mymodel', schema)
+        models.setup_fields_processors(config, 'mymodel', schema)
         assert not config.add_field_processors.called
