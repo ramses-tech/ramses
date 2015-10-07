@@ -109,3 +109,7 @@ To edit other fields of instance, ``event.set_field_value`` method should be use
         event = kwargs['event']
         event.set_field_value('days_left', days_left)
         return kwargs['new_value']
+
+Note that if field you change by calling ``event.set_field_value`` is not affected by request, it will be added to ``event.fields`` which will makes field processors which are connected to changed field to be triggered, if they are run after this method call(connected to events after handler that performs method call).
+
+E.g. if in addition to above ``calculate_days_left`` processor we had field processors for ``days_left`` field set up, running ``calculate_days_left`` will make ``days_left`` field processors run, because after ``event.set_field_value`` was called in ``calculate_days_left`` field ``days_left`` is considered "updated/changed".
