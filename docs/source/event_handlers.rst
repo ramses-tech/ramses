@@ -31,7 +31,7 @@ When you define event handlers in your ``__init__.py`` as described above, you c
     Is either ``before`` or ``after``, depending on when handler should run - before view method call or after respectively.
 
 **action**
-    Exact name of Nefertari view method that processes the request (action).
+    Exact name of Nefertari view method that processes the request (action) and special names for authentication actions.
 
     * **index** - Collection GET
     * **create** - Collection POST
@@ -43,7 +43,10 @@ When you define event handlers in your ``__init__.py`` as described above, you c
     * **replace** - Item PUT
     * **delete** - Item DELETE
     * **item_options** - Item OPTIONS
-    * **set** - triggers on all the following actions: ``create``, ``update``, ``replace`` and ``update_many``
+    * **set** - triggers on all the following actions: ``create``, ``update``, ``replace`` and ``update_many``, ``register``.
+    * **login** - User login (POST /auth/login)
+    * **logout** - User logout (POST /auth/logout)
+    * **register** - User register (POST /auth/register)
 
 E.g. This example connects the ``lowercase`` handler to the ``before_set`` event.
 

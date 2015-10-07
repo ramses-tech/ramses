@@ -387,12 +387,14 @@ class TestUtils(object):
             events.AfterUpdate,
             events.AfterReplace,
             events.AfterUpdateMany,
+            events.AfterRegister,
         ]
         assert before_set == [
             events.BeforeCreate,
             events.BeforeUpdate,
             events.BeforeReplace,
             events.BeforeUpdateMany,
+            events.BeforeRegister,
         ]
 
     def test_patch_view_model(self):
