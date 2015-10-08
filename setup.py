@@ -6,13 +6,13 @@ README = open(os.path.join(here, 'README.md')).read()
 VERSION = open(os.path.join(here, 'VERSION')).read()
 
 requires = [
-    'pyramid',
     'cryptacular',
-    'ramlfications==0.1.5',
     'inflection',
-    'transaction',
+    'nefertari>=0.6.0',
+    'pyramid',
+    'ramlfications==0.1.5',
     'six',
-    'nefertari>=0.5.1',
+    'transaction',
 ]
 
 setup(name='ramses',
