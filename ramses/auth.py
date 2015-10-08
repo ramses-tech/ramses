@@ -25,6 +25,24 @@ from nefertari.authentication.policies import ApiKeyAuthenticationPolicy
 log = logging.getLogger(__name__)
 
 
+class ACLAssignRegisterMixin(object):
+    """ Mixin that sets ``User._acl`` field after user is registered. """
+    def register(self, *args, **kwargs):
+        response = super(ACLAssignRegisterMixin, self).register(
+            *args, **kwargs)
+
+        user = self.request._user
+        mapping = self.request.registry._model_collections
+        if not user._acl and self.Model.__name__ in mapping:
+            from nefertari_guards import engine as guards_engine
+            factory = mapping[self.Model.__name__].view._factory
+            acl = factory(self.request).generate_item_acl(user)
+            acl = guards_engine.ACLField.stringify_acl(acl)
+            user.update({'_acl': acl})
+
+        return response
+
+
 def _setup_ticket_policy(config, params):
     """ Setup Pyramid AuthTktAuthenticationPolicy.
 
@@ -56,7 +74,13 @@ def _setup_ticket_policy(config, params):
 
     policy = AuthTktAuthenticationPolicy(**params)
 
-    class RamsesTicketAuthRegisterView(TicketAuthRegisterView):
+    RegisterViewBase = TicketAuthRegisterView
+    if config.registry.database_acls:
+        class RegisterViewBase(ACLAssignRegisterMixin,
+                               TicketAuthRegisterView):
+            pass
+
+    class RamsesTicketAuthRegisterView(RegisterViewBase):
         Model = config.registry.auth_model
 
     class RamsesTicketAuthLoginView(TicketAuthLoginView):
@@ -108,7 +132,13 @@ def _setup_apikey_policy(config, params):
 
     policy = ApiKeyAuthenticationPolicy(**params)
 
-    class RamsesTokenAuthRegisterView(TokenAuthRegisterView):
+    RegisterViewBase = TokenAuthRegisterView
+    if config.registry.database_acls:
+        class RegisterViewBase(ACLAssignRegisterMixin,
+                               TokenAuthRegisterView):
+            pass
+
+    class RamsesTokenAuthRegisterView(RegisterViewBase):
         Model = auth_model
 
     class RamsesTokenAuthClaimView(TokenAuthClaimView):
