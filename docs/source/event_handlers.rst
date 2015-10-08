@@ -1,7 +1,7 @@
 Event Handlers
 ==============
 
-Ramses supports Nefertari model event handlers. The following documentation describes how to define and connect them.
+Ramses supports `Nefertari event handlers <http://nefertari.readthedocs.org/en/stable/event_handlers.html>`_. The following documentation describes how to define and connect them.
 
 
 Writing Event Handlers
@@ -25,14 +25,15 @@ Example:
 Connecting Event Handlers
 -------------------------
 
-When you define event handlers in your ``__init__.py`` as described above, you can apply them on per-model basis. If multiple handlers are listed, they are executed in the order in which they are listed. Handlers are defined in the root of JSON schema using ``_event_handlers`` property. This property is an object, keys of which are called "event tags" and values are lists of handler names. Event tags are constructed of two parts: ``<type>_<action>`` whereby:
+When you define event handlers in your ``__init__.py`` as described above, you can apply them on per-model basis. If multiple handlers are listed, they are executed in the order in which they are listed. Handlers should be defined in the root of JSON schema using ``_event_handlers`` property. This property is an object, keys of which are called "event tags" and values are lists of handler names. Event tags are composed of two parts: ``<type>_<action>`` whereby:
 
 **type**
-    Is either ``before`` or ``after``, depending on when handler should run - before view method call or after respectively.
+    Is either ``before`` or ``after``, depending on when handler should run - before view method call or after respectively. You can read more about when to use `before vs after event handlers <http://nefertari.readthedocs.org/en/stable/event_handlers.html#before-vs-after>`_.
 
 **action**
     Exact name of Nefertari view method that processes the request (action) and special names for authentication actions.
 
+Complete list of actions:
     * **index** - Collection GET
     * **create** - Collection POST
     * **update_many** - Collection PATCH/PUT
@@ -43,29 +44,16 @@ When you define event handlers in your ``__init__.py`` as described above, you c
     * **replace** - Item PUT
     * **delete** - Item DELETE
     * **item_options** - Item OPTIONS
-    * **set** - triggers on all the following actions: ``create``, ``update``, ``replace`` and ``update_many``, ``register``.
     * **login** - User login (POST /auth/login)
     * **logout** - User logout (POST /auth/logout)
     * **register** - User register (POST /auth/register)
-
-E.g. This example connects the ``lowercase`` handler to the ``before_set`` event.
-
-.. code-block:: json
-
-    "_event_handlers": {
-        "before_set": ["lowercase"]
-    }
-
-The ``lowercase`` handler will run before any of the following requests are processed:
-
-    * Collection POST
-    * Item PATCH
-    * Item PUT
-    * Collection PATCH
-    * Collection PUT
+    * **set** - triggers on all the following actions: **create**, **update**, **replace**, **update_many** and **register**.
 
 
-We will use the following handler to demonstrate how to connect handlers to events. This handler logs ``request``.
+Example
+-------
+
+We will use the following handler to demonstrate how to connect handlers to events. This handler logs ``request`` to the console.
 
 .. code-block:: python
 
@@ -77,23 +65,7 @@ We will use the following handler to demonstrate how to connect handlers to even
         log.debug(event.view.request)
 
 
-Before vs After
----------------
-
-``Before`` events should be used to:
-    * Transform input
-    * Perform validation
-    * Apply changes to object that is being affected by the request using the ``event.set_field_value`` method. Note that if field you change by calling ``event.set_field_value`` is not affected by request, it will be added to ``event.fields`` which will makes field processors which are connected to this field to be triggered, if they are run after this method call(connected to events after handler that performs method call).
-
-``After`` events should be used to:
-    * Change DB objects which are not affected by the request
-    * Perform notifications/logging
-
-
-Registering Event Handlers
---------------------------
-
-To register event handlers, you can define the ``_event_handlers`` property at the root of your model's JSON schema. For example, if we have a JSON schema for the model ``User`` and we want to log all collection GET requests to the ``User`` model after they were processed (using the ``log_request`` handler), we can register the handler in the JSON schema like this:
+Assuming we had a JSON schema representing the model ``User`` and we want to log all collection GET requests on the ``User`` model after they are processed using the ``log_request`` handler, we would register the handler in the JSON schema like this:
 
 .. code-block:: json
 

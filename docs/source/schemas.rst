@@ -35,13 +35,14 @@ If you've enabled authentication, you can list which fields to return to authent
 Nested Documents
 ----------------
 
-If you use ``Relationship`` fields in your schemas, you can list those fields in ``_nested_relationships``. Your fields will then become nested documents instead of just the ``id``.
+If you use ``Relationship`` fields in your schemas, you can list those fields in ``_nested_relationships``. Your fields will then become nested documents instead of just showing the ``id``. You can control the level of nesting by specifying the ``_nesting_depth`` property, defaul is 1.
 
 .. code-block:: json
 
     {
         (...)
-        "_nested_relationships": ["relationship_field_name"]
+        "_nested_relationships": ["relationship_field_name"],
+        "_nesting_depth": 2
         (...)
     }
 
