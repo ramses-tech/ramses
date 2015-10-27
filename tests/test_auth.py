@@ -4,7 +4,57 @@ from mock import Mock, patch
 from nefertari.utils import dictset
 from pyramid.security import Allow, ALL_PERMISSIONS
 
-from .fixtures import engine_mock
+from .fixtures import engine_mock, guards_engine_mock
+
+
+@pytest.mark.usefixtures('engine_mock')
+class TestACLAssignRegisterMixin(object):
+    def _dummy_view(self):
+        from ramses import auth
+
+        class DummyBase(object):
+            def register(self, *args, **kwargs):
+                return 1
+
+        class DummyView(auth.ACLAssignRegisterMixin, DummyBase):
+            def __init__(self, *args, **kwargs):
+                super(DummyView, self).__init__(*args, **kwargs)
+                self.Model = Mock()
+                self.request = Mock(_user=Mock())
+                self.request.registry._model_collections = {}
+        return DummyView
+
+    def test_register_acl_present(self):
+        DummyView = self._dummy_view()
+        view = DummyView()
+        view.request._user._acl = ['a']
+        assert view.register() == 1
+        assert view.request._user._acl == ['a']
+
+    def test_register_no_model_collection(self):
+        DummyView = self._dummy_view()
+        view = DummyView()
+        view.Model.__name__ = 'Foo'
+        view.request._user._acl = []
+        assert view.register() == 1
+        assert view.request._user._acl == []
+
+    def test_register_acl_set(self, guards_engine_mock):
+        DummyView = self._dummy_view()
+        view = DummyView()
+        view.Model.__name__ = 'Foo'
+        resource = Mock()
+        view.request.registry._model_collections['Foo'] = resource
+        view.request._user._acl = []
+        assert view.register() == 1
+        factory = resource.view._factory
+        factory.assert_called_once_with(view.request)
+        factory().generate_item_acl.assert_called_once_with(
+            view.request._user)
+        guards_engine_mock.ACLField.stringify_acl.assert_called_once_with(
+            factory().generate_item_acl())
+        view.request._user.update.assert_called_once_with(
+            {'_acl': guards_engine_mock.ACLField.stringify_acl()})
 
 
 @pytest.mark.usefixtures('engine_mock')
