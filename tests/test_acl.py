@@ -89,8 +89,8 @@ class TestGenerateACL(object):
         assert issubclass(acl_cls, acl.BaseACL)
         instance = acl_cls(request=None)
         assert instance.es_based
-        assert instance._collection_acl == [acl.ALLOW_ALL]
-        assert instance._item_acl == [acl.ALLOW_ALL]
+        assert instance._collection_acl == []
+        assert instance._item_acl == []
         assert not mock_parse.called
 
     def test_wrong_security_scheme_type(self, mock_parse):
@@ -107,8 +107,8 @@ class TestGenerateACL(object):
         assert issubclass(acl_cls, acl.BaseACL)
         instance = acl_cls(request=None)
         assert not instance.es_based
-        assert instance._collection_acl == [acl.ALLOW_ALL]
-        assert instance._item_acl == [acl.ALLOW_ALL]
+        assert instance._collection_acl == []
+        assert instance._item_acl == []
 
     def test_correct_security_scheme(self, mock_parse):
         raml_resource = Mock(security_schemes=[

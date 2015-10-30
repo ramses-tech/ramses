@@ -226,7 +226,7 @@ def generate_acl(config, model_cls, raml_resource, es_based=True):
     schemes = [sch for sch in schemes if sch.type == 'x-ACL']
 
     if not schemes:
-        collection_acl = item_acl = [ALLOW_ALL]
+        collection_acl = item_acl = []
         log.debug('No ACL scheme applied. Using ACL: {}'.format(item_acl))
     else:
         sec_scheme = schemes[0]
