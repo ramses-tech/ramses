@@ -11,6 +11,20 @@ from .fixtures import config_mock
 
 
 class TestACLHelpers(object):
+    def test_validate_permissions_all_perms(self):
+        perms = ALL_PERMISSIONS
+        assert acl.validate_permissions(perms) == [perms]
+        assert acl.validate_permissions([perms]) == [perms]
+
+    def test_validate_permissions_valid(self):
+        perms = ['update', 'delete']
+        assert acl.validate_permissions(perms) == perms
+
+    def test_validate_permissions_invalid(self):
+        with pytest.raises(ValueError) as ex:
+            acl.validate_permissions(['foobar'])
+        assert 'Invalid ACL permission names' in str(ex.value)
+
     def test_parse_permissions_all_permissions(self):
         perms = acl.parse_permissions('all,view,create')
         assert perms is ALL_PERMISSIONS
@@ -162,7 +176,7 @@ class TestBaseACL(object):
             obj='obj')
         assert new_acl == (('foo', 'bar', 'baz'),)
 
-    @patch.object(acl, 'parse_permissions')
+    @patch.object(acl, 'validate_permissions')
     def test_apply_callables(self, mock_meth):
         mock_meth.return_value = '123'
         principal = Mock(return_value=(7, 8, 9))
@@ -192,7 +206,7 @@ class TestBaseACL(object):
             obj='obj')
         assert not mock_meth.called
 
-    @patch.object(acl, 'parse_permissions')
+    @patch.object(acl, 'validate_permissions')
     def test_apply_callables_principal_returns_list(self, mock_meth):
         mock_meth.return_value = '123'
         principal = Mock(return_value=[(7, 8, 9)])
