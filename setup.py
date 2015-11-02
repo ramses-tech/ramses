@@ -10,7 +10,7 @@ requires = [
     'inflection',
     'nefertari>=0.6.0',
     'pyramid',
-    'ramlfications==0.1.5',
+    'ramlfications==0.1.8',
     'six',
     'transaction',
 ]
