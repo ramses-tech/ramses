@@ -26,6 +26,23 @@ special_principals = {
 ALLOW_ALL = (Allow, Everyone, ALL_PERMISSIONS)
 
 
+def validate_permissions(perms):
+    """ Validate :perms: contains valid permissions.
+
+    :param perms: List of permission names or ALL_PERMISSIONS.
+    """
+    if not isinstance(perms, (list, tuple)):
+        perms = [perms]
+    valid_perms = set(PERMISSIONS.values())
+    if ALL_PERMISSIONS in perms:
+        return perms
+    if set(perms) - valid_perms:
+        raise ValueError(
+            'Invalid ACL permission names. Valid permissions '
+            'are: {}'.format(', '.join(valid_perms)))
+    return perms
+
+
 def parse_permissions(perms):
     """ Parse permissions ("perms") which are either exact permission
     names or the keyword 'all'.
@@ -38,13 +55,7 @@ def parse_permissions(perms):
     perms = [perm.strip().lower() for perm in perms]
     if 'all' in perms:
         return ALL_PERMISSIONS
-    else:
-        valid_perms = set(PERMISSIONS.values())
-        if set(perms) - valid_perms:
-            raise ValueError(
-                'Invalid ACL permission names. Valid permissions '
-                'are: {}'.format(', '.join(valid_perms)))
-        return perms
+    return validate_permissions(perms)
 
 
 def parse_acl(acl_string):
@@ -126,7 +137,7 @@ class BaseACL(CollectionACL):
                     continue
                 if not isinstance(ace[0], (list, tuple)):
                     ace = [ace]
-                ace = [(a, b, parse_permissions(c)) for a, b, c in ace]
+                ace = [(a, b, validate_permissions(c)) for a, b, c in ace]
             else:
                 ace = [ace]
             new_acl += ace
@@ -226,7 +237,7 @@ def generate_acl(config, model_cls, raml_resource, es_based=True):
     schemes = [sch for sch in schemes if sch.type == 'x-ACL']
 
     if not schemes:
-        collection_acl = item_acl = [ALLOW_ALL]
+        collection_acl = item_acl = []
         log.debug('No ACL scheme applied. Using ACL: {}'.format(item_acl))
     else:
         sec_scheme = schemes[0]
