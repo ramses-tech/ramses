@@ -30,6 +30,7 @@ If we had following processors defined:
 
     from .my_helpers import get_stories_by_ids
 
+
     @registry.add
     def lowercase(**kwargs):
         """ Make :new_value: lowercase """

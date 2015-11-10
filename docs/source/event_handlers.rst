@@ -13,10 +13,15 @@ Example:
 
 .. code-block:: python
 
+
+    import logging
+    from ramses import registry
+
+
+    log = logging.getLogger('foo')
+
     @registry.add
     def log_changed_fields(event):
-        import logging
-        logger = logging.getLogger('foo')
         changed = ['{}: {}'.format(name, field.new_value)
                    for name, field in event.fields.items()]
         logger.debug('Changed fields: ' + ', '.join(changed))
@@ -58,7 +63,10 @@ We will use the following handler to demonstrate how to connect handlers to even
 .. code-block:: python
 
     import logging
-    log = logging.getLogger(__name__)
+    from ramses import registry
+
+
+    log = logging.getLogger('foo')
 
     @registry.add
     def log_request(event):
@@ -87,9 +95,13 @@ You can update another field's value, for example, increment a counter:
 
 .. code-block:: python
 
+    from ramses import registry
+
+
     @registry.add
     def increment_count(event):
-        counter = event.instance.counter
+        instance = event.instance or event.response
+        counter = instance.counter
         incremented = counter + 1
         event.set_field_value('counter', incremented)
 
@@ -98,14 +110,16 @@ You can update other collections (or filtered collections), for example, mark su
 
 .. code-block:: python
 
+    from ramses import registry
+    from nefertari import engine
+
     @registry.add
     def mark_subtasks_completed(event):
         if 'task' not in event.fields:
             return
 
-        from nefertari import engine
         completed = event.fields['task'].new_value
-        instance = event.instance
+        instance = event.instance or event.response
 
         if completed:
             subtask_model = engine.get_document_cls('Subtask')
@@ -117,15 +131,18 @@ You can perform more complex queries using Elasticsearch:
 
 .. code-block:: python
 
+    from ramses import registry
+    from nefertari import engine
+    from nefertari.elasticsearch import ES
+
+
     @registry.add
     def mark_subtasks_after_2015_completed(event):
         if 'task' not in event.fields:
             return
 
-        from nefertari import engine
-        from nefertari.elasticsearch import ES
         completed = event.fields['task'].new_value
-        instance = event.instance
+        instance = event.instance or event.response
 
         if completed:
             subtask_model = engine.get_document_cls('Subtask')
