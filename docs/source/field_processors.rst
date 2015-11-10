@@ -1,7 +1,7 @@
 Field processors
 ================
 
-Ramses supports `Nefertari field processors <http://nefertari.readthedocs.org/en/stable/field_processors.html>`_. The following documentation describes how to connect them.
+Ramses supports `Nefertari field processors <http://nefertari.readthedocs.org/en/stable/field_processors.html>`_. Ramses field processors also have access to `Nefertari's wrapper API <http://nefertari.readthedocs.org/en/stable/models.html#wrapper-api>`_ which provides additional helpers.
 
 
 Setup

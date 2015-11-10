@@ -1,7 +1,7 @@
 Event Handlers
 ==============
 
-Ramses supports `Nefertari event handlers <http://nefertari.readthedocs.org/en/stable/event_handlers.html>`_. The following documentation describes how to define and connect them.
+Ramses supports `Nefertari event handlers <http://nefertari.readthedocs.org/en/stable/event_handlers.html>`_. Ramses event handlers also have access to `Nefertari's wrapper API <http://nefertari.readthedocs.org/en/stable/models.html#wrapper-api>`_ which provides additional helpers.
 
 
 Setup
