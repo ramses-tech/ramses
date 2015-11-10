@@ -157,7 +157,6 @@ def generate_models(config, raml_resources):
     from .models import handle_model_generation
     if not raml_resources:
         return
-
     for raml_resource in raml_resources:
         # No need to generate models for dynamic resource
         if is_dynamic_uri(raml_resource.path):

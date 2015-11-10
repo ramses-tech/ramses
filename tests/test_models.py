@@ -29,7 +29,7 @@ class TestHelperFunctions(object):
         from ramses import models
         config = Mock()
         models.prepare_relationship(
-            config, 'foobar', 'Story', 'raml_resource')
+            config, 'Story', 'raml_resource')
         mock_get.assert_called_once_with('Story')
         assert not mock_set.called
 
@@ -44,9 +44,8 @@ class TestHelperFunctions(object):
         ]))
         mock_get.return_value = None
         with pytest.raises(ValueError) as ex:
-            models.prepare_relationship(
-                config, 'stories', 'Story', resource)
-        expected = ('Model `Story` used in relationship `stories` '
+            models.prepare_relationship(config, 'Story', resource)
+        expected = ('Model `Story` used in relationship '
                     'is not defined')
         assert str(ex.value) == expected
 
@@ -64,7 +63,7 @@ class TestHelperFunctions(object):
         ]))
         mock_get.return_value = None
         config = config_mock()
-        models.prepare_relationship(config, 'stories', 'Story', resource)
+        models.prepare_relationship(config, 'Story', resource)
         mock_set.assert_called_once_with(config, matching_res, 'Story')
 
     @patch('ramses.models.get_existing_model')
@@ -306,7 +305,7 @@ class TestGenerateModelCls(object):
             config, schema=schema, model_name='Story',
             raml_resource=1)
         mock_prep.assert_called_once_with(
-            config, 'progress', 'FooBar', 1)
+            config, 'FooBar', 1)
 
     def test_foreignkey_field(
             self, mock_reg, mock_subscribers, mock_proc):
