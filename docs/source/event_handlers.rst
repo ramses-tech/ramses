@@ -113,7 +113,7 @@ You can update other collections (or filtered collections), for example, mark su
             subtask_model._update_many(subtasks, {'completed': True})
 
 
-You can perform more complex queries using ElasticSearch:
+You can perform more complex queries using Elasticsearch:
 
 .. code-block:: python
 

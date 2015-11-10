@@ -17,7 +17,7 @@ mongodb.host = localhost
 mongodb.port = 27017
 mongodb.db = {{package}}
 
-# ElasticSearch
+# Elasticsearch
 elasticsearch.hosts = localhost:9200
 elasticsearch.sniff = false
 elasticsearch.index_name = {{package}}
