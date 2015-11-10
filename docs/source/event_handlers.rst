@@ -4,8 +4,12 @@ Event Handlers
 Ramses supports `Nefertari event handlers <http://nefertari.readthedocs.org/en/stable/event_handlers.html>`_. The following documentation describes how to define and connect them.
 
 
+Setup
+-----
+
+
 Writing Event Handlers
-----------------------
+^^^^^^^^^^^^^^^^^^^^^^
 
 You can write custom functions inside your ``__init__.py`` file, then add the ``@registry.add`` decorator before the functions that you'd like to turn into CRUD event handlers. Ramses CRUD event handlers has the same API as Nefertari CRUD event handlers. Check Nefertari CRUD Events doc for more details on events API.
 
@@ -28,7 +32,7 @@ Example:
 
 
 Connecting Event Handlers
--------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When you define event handlers in your ``__init__.py`` as described above, you can apply them on per-model basis. If multiple handlers are listed, they are executed in the order in which they are listed. Handlers should be defined in the root of JSON schema using ``_event_handlers`` property. This property is an object, keys of which are called "event tags" and values are lists of handler names. Event tags are composed of two parts: ``<type>_<action>`` whereby:
 
