@@ -183,11 +183,11 @@ def setup_data_model(config, raml_resource, model_name):
     model_cls = get_existing_model(model_name)
     schema = resource_schema(raml_resource)
 
-    if model_cls is not None:
-        return model_cls, schema.get('_auth_model', False)
-
     if not schema:
         raise Exception('Missing schema for model `{}`'.format(model_name))
+
+    if model_cls is not None:
+        return model_cls, schema.get('_auth_model', False)
 
     log.info('Generating model class `{}`'.format(model_name))
     return generate_model_cls(
