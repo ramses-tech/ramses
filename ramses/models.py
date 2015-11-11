@@ -181,10 +181,11 @@ def setup_data_model(config, raml_resource, model_name):
     :param model_name: String representing model name.
     """
     model_cls = get_existing_model(model_name)
-    if model_cls is not None:
-        return model_cls, False
-
     schema = resource_schema(raml_resource)
+
+    if model_cls is not None:
+        return model_cls, schema.get('_auth_model', False)
+
     if not schema:
         raise Exception('Missing schema for model `{}`'.format(model_name))
 
