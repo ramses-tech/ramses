@@ -1,6 +1,9 @@
 Changelog
 =========
 
+* :release:`0.5.1 <2015-11-xx>`
+* :bug:`-` Reworked the creation of related models, order does not matter anymore
+
 * :release:`0.5.0 <2015-10-07>`
 * :bug:`- major` Fixed a bug using 'required' '_db_settings' property on 'relationship' field
 * :support:`-` Added support for `'nefertari-guards' <https://nefertari-guards.readthedocs.org/>`_

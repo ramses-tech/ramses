@@ -1,11 +1,15 @@
 Event Handlers
 ==============
 
-Ramses supports `Nefertari event handlers <http://nefertari.readthedocs.org/en/stable/event_handlers.html>`_. The following documentation describes how to define and connect them.
+Ramses supports `Nefertari event handlers <http://nefertari.readthedocs.org/en/stable/event_handlers.html>`_. Ramses event handlers also have access to `Nefertari's wrapper API <http://nefertari.readthedocs.org/en/stable/models.html#wrapper-api>`_ which provides additional helpers.
+
+
+Setup
+-----
 
 
 Writing Event Handlers
-----------------------
+^^^^^^^^^^^^^^^^^^^^^^
 
 You can write custom functions inside your ``__init__.py`` file, then add the ``@registry.add`` decorator before the functions that you'd like to turn into CRUD event handlers. Ramses CRUD event handlers has the same API as Nefertari CRUD event handlers. Check Nefertari CRUD Events doc for more details on events API.
 
@@ -13,17 +17,22 @@ Example:
 
 .. code-block:: python
 
+
+    import logging
+    from ramses import registry
+
+
+    log = logging.getLogger('foo')
+
     @registry.add
     def log_changed_fields(event):
-        import logging
-        logger = logging.getLogger('foo')
         changed = ['{}: {}'.format(name, field.new_value)
                    for name, field in event.fields.items()]
         logger.debug('Changed fields: ' + ', '.join(changed))
 
 
 Connecting Event Handlers
--------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When you define event handlers in your ``__init__.py`` as described above, you can apply them on per-model basis. If multiple handlers are listed, they are executed in the order in which they are listed. Handlers should be defined in the root of JSON schema using ``_event_handlers`` property. This property is an object, keys of which are called "event tags" and values are lists of handler names. Event tags are composed of two parts: ``<type>_<action>`` whereby:
 
@@ -58,7 +67,10 @@ We will use the following handler to demonstrate how to connect handlers to even
 .. code-block:: python
 
     import logging
-    log = logging.getLogger(__name__)
+    from ramses import registry
+
+
+    log = logging.getLogger('foo')
 
     @registry.add
     def log_request(event):
@@ -87,9 +99,13 @@ You can update another field's value, for example, increment a counter:
 
 .. code-block:: python
 
+    from ramses import registry
+
+
     @registry.add
     def increment_count(event):
-        counter = event.instance.counter
+        instance = event.instance or event.response
+        counter = instance.counter
         incremented = counter + 1
         event.set_field_value('counter', incremented)
 
@@ -98,14 +114,16 @@ You can update other collections (or filtered collections), for example, mark su
 
 .. code-block:: python
 
+    from ramses import registry
+    from nefertari import engine
+
     @registry.add
     def mark_subtasks_completed(event):
         if 'task' not in event.fields:
             return
 
-        from nefertari import engine
         completed = event.fields['task'].new_value
-        instance = event.instance
+        instance = event.instance or event.response
 
         if completed:
             subtask_model = engine.get_document_cls('Subtask')
@@ -113,19 +131,22 @@ You can update other collections (or filtered collections), for example, mark su
             subtask_model._update_many(subtasks, {'completed': True})
 
 
-You can perform more complex queries using ElasticSearch:
+You can perform more complex queries using Elasticsearch:
 
 .. code-block:: python
+
+    from ramses import registry
+    from nefertari import engine
+    from nefertari.elasticsearch import ES
+
 
     @registry.add
     def mark_subtasks_after_2015_completed(event):
         if 'task' not in event.fields:
             return
 
-        from nefertari import engine
-        from nefertari.elasticsearch import ES
         completed = event.fields['task'].new_value
-        instance = event.instance
+        instance = event.instance or event.response
 
         if completed:
             subtask_model = engine.get_document_cls('Subtask')
