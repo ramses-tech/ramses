@@ -193,7 +193,7 @@ class DatabaseACLMixin(object):
         if self.es_based:
             from nefertari_guards.elasticsearch import get_es_item_acl
             return get_es_item_acl(item)
-        return item.get_acl()
+        return super(DatabaseACLMixin, self).item_acl(item)
 
     def getitem_es(self, key):
         """ Override to support ACL filtering.
@@ -233,6 +233,7 @@ def generate_acl(config, model_cls, raml_resource, es_based=True):
     :param es_based: Boolean inidicating whether ACL should query ES or
         not when getting an object
     """
+    from nefertari_guards.acl import DatabaseACLMixin as GuardsMixin
     schemes = raml_resource.security_schemes or []
     schemes = [sch for sch in schemes if sch.type == 'x-ACL']
 
@@ -257,7 +258,7 @@ def generate_acl(config, model_cls, raml_resource, es_based=True):
 
     bases = [GeneratedACLBase]
     if config.registry.database_acls:
-        bases.append(DatabaseACLMixin)
+        bases += [DatabaseACLMixin, GuardsMixin]
     bases.append(BaseACL)
 
     return type('GeneratedACL', tuple(bases), {})
