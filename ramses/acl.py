@@ -233,7 +233,6 @@ def generate_acl(config, model_cls, raml_resource, es_based=True):
     :param es_based: Boolean inidicating whether ACL should query ES or
         not when getting an object
     """
-    from nefertari_guards.acl import DatabaseACLMixin as GuardsMixin
     schemes = raml_resource.security_schemes or []
     schemes = [sch for sch in schemes if sch.type == 'x-ACL']
 
@@ -258,6 +257,7 @@ def generate_acl(config, model_cls, raml_resource, es_based=True):
 
     bases = [GeneratedACLBase]
     if config.registry.database_acls:
+        from nefertari_guards.acl import DatabaseACLMixin as GuardsMixin
         bases += [DatabaseACLMixin, GuardsMixin]
     bases.append(BaseACL)
 
