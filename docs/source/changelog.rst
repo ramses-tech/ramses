@@ -2,7 +2,7 @@ Changelog
 =========
 
 * :release:`0.5.1 <2015-11-18>`
-* :bug:`-` Reworked the creation of related/auth_model models, order does not matter anymore
+* :bug:`88` Reworked the creation of related/auth_model models, order does not matter anymore
 
 * :release:`0.5.0 <2015-10-07>`
 * :bug:`- major` Fixed a bug using 'required' '_db_settings' property on 'relationship' field
