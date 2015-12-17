@@ -1,6 +1,9 @@
 Changelog
 =========
 
+* :release:`0.x.y <????-??-??>`
+* :support:`99` Use ACL mixin from nefertari-guards (if enabled)
+
 * :release:`0.5.1 <2015-11-18>`
 * :bug:`88` Reworked the creation of related/auth_model models, order does not matter anymore
 
