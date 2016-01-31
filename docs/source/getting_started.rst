@@ -20,7 +20,7 @@ Requirements
 
 * Python 2.7, 3.3 or 3.4
 * Elasticsearch (data is automatically indexed for near real-time search)
-* Postgres or Mongodb or <Your Data Store™>
+* Postgres or Mongodb or Your Data Store™
 
 
 Examples
