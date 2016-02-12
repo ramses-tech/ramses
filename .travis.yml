@@ -7,3 +7,12 @@ env:
 install:
   - pip install tox
 script: tox
+services:
+  - mongodb
+  - elasticsearch
+before_install:
+  - curl -O https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.7.5.deb && sudo dpkg -i --force-confnew elasticsearch-1.7.5.deb
+before_script:
+  - sleep 15
+  - curl -XDELETE 'http://localhost:9200/ramses_scaffold/'
+  - mongo ramses_scaffold --eval 'db.dropDatabase();'
