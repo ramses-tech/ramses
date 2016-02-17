@@ -9,14 +9,10 @@ install:
 script: tox
 services:
   - mongodb
-  - elasticsearch
 before_install:
-  - sudo service elasticsearch stop
-  - sleep 10
-  - curl -O https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.7.5.deb && sudo dpkg -i --force-confnew --force-confdef elasticsearch-1.7.5.deb
+  - travis_retry curl -O https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.7.5.deb && sudo dpkg -i --force-confnew --force-confdef elasticsearch-1.7.5.deb
   - sudo service elasticsearch start
-  - sleep 10
 before_script:
-  - sleep 30
-  - curl -XDELETE 'http://localhost:9200/ramses_starter/'
+  - sleep 10
+  - travis_retry curl -XDELETE 'http://localhost:9200/ramses_starter/'
   - mongo ramses_starter --eval 'db.dropDatabase();'
