@@ -40,8 +40,6 @@ setup(name='ramses',
       tests_require=requires,
       test_suite="ramses",
       entry_points="""\
-        [console_scripts]
-            ramses.scaffold_test = ramses.scripts.scaffold_test:main
         [pyramid.scaffold]
             ramses_starter = ramses.scaffolds:RamsesStarterTemplate
       """)
