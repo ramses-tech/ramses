@@ -350,3 +350,11 @@ def get_route_name(resource_uri):
     resource_uri = resource_uri.strip('/')
     resource_uri = re.sub('\W', '', resource_uri)
     return resource_uri
+
+
+def get_resource_uri(raml_resource):
+    """ Get cleaned resource URI of RAML resource.
+
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    """
+    return raml_resource.path.split('/')[-1].strip()

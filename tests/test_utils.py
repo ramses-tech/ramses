@@ -413,3 +413,7 @@ class TestUtils(object):
     def test_get_route_name(self):
         resource_uri = '/foo-=-=-=-123'
         assert utils.get_route_name(resource_uri) == 'foo123'
+
+    def test_get_resource_uri(self):
+        resource = Mock(path='/foobar/zoo ')
+        assert utils.get_resource_uri(resource) == 'zoo'
