@@ -170,7 +170,7 @@ class TestGenerateResource(object):
             config, model_cls=model_cls, raml_resource=raml_resource)
         mock_dyn.assert_called_once_with(
             raml_resource=raml_resource,
-            clean_uri='stories', pk_field='my_id')
+            route_name='stories', pk_field='my_id')
         view_attrs.assert_called_once_with(raml_resource, False)
         generate_view.assert_called_once_with(
             config,

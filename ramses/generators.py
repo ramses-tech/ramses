@@ -5,9 +5,15 @@ from inflection import singularize
 from .views import generate_rest_view
 from .acl import generate_acl
 from .utils import (
-    is_dynamic_uri, resource_view_attrs, generate_model_name,
-    dynamic_part_name, attr_subresource, singular_subresource,
-    get_static_parent)
+    is_dynamic_uri,
+    resource_view_attrs,
+    generate_model_name,
+    dynamic_part_name,
+    attr_subresource,
+    singular_subresource,
+    get_static_parent,
+    get_route_name,
+)
 
 
 log = logging.getLogger(__name__)
@@ -56,7 +62,7 @@ def generate_resource(config, raml_resource, parent_resource):
                             "represent collections instead")
         return
 
-    clean_uri = route_name = resource_uri.strip('/')
+    route_name = get_route_name(resource_uri)
     log.info('Configuring resource: `{}`. Parent: `{}`'.format(
         route_name, parent_resource.uid or 'root'))
 
@@ -83,7 +89,7 @@ def generate_resource(config, raml_resource, parent_resource):
     if not is_singular:
         resource_kwargs['id_name'] = dynamic_part_name(
             raml_resource=raml_resource,
-            clean_uri=clean_uri,
+            route_name=route_name,
             pk_field=model_cls.pk_field())
 
     # Generate REST view
@@ -107,8 +113,8 @@ def generate_resource(config, raml_resource, parent_resource):
 
     # Create new nefertari resource
     log.info('Creating new resource for `{}`'.format(route_name))
+    clean_uri = resource_uri.strip('/')
     resource_args = (singularize(clean_uri),)
-
     if not is_singular:
         resource_args += (clean_uri,)
 
@@ -169,8 +175,8 @@ def generate_models(config, raml_resources):
 
         # Generate DB model
         # If this is an attribute resource we don't need to generate model
-        route_name = raml_resource.path.split('/')[-1]
-        route_name = route_name.strip('/')
+        resource_uri = raml_resource.path.split('/')[-1]
+        route_name = get_route_name(resource_uri)
         if not attr_subresource(raml_resource, route_name):
             log.info('Configuring model for route `{}`'.format(route_name))
             model_cls, is_auth_model = handle_model_generation(
