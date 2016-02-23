@@ -409,3 +409,7 @@ class TestUtils(object):
         assert view_cls.Model is model1
         assert not model1.called
         model2.assert_called_once_with()
+
+    def test_get_route_name(self):
+        resource_uri = '/foo-=-=-=-123'
+        assert utils.get_route_name(resource_uri) == 'foo123'
