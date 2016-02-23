@@ -1,2 +1,2 @@
 ra
--e git+https://github.com/postatum/nefertari.git@101462172_test_scaffold#egg=nefertari
+-e git+https://github.com/ramses-tech/nefertari.git@develop#egg=nefertari
