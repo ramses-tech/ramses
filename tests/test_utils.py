@@ -35,8 +35,9 @@ class TestUtils(object):
         assert clean == 'item_id'
 
     def test_generate_model_name(self):
-        model_name = utils.generate_model_name('/collectionitems')
-        assert model_name == 'Collectionitem'
+        resource = Mock(path='/zoo/alien-users')
+        model_name = utils.generate_model_name(resource)
+        assert model_name == 'AlienUser'
 
     @patch.object(utils, 'get_resource_children')
     def test_dynamic_part_name(self, get_children):

@@ -1,3 +1,4 @@
+import re
 import logging
 from contextlib import contextmanager
 
@@ -72,13 +73,15 @@ def clean_dynamic_uri(uri):
     return uri.replace('/', '').replace('{', '').replace('}', '')
 
 
-def generate_model_name(name):
+def generate_model_name(raml_resource):
     """ Generate model name.
 
-    :param name: String representing a field or route name.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
     """
-    model_name = inflection.camelize(name.strip('/'))
-    return inflection.singularize(model_name)
+    resource_uri = get_resource_uri(raml_resource).strip('/')
+    resource_uri = re.sub('\W', ' ', resource_uri)
+    model_name = inflection.titleize(resource_uri)
+    return inflection.singularize(model_name).replace(' ', '')
 
 
 def dynamic_part_name(raml_resource, route_name, pk_field):
@@ -346,7 +349,6 @@ def get_route_name(resource_uri):
     :returns string: String with route name, which is :resource_uri:
         stripped of non-word characters.
     """
-    import re
     resource_uri = resource_uri.strip('/')
     resource_uri = re.sub('\W', '', resource_uri)
     return resource_uri

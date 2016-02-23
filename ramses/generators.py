@@ -74,7 +74,7 @@ def generate_resource(config, raml_resource, parent_resource):
     if not parent_resource.is_root and (is_attr_res or is_singular):
         model_cls = parent_resource.view.Model
     else:
-        model_name = generate_model_name(route_name)
+        model_name = generate_model_name(raml_resource)
         model_cls = get_existing_model(model_name)
 
     resource_kwargs = {}
@@ -107,7 +107,7 @@ def generate_resource(config, raml_resource, parent_resource):
     # In case of singular resource, model still needs to be generated,
     # but we store it on a different view attribute
     if is_singular:
-        model_name = generate_model_name(route_name)
+        model_name = generate_model_name(raml_resource)
         view_cls = resource_kwargs['view']
         view_cls._parent_model = view_cls.Model
         view_cls.Model = get_existing_model(model_name)
@@ -181,6 +181,6 @@ def generate_models(config, raml_resources):
         if not attr_subresource(raml_resource, route_name):
             log.info('Configuring model for route `{}`'.format(route_name))
             model_cls, is_auth_model = handle_model_generation(
-                config, raml_resource, route_name)
+                config, raml_resource)
             if is_auth_model:
                 config.registry.auth_model = model_cls
