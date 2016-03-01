@@ -14,8 +14,8 @@ testapp = webtest.TestApp('config:local.ini', relative_to=appdir)
 def setup(req, examples):
     """ Setup database state for tests.
 
-    NOTE: For objects to be created, transaction needs to be commited
-    as follows:
+    NOTE: For objects to be created, when using SQLA transaction
+    needs to be commited as follows:
         import transaction
         transaction.commit()
     """
