@@ -1,0 +1,29 @@
+{
+    "type": "object",
+    "title": "Item schema",
+    "$schema": "http://json-schema.org/draft-04/schema",
+    "required": ["name"],
+    "properties": {
+        "id": {
+            "type": ["string", "null"],
+            "_db_settings": {
+                "type": "id_field",
+                "required": true,
+                "primary_key": true
+            }
+        },
+        "name": {
+            "type": "string",
+            "_db_settings": {
+                "type": "string",
+                "required": true
+            }
+        },
+        "description": {
+            "type": ["string", "null"],
+            "_db_settings": {
+                "type": "text"
+            }
+        }
+    }
+}

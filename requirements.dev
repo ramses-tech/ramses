@@ -3,8 +3,9 @@ pytest
 pytest-cov
 releases
 sphinx
+virtualenv
 
-git+https://github.com/ramses-tech/nefertari.git@develop#egg=nefertari
-git+https://github.com/ramses-tech/nefertari-guards.git@develop#egg=nefertari_guards
+-e git+https://github.com/ramses-tech/nefertari.git@develop#egg=nefertari
+-e git+https://github.com/ramses-tech/nefertari-guards.git@develop#egg=nefertari_guards
 
 -e .
