@@ -1,0 +1,3 @@
+-e git+https://github.com/ramses-tech/ra.git@develop#egg=ra
+-e git+https://github.com/ramses-tech/nefertari.git@develop#egg=nefertari
+-e git+https://github.com/ramses-tech/nefertari-mongodb.git@develop#egg=nefertari-mongodb
