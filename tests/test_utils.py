@@ -35,8 +35,9 @@ class TestUtils(object):
         assert clean == 'item_id'
 
     def test_generate_model_name(self):
-        model_name = utils.generate_model_name('/collectionitems')
-        assert model_name == 'Collectionitem'
+        resource = Mock(path='/zoo/alien-users')
+        model_name = utils.generate_model_name(resource)
+        assert model_name == 'AlienUser'
 
     @patch.object(utils, 'get_resource_children')
     def test_dynamic_part_name(self, get_children):
@@ -409,3 +410,11 @@ class TestUtils(object):
         assert view_cls.Model is model1
         assert not model1.called
         model2.assert_called_once_with()
+
+    def test_get_route_name(self):
+        resource_uri = '/foo-=-=-=-123'
+        assert utils.get_route_name(resource_uri) == 'foo123'
+
+    def test_get_resource_uri(self):
+        resource = Mock(path='/foobar/zoo ')
+        assert utils.get_resource_uri(resource) == 'zoo'

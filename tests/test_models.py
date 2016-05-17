@@ -128,9 +128,10 @@ class TestHelperFunctions(object):
         mock_set.side_effect = ValueError('strange error')
         config = config_mock()
         with pytest.raises(ValueError) as ex:
-            models.handle_model_generation(config, 'foo', '/stories')
+            raml_resource = Mock(path='/stories')
+            models.handle_model_generation(config, raml_resource)
         assert str(ex.value) == 'Story: strange error'
-        mock_set.assert_called_once_with(config, 'foo', 'Story')
+        mock_set.assert_called_once_with(config, raml_resource, 'Story')
 
     @patch('ramses.models.setup_data_model')
     def test_handle_model_generation(self, mock_set):
@@ -138,9 +139,10 @@ class TestHelperFunctions(object):
         config = Mock()
         mock_set.return_value = ('Foo1', True)
         config = config_mock()
+        raml_resource = Mock(path='/stories')
         model, auth_model = models.handle_model_generation(
-            config, 'foo', '/stories')
-        mock_set.assert_called_once_with(config, 'foo', 'Story')
+            config, raml_resource)
+        mock_set.assert_called_once_with(config, raml_resource, 'Story')
         assert model == 'Foo1'
         assert auth_model
 
