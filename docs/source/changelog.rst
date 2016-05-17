@@ -1,9 +1,10 @@
 Changelog
 =========
 
-* :release:`0.x.y <????-??-??>`
-* :support:`99` Use ACL mixin from nefertari-guards (if enabled)
-* :support:`-` Scaffold defaults to Pyramid 1.6.1
+* :release:`0.5.2 <2016-05-17>`
+* :support:`99 backported` Use ACL mixin from nefertari-guards (if enabled)
+* :support:`- backported` Scaffold defaults to Pyramid 1.6.1
+* :bug:`107` Fixed issue with hyphens in resource paths
 
 * :release:`0.5.1 <2015-11-18>`
 * :bug:`88` Reworked the creation of related/auth_model models, order does not matter anymore
