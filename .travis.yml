@@ -4,15 +4,14 @@ env:
   - TOXENV=py27
   - TOXENV=py33
   - TOXENV=py34
+  - TOXENV=py35
+python: 3.5
 install:
   - pip install tox
 script: tox
 services:
+  - elasticsearch
   - mongodb
-before_install:
-  - travis_retry curl -O https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.7.5.deb && sudo dpkg -i --force-confnew --force-confdef elasticsearch-1.7.5.deb
-  - sudo service elasticsearch start
 before_script:
-  - sleep 10
   - travis_retry curl -XDELETE 'http://localhost:9200/ramses_starter/'
   - mongo ramses_starter --eval 'db.dropDatabase();'
