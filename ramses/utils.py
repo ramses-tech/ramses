@@ -1,3 +1,4 @@
+import re
 import logging
 from contextlib import contextmanager
 
@@ -72,20 +73,22 @@ def clean_dynamic_uri(uri):
     return uri.replace('/', '').replace('{', '').replace('}', '')
 
 
-def generate_model_name(name):
+def generate_model_name(raml_resource):
     """ Generate model name.
 
-    :param name: String representing a field or route name.
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
     """
-    model_name = inflection.camelize(name.strip('/'))
-    return inflection.singularize(model_name)
+    resource_uri = get_resource_uri(raml_resource).strip('/')
+    resource_uri = re.sub('\W', ' ', resource_uri)
+    model_name = inflection.titleize(resource_uri)
+    return inflection.singularize(model_name).replace(' ', '')
 
 
-def dynamic_part_name(raml_resource, clean_uri, pk_field):
+def dynamic_part_name(raml_resource, route_name, pk_field):
     """ Generate a dynamic part for a resource :raml_resource:.
 
-    A dynamic part is generated using 2 parts: :clean_uri: of the resource
-    and the dynamic part of first dynamic child resources. If
+    A dynamic part is generated using 2 parts: :route_name: of the
+    resource and the dynamic part of first dynamic child resources. If
     :raml_resource: has no dynamic child resources, 'id' is used as the
     2nd part.
     E.g. if your dynamic part on route 'stories' is named 'superId' then
@@ -93,7 +96,7 @@ def dynamic_part_name(raml_resource, clean_uri, pk_field):
 
     :param raml_resource: Instance of ramlfications.raml.ResourceNode for
         which dynamic part name is being generated.
-    :param clean_uri: Cleaned URI of :raml_resource:
+    :param route_name: Cleaned name of :raml_resource:
     :param pk_field: Model Primary Key field name.
     """
     subresources = get_resource_children(raml_resource)
@@ -103,7 +106,7 @@ def dynamic_part_name(raml_resource, clean_uri, pk_field):
         dynamic_part = extract_dynamic_part(dynamic_uris[0])
     else:
         dynamic_part = pk_field
-    return '_'.join([clean_uri, dynamic_part])
+    return '_'.join([route_name, dynamic_part])
 
 
 def extract_dynamic_part(uri):
@@ -337,3 +340,23 @@ def patch_view_model(view_cls, model_cls):
         yield
     finally:
         view_cls.Model = original_model
+
+
+def get_route_name(resource_uri):
+    """ Get route name from RAML resource URI.
+
+    :param resource_uri: String representing RAML resource URI.
+    :returns string: String with route name, which is :resource_uri:
+        stripped of non-word characters.
+    """
+    resource_uri = resource_uri.strip('/')
+    resource_uri = re.sub('\W', '', resource_uri)
+    return resource_uri
+
+
+def get_resource_uri(raml_resource):
+    """ Get cleaned resource URI of RAML resource.
+
+    :param raml_resource: Instance of ramlfications.raml.ResourceNode.
+    """
+    return raml_resource.path.split('/')[-1].strip()
