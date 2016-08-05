@@ -10,18 +10,17 @@ nefertari.engine = nefertari_{{engine}}
 enable_get_tunneling = true
 
 # SQLA
-sqlalchemy.url = postgresql://localhost:5432/{{package}}
+sqlalchemy.url = postgresql://%(host)s:5432/{{package}}
 
-# MongoDB settings
-mongodb.host = localhost
+# MongoDB
+mongodb.host = %(host)s
 mongodb.port = 27017
 mongodb.db = {{package}}
 
 # Elasticsearch
-elasticsearch.hosts = localhost:9200
+elasticsearch.hosts = %(host)s:9200
 elasticsearch.sniff = false
 elasticsearch.index_name = {{package}}
-elasticsearch.index.disable = false
 elasticsearch.enable_refresh_query = false
 elasticsearch.enable_aggregations = false
 elasticsearch.enable_polymorphic_query = false
@@ -41,7 +40,7 @@ use = egg:Paste#urlmap
 
 [server:main]
 use = egg:waitress#main
-host = 0.0.0.0
+host = localhost
 port = 6543
 threads = 3
 
