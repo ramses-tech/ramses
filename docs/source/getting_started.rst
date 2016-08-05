@@ -5,11 +5,12 @@ Getting started
 
 .. code-block:: shell
 
-    $ virtualenv my_project
-    $ source my_project/bin/activate
-    $ pip install ramses
-    $ pcreate -s ramses_starter my_project
+    $ mkdir my_project
     $ cd my_project
+    $ virtualenv venv
+    $ source venv/bin/activate
+    $ pip install ramses
+    $ pcreate -s ramses_starter .
     $ pserve local.ini
 
 2. Tada! Start editing api.raml to modify the API and items.json for the schema.
